@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -9,12 +10,18 @@ import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
+import org.firstinspires.ftc.teamcode.subsystems.Drivetrain;
+//import org.firstinspires.ftc.teamcode.subsystems.OuttakeSlide;
 
-
+@Config
 @TeleOp(name = "DecodeTeleop", group = "TeleOp")
 
 public class DecodeTeleop extends LinearOpMode{
     private DecodeDriveTrain drivetrain;
+//    private OuttakeSlide outtakeSlide;
+    /**
+     * outtake slide
+     */
     private DcMotorEx intake;
     boolean fieldCentric = true;
 
@@ -41,6 +48,7 @@ public class DecodeTeleop extends LinearOpMode{
             }
             // all the movement controls.
             drivetrain.Teleop(gamepad1,telemetry, fieldCentric);
+
 
 
             // delete the other once we know which direction intake is
