@@ -23,7 +23,7 @@ public class DecodeTeleop extends LinearOpMode{
     @Override
     public void runOpMode() {
         // initializes movement motors
-        drivetrain = new DecodeDriveTrain(hardwareMap);
+       // drivetrain = new DecodeDriveTrain(hardwareMap);
         IMU imu = hardwareMap.get(IMU.class, "imu");
         IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
                 RevHubOrientationOnRobot.LogoFacingDirection.LEFT,
@@ -40,16 +40,17 @@ public class DecodeTeleop extends LinearOpMode{
                 fieldCentric = !fieldCentric;
             }
             // all the movement controls.
-            drivetrain.Teleop(gamepad1,telemetry, fieldCentric);
+            //drivetrain.Teleop(gamepad1,telemetry, fieldCentric);
 
 
             // delete the other once we know which direction intake is
             if(gamepad1.left_trigger > 0){
-                intake.setPower(gamepad1.left_trigger);
+                intake.setPower(1);
             }
-            if(gamepad1.right_trigger > 0){
-                intake.setPower(-gamepad1.left_trigger);
+            else{
+                intake.setPower(0);
             }
+
 
 
 
