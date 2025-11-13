@@ -17,13 +17,17 @@ import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 @TeleOp(name = "DecodeTeleop", group = "TeleOp")
 
 public class DecodeTeleop extends LinearOpMode{
+
+
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
-    private DcMotorEx outtake;
+    private DcMotorEx flywheel;
+    private Servo flopper;
+
     boolean fieldCentric = false;
     double intakePower = 0;
     int outtakeMode = 0;
-    double outtakePower = 0;
+    double fwPower = 0;
 
 
 
@@ -32,17 +36,18 @@ public class DecodeTeleop extends LinearOpMode{
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap);
 
+        flopper = hardwareMap.get(Servo.class, "pusher");
         intake=hardwareMap.get(DcMotorEx.class, "intake");
         intake.setDirection(DcMotorEx.Direction.REVERSE); // Change this to either FORWARD or REVERSE
 
-        outtake=hardwareMap.get(DcMotorEx.class, "outtake");
-        outtake.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
+        flywheel=hardwareMap.get(DcMotorEx.class, "FW");
+        flywheel.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
 
 
         waitForStart();
         while (opModeIsActive()) {
             // toggle for field centric
-
+            flopper.setPosition(0.5);
             // all the movement controls.
             drivetrain.Teleop(gamepad1,telemetry, fieldCentric);
 
@@ -64,21 +69,21 @@ public class DecodeTeleop extends LinearOpMode{
             }
 
             if(outtakeMode==0){
-                outtakePower =0;
+                fwPower =0;
             }else if(outtakeMode==1){
-                outtakePower = 0.56;
+                fwPower = 0.56;
             }else if(outtakeMode==2){
-                outtakePower = 1;
+                fwPower = 1;
             }else{
-                outtakePower = 0;
+                fwPower = 0;
             }
 
 
-            outtake.setPower(outtakePower);
+            flywheel.setPower(fwPower);
             /*
             if(gamepad1.right_trigger > 0){
-                outtakePower = Range.clip(gamepad1.right_trigger, 0, 0.9);
-                outtake.setPower(outtakePower);
+                fwPower = Range.clip(gamepad1.right_trigger, 0, 0.9);
+                outtake.setPower(fwPower);
             }
             else if(gamepad1.right_bumper){
                 outtake.setPower(0.56);
