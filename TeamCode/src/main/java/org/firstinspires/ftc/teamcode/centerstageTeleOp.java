@@ -2,20 +2,31 @@
 package org.firstinspires.ftc.teamcode;
 
 //importing needed things
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+
+import java.util.List;
 
 @TeleOp
 //@Disabled
 //beginning of class
 public class centerstageTeleOp extends LinearOpMode {
+    private Limelight3A limelight;
+    IMU imu;
     @Override
-
     public void runOpMode() throws InterruptedException {
         //motors
         double dampSpeedRatio = 0.58;
@@ -37,7 +48,18 @@ public class centerstageTeleOp extends LinearOpMode {
         rightarm.setDirection(Servo.Direction.REVERSE);
         double sPosiL = 0.8;
 
-        DcMotor slides = hardwareMap.dcMotor.get("slides"); //0
+        //DcMotor slides = hardwareMap.dcMotor.get("slides"); //0
+        // vision detection
+        limelight = hardwareMap.get(Limelight3A.class, "limelight");
+        imu = hardwareMap.get(IMU.class, "imu");
+
+        telemetry.setMsTransmissionInterval(11);
+
+        limelight.pipelineSwitch(0);
+        /*
+         * Starts polling for data.
+         */
+        limelight.start();
 
         boolean dropped = false;
 
@@ -67,9 +89,11 @@ public class centerstageTeleOp extends LinearOpMode {
             telemetry.addData("rightarm", Double.toString(rightarm.getPosition()));
             telemetry.addData("claw", Double.toString(claw.getPosition()));
             telemetry.addData("flopper", Double.toString(flopper.getPosition()));
-            telemetry.addData("slides", Double.toString(slides.getCurrentPosition()));
+            //telemetry.addData("slides", Double.toString(slides.getCurrentPosition()));
             telemetry.addData("airplane", Double.toString(airplane.getPosition()));
             telemetry.addData("drift", Double.toString(gamepad2.left_stick_y));
+
+            centerRobot();
 
 
             ////////////////arm
@@ -143,19 +167,19 @@ public class centerstageTeleOp extends LinearOpMode {
                 airplane.setPosition(0.8);
             }
 
-            if (gamepad2.left_stick_y < 0 ){
-
-                    slides.setTargetPosition((int) (slides.getCurrentPosition() - (70 * Math.abs(gamepad2.left_stick_y))));
-                    slides.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    //slides.setPower(0.5);
-            }
-            if (gamepad2.left_stick_y > 0){
-                    slides.setTargetPosition((int)(slides.getCurrentPosition() + (70 * Math.abs(gamepad2.left_stick_y))));
-                    slides.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                    //slides.setPower(0.5);
-            }
-
-            slides.setPower(0.7);
+//            if (gamepad2.left_stick_y < 0 ){
+//
+//                    slides.setTargetPosition((int) (slides.getCurrentPosition() - (70 * Math.abs(gamepad2.left_stick_y))));
+//                    slides.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//                    //slides.setPower(0.5);
+//            }
+//            if (gamepad2.left_stick_y > 0){
+//                    slides.setTargetPosition((int)(slides.getCurrentPosition() + (70 * Math.abs(gamepad2.left_stick_y))));
+//                    slides.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+//                    //slides.setPower(0.5);
+//            }
+//
+//            slides.setPower(0.7);
 
 
 
@@ -204,5 +228,42 @@ public class centerstageTeleOp extends LinearOpMode {
             telemetry.update();
 
         }
+    }
+    private void centerRobot(){
+        YawPitchRollAngles orientation = imu.getRobotYawPitchRollAngles();
+        limelight.updateRobotOrientation(orientation.getYaw(AngleUnit.DEGREES));
+        LLResult result = limelight.getLatestResult();
+        if (result != null) {
+            if (result.isValid()) {
+                List<LLResultTypes.FiducialResult> tags =
+                        result.getFiducialResults();
+
+                if (tags != null && !tags.isEmpty()) {
+                    int id = tags.get(0).getFiducialId(); // take the primary/closest tag
+
+                    // Map tag ID -> order vector
+//                    if (id == 20) {
+//
+//                    } else if (id == 24) {
+//
+//
+//                    } else {
+//
+//
+//                    }
+
+                    telemetry.addData("Tag ID", id);
+                } else {
+                    telemetry.addData("Tags", "none");
+                }
+
+
+                Pose3D botPose = result.getBotpose();
+                telemetry.addData("tx", result.getTx());
+                telemetry.addData("ty", result.getTy());
+                telemetry.addData("botPose", botPose.toString());
+            }
+        }
+        telemetry.update();
     }
 }
