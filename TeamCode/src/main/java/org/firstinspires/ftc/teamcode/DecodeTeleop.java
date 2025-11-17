@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
@@ -17,90 +18,107 @@ import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 @TeleOp(name = "DecodeTeleop", group = "TeleOp")
 
 public class DecodeTeleop extends LinearOpMode{
+        private DecodeDriveTrain drivetrain;
+        private DcMotorEx intake;
+        private DcMotorEx turret;
+        private DcMotorEx flyWheel;
+        private Servo pusher;
 
+        boolean fieldCentric = false;
+        double intakePower = 0;
+        int flyWheelMode = 0;
+        double flyWheelPower = 0;
+        double pusherPosition = 0.3;
 
-    private DecodeDriveTrain drivetrain;
-    private DcMotorEx intake;
-    private DcMotorEx flywheel;
-    private Servo flopper;
-
-    boolean fieldCentric = false;
-    double intakePower = 0;
-    int outtakeMode = 0;
-    double fwPower = 0;
 
 
 
     @Override
-    public void runOpMode() {
-        // initializes movement motors
-        drivetrain = new DecodeDriveTrain(hardwareMap);
-
-        flopper = hardwareMap.get(Servo.class, "pusher");
-        intake=hardwareMap.get(DcMotorEx.class, "intake");
-        intake.setDirection(DcMotorEx.Direction.REVERSE); // Change this to either FORWARD or REVERSE
-
-        flywheel=hardwareMap.get(DcMotorEx.class, "FW");
-        flywheel.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
+        public void runOpMode() {
 
 
-        waitForStart();
-        while (opModeIsActive()) {
-            // toggle for field centric
-            flopper.setPosition(0.5);
-            // all the movement controls.
-            drivetrain.Teleop(gamepad1,telemetry, fieldCentric);
+            // initializes movement motors
+            drivetrain = new DecodeDriveTrain(hardwareMap);
+
+            intake=hardwareMap.get(DcMotorEx.class, "intake");
+            intake.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
+
+            flyWheel=hardwareMap.get(DcMotorEx.class, "FW");
+            flyWheel.setDirection(DcMotorEx.Direction.REVERSE); // Change this to either FORWARD or REVERSE
+            flyWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            turret=hardwareMap.get(DcMotorEx.class, "turret");
+            turret.setDirection(DcMotorEx.Direction.REVERSE);
+
+            pusher = hardwareMap.get(Servo.class, "pusher");
+            pusher.setDirection(Servo.Direction.REVERSE);
 
 
-            if(gamepad1.left_trigger > 0){
-                intakePower = Range.clip(gamepad1.left_trigger, 0, 0.67);
-                intake.setPower(intakePower);
+
+
+            waitForStart();
+            while (opModeIsActive()) {
+                // toggle for field centric
+
+                // all the movement controls.
+                drivetrain.Teleop(gamepad1,telemetry, fieldCentric);
+
+
+                if(gamepad1.left_trigger > 0){
+                    intakePower = Range.clip(gamepad1.left_trigger, 0, 1);
+                    intake.setPower(intakePower);
+                }
+                else{
+                    intake.setPower(0);
+                }
+
+                if(gamepad1.a) {
+                    flyWheelMode = 1; //operating power
+                }else if(gamepad1.y){
+                    flyWheelMode =2; //max power
+                }else if(gamepad1.b){
+                    flyWheelMode =0;//off
+                }
+
+                if(flyWheelMode==1){
+                    flyWheelPower = 0.56;
+                }else if(flyWheelMode==2){
+                    flyWheelPower = 0.8;
+                }else{
+                    flyWheelPower = 0;
+                }
+
+
+                flyWheel.setVelocity(2000);
+
+                if(gamepad1.left_bumper){
+                    turret.setPower(0.1);
+                }
+                else if(gamepad1.right_bumper){
+                    turret.setPower(-0.1);
+                }else{
+                    turret.setPower(0);
+                }
+
+
+                if(gamepad1.x){
+                    pusherPosition = 0.9; // up
+                }
+                else{
+                    pusherPosition = 0.3; // down
+                }
+                pusher.setPosition(pusherPosition);
+
+                telemetry.addData("Field Centric", fieldCentric);
+                telemetry.addData("pusher position", pusher.getPosition());
+                telemetry.update();
+
+
+
+
             }
-            else{
-                intake.setPower(0);
-            }
-
-            if(gamepad1.a) {
-                outtakeMode = 1; //max power
-            }else if(gamepad1.y){
-                outtakeMode =2; //operating power
-            }else if(gamepad1.b){
-                outtakeMode =0;//off
-            }
-
-            if(outtakeMode==0){
-                fwPower =0;
-            }else if(outtakeMode==1){
-                fwPower = 0.56;
-            }else if(outtakeMode==2){
-                fwPower = 1;
-            }else{
-                fwPower = 0;
-            }
-
-
-            flywheel.setPower(fwPower);
-            /*
-            if(gamepad1.right_trigger > 0){
-                fwPower = Range.clip(gamepad1.right_trigger, 0, 0.9);
-                outtake.setPower(fwPower);
-            }
-            else if(gamepad1.right_bumper){
-                outtake.setPower(0.56);
-            }else{
-                outtake.setPower(0);
-            }*/
-
-
-            telemetry.addData("Field Centric", fieldCentric);
-            telemetry.update();
-
-
 
 
         }
-
-
-    }
 
 }

@@ -32,7 +32,7 @@ public class DecodeDriveTrain {
 
         // Set motor direction based on which side of the robot the motors are on
         fr.setDirection(DcMotorEx.Direction.FORWARD);
-        br.setDirection(DcMotorEx.Direction.FORWARD);
+        br.setDirection(DcMotorEx.Direction.REVERSE);
         fl.setDirection(DcMotorEx.Direction.REVERSE);
         bl.setDirection(DcMotorEx.Direction.REVERSE);
 
