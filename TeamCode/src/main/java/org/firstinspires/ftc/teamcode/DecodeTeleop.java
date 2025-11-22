@@ -13,12 +13,14 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
+import org.firstinspires.ftc.teamcode.subsystems.FlyWheelVision;
 
-
+@Disabled
 @TeleOp(name = "DecodeTeleop", group = "TeleOp")
 
 public class DecodeTeleop extends LinearOpMode{
         private DecodeDriveTrain drivetrain;
+        private FlyWheelVision flyWheelVision;
         private DcMotorEx intake;
         private DcMotorEx turret;
         private DcMotorEx flyWheel;
@@ -30,15 +32,19 @@ public class DecodeTeleop extends LinearOpMode{
         double flyWheelPower = 0;
         double pusherPosition = 0.3;
 
+        double flyWheelPostition = 0;
+        double kP = 0.02;
+        double deadband = 0.5; // amount of error in limelight X
+        double flyWheelMaxPower = 0.2;
 
 
 
     @Override
         public void runOpMode() {
 
-
             // initializes movement motors
             drivetrain = new DecodeDriveTrain(hardwareMap);
+            flyWheelVision = new FlyWheelVision(hardwareMap);
 
             intake=hardwareMap.get(DcMotorEx.class, "intake");
             intake.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
@@ -48,12 +54,10 @@ public class DecodeTeleop extends LinearOpMode{
             flyWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
             turret=hardwareMap.get(DcMotorEx.class, "turret");
-            turret.setDirection(DcMotorEx.Direction.REVERSE);
+            turret.setDirection(DcMotorEx.Direction.FORWARD);
 
             pusher = hardwareMap.get(Servo.class, "pusher");
             pusher.setDirection(Servo.Direction.REVERSE);
-
-
 
 
             waitForStart();
@@ -62,6 +66,8 @@ public class DecodeTeleop extends LinearOpMode{
 
                 // all the movement controls.
                 drivetrain.Teleop(gamepad1,telemetry, fieldCentric);
+                flyWheelVision.Teleop(telemetry,true, true);
+                flyWheelPostition= flyWheelVision.getTx();
 
 
                 if(gamepad1.left_trigger > 0){
@@ -81,22 +87,34 @@ public class DecodeTeleop extends LinearOpMode{
                 }
 
                 if(flyWheelMode==1){
-                    flyWheelPower = 0.56;
+                    flyWheelPower = 2000; // a
                 }else if(flyWheelMode==2){
-                    flyWheelPower = 0.8;
+                    flyWheelPower = 3000; //y
                 }else{
-                    flyWheelPower = 0;
+                    flyWheelPower = 0;//b
                 }
 
 
-                flyWheel.setVelocity(2000);
+                flyWheel.setVelocity(flyWheelPower);
 
                 if(gamepad1.left_bumper){
-                    turret.setPower(0.1);
+                    turret.setPower(0.2);
                 }
                 else if(gamepad1.right_bumper){
-                    turret.setPower(-0.1);
-                }else{
+                    turret.setPower(-0.2);
+                }
+                else if(gamepad1.dpad_up){
+                    double power = kP * flyWheelPostition;
+
+                    if(Math.abs(flyWheelPostition) < deadband){
+                        power = 0;
+                    }
+                    power = Range.clip(power,-flyWheelMaxPower, flyWheelMaxPower);
+
+                    turret.setPower(power);
+
+                }
+                else{
                     turret.setPower(0);
                 }
 
@@ -111,6 +129,7 @@ public class DecodeTeleop extends LinearOpMode{
 
                 telemetry.addData("Field Centric", fieldCentric);
                 telemetry.addData("pusher position", pusher.getPosition());
+                telemetry.addData("Tx", flyWheelPostition);
                 telemetry.update();
 
 
