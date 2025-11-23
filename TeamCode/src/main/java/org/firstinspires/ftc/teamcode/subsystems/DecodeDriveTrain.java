@@ -20,7 +20,8 @@ public class DecodeDriveTrain {
     private DcMotorEx br; //Back right motor of drivetrain
     private IMU imu;
     private double dampSpeedRatio = 1;
-    private double dampTurnRatio  = -1;
+    private double dampTurnRatio  = -0.6;
+    private boolean slowMode = false;
 
 
     public DecodeDriveTrain(HardwareMap hardwareMap){                 // Motor Mapping
@@ -58,7 +59,10 @@ public class DecodeDriveTrain {
             }
 
 
-            if(gamepad.right_bumper){
+            if(gamepad.left_stick_button){
+                slowMode = !slowMode;
+            }
+            if(slowMode){
                 dampSpeedRatio = 0.25;
                 dampTurnRatio = -0.2;
             }else{
@@ -105,6 +109,17 @@ public class DecodeDriveTrain {
             double x = Range.clip(-gamepad.left_stick_x, -1, 1);
             //right stick x value
             double rx = Range.clip(-gamepad.right_stick_x, -1, 1);
+
+            if(gamepad.left_stick_button){
+                slowMode = !slowMode;
+            }
+            if(slowMode){
+                dampSpeedRatio = 0.25;
+                dampTurnRatio = -0.2;
+            }else{
+                dampSpeedRatio = 1;
+                dampTurnRatio = -0.6;
+            }
 
 
             if(gamepad.right_bumper){

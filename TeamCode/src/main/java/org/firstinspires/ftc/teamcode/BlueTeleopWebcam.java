@@ -22,7 +22,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.List;
 
 
-@TeleOp(name = "Red DecodeTeleop webcam", group = "TeleOp")
+@TeleOp(name = "Blue DecodeTeleop webcam", group = "TeleOp")
 
 public class BlueTeleopWebcam extends LinearOpMode{
     private DecodeDriveTrain drivetrain;
@@ -40,19 +40,19 @@ public class BlueTeleopWebcam extends LinearOpMode{
     boolean useWebcam = true;
     boolean autoAdjust = true;
     double intakePower = 0;
-    int flyWheelMode = 0;
+    int flyWheelMode = 1;
     double flyWheelPower = 0;
     double pusherPos = 0.3;
     double turretPower;
     double turretPos;
 
-    double range;
+    double range ;
     double bearing;
     double elevation;
 
-    double turretKp = 0.005; //0.01
+    double turretKp = 0.03; //0.01
     double turretKi = 0.0;
-    double turretKd = 0.00025; //0.0005
+    double turretKd = 0.001;  //0.0005
 
     // PID state
     double turretIntegral = 0;
@@ -113,130 +113,157 @@ public class BlueTeleopWebcam extends LinearOpMode{
             turretPos = turret.getCurrentPosition();
 
 
-            if(gamepad1.left_trigger > 0){
+            if(gamepad1.left_trigger > 0 && !gamepad1.x){
                 intakePower = Range.clip(gamepad1.left_trigger, 0, 1);
-                intake.setPower(intakePower);
+            }else if (gamepad1.right_trigger > 0 && !gamepad1.x){
+                intakePower = -Range.clip(gamepad1.right_trigger, 0, 1);
             }
             else{
-                intake.setPower(0);
+                intakePower = 0;
+            }
+            intake.setPower(intakePower);
+
+            if(gamepad2.a) { // auto
+                flyWheelMode = 1; //operating power
+            }else if(gamepad2.y){ // 2200
+                flyWheelMode =2; //max power
+            }else if(gamepad2.b){
+                flyWheelMode =0;//off
             }
 
-//            if(gamepad1.a) {
-//                flyWheelMode = 1; //operating power
-//            }else if(gamepad1.y){
-//                flyWheelMode =2; //max power
-//            }else if(gamepad1.b){
-//                flyWheelMode =0;//off
+            if(flyWheelMode == 2){
+                flyWheelPower = 2200;
+            } else if (flyWheelMode == 0) {
+                flyWheelPower = 0;
+            }
+
+            // aim turret
+//            for (AprilTagDetection detection : detectedTags) {
+//                if (detection.metadata != null) {
+//                    if (detection.id == 24 ){ //20
+//                        bearing = detection.ftcPose.bearing;
+//                        if (bearing > 0){
+//                            turretPower = 0.05;
+//                        }
+//                        else if (bearing < 0){
+//                            turretPower = -0.05;
+//                        }
+//                    }
+//                } else {
+//                    turretPower = 0;
+//                }
 //            }
-//
-//            if(flyWheelMode==1){
-//                flyWheelPower = 2000;
-//            }else if(flyWheelMode==2){
-//                flyWheelPower = 3000;
-//            }else{
-//                flyWheelPower = 0;
-//            }
 
-//            flyWheel.setVelocity(flyWheelPower);
+            // PID
+            if(gamepad2.left_bumper){
+                autoAdjust = true;
+            } else if(gamepad2.right_bumper){
+                autoAdjust = false;
+            }
+            //start pid control
+            double dt = turretPidTimer.seconds();
+            turretPidTimer.reset();
 
-            // PID aiming
+            double pidTurretPower = 0;
+            boolean hasTarget = false;
+            double error = 0;
 
-            if (autoAdjust){
-                double dt = turretPidTimer.seconds();
-                turretPidTimer.reset();
-
-                double pidTurretPower = 0;
-                boolean hasTarget = false;
-                double error = 0;
-
-                // Find our tag and compute error (target bearing = 0)
-                for (AprilTagDetection detection : detectedTags) {
-                    if (detection.metadata != null && detection.id == 20) { // your desired tag ID
-                        range = detection.ftcPose.range;
-                        bearing = detection.ftcPose.bearing;   // in degrees
-                        elevation = detection.ftcPose.elevation;
-                        error = bearing;                       // error = current bearing - desired (0)
-                        hasTarget = true;
-                        break; // we found our tag, no need to keep looping
-                    }
-                }
-
-                if (hasTarget && dt > 0) {
-                    // PID terms
-                    double proportional = error;
-                    turretIntegral += error * dt;
-
-                    // Prevent integral windup (optional, tune limits)
-                    turretIntegral = Range.clip(turretIntegral, -200, 200);
-
-                    double derivative = (error - turretLastError) / dt;
-
-                    pidTurretPower = turretKp * proportional
-                            + turretKi * turretIntegral
-                            + turretKd * derivative;
-
-                    turretLastError = error;
-                } else {
-                    // No target: stop PID contributions & reset integral & use manual control
-//                    pidTurretPower = 0;
-                    turretIntegral = 0;
-                    turretLastError = 0;
-                    if(gamepad1.left_bumper){
-                        pidTurretPower = 0.3;
-                    }
-                    else if(gamepad1.right_bumper){
-                        pidTurretPower = -0.3;
-                    }else{
-                        pidTurretPower = 0;
-                    }
-                }
-
-
-                // limit turret pos
-                if ((pidTurretPower > 0 && turretPos < 525) || (pidTurretPower < 0 && turretPos > -525)) { //left, right limits
-                    turret.setPower(pidTurretPower);
-                } else {
-                    turret.setPower(0);   // stop at limits
+            // Find our tag and compute error (target bearing = 0)
+            for (AprilTagDetection detection : detectedTags) {
+                if (detection.metadata != null && detection.id == 20) { // your desired tag ID
+                    range = detection.ftcPose.range;
+                    bearing = detection.ftcPose.bearing;   // in degrees
+                    elevation = detection.ftcPose.elevation;
+                    error = bearing - (Math.toDegrees(Math.atan(2/range)));                       // error = current bearing - desired (0)
+                    hasTarget = true;
+                    break; // we found our tag, no need to keep looping
                 }
             }
 
+            if (hasTarget && dt > 0) {
+                // PID terms
+                double proportional = error;
+                turretIntegral += error * dt;
 
-            if (gamepad1.x) {
-                // Reset the release timer because X *is* held
-                releaseTimer.reset();
+                // Prevent integral windup (optional, tune limits)
+                turretIntegral = Range.clip(turretIntegral, -200, 200);
 
-                // CASE 1: Flywheel was OFF → start it, start timing the spin-up
-                if (!flywheelRunning) {
-                    flywheelRunning = true;
-                    flyWheelPower = 0.000870231 * Math.pow(range, 3) + 1904;
-                    spinUpDelay.reset();   // start spin-up timer
-                }
+                double derivative = (error - turretLastError) / dt;
 
-                // CASE 2: Flywheel already running → check if delay has passed
-                double delay = 0.6 + flyWheelPower * 0.0002;
+                pidTurretPower = turretKp * proportional
+                        + turretKi * turretIntegral
+                        + turretKd * derivative;
 
-                if (spinUpDelay.seconds() >= delay) {
-                    pusherPos = 0.9;   // raise pusher
-                }
-
+                turretLastError = error;
             } else {
-                // X NOT pressed
+                // No target: stop PID contributions & reset integral & use manual control
+//                    pidTurretPower = 0;
+                turretIntegral = 0;
+                turretLastError = 0;
+                if(gamepad1.left_bumper){
+                    pidTurretPower = 0.3;
+                }
+                else if(gamepad1.right_bumper){
+                    pidTurretPower = -0.3;
+                }else{
+                    pidTurretPower = 0;
+                }
+            } //end pid control
 
-                pusherPos = 0.3;  // lower pusher immediately
 
-                // Start or continue the "X not pressed" timer
-                if (releaseTimer.seconds() > 3) {
-                    // X has been unpressed for > 3 seconds → stop flywheel
-                    flywheelRunning = false;
-                    flyWheelPower = 0;
+            // limit turret pos
+            if ((pidTurretPower > 0 && turretPos < 525) || (pidTurretPower < 0 && turretPos > -525)) { //left, right limits
+                turret.setPower(pidTurretPower);
+            } else {
+                turret.setPower(0);   // stop at limits
+            }
+
+            if (autoAdjust) {
+                if (gamepad1.x) {
+                    // Reset the release timer because X *is* held
+                    releaseTimer.reset();
+
+                    // CASE 1: Flywheel was OFF → start it, start timing the spin-up
+                    if (!flywheelRunning) {
+                        flywheelRunning = true;
+                        flyWheelPower = 0.000870231 * Math.pow(range, 3) + 1904;
+                        spinUpDelay.reset();   // start spin-up timer
+                    }
+
+                    // CASE 2: Flywheel already running → check if delay has passed
+                    double delay = 0.6 + flyWheelPower * 0.0002;
+
+                    if (spinUpDelay.seconds() >= delay) {
+                        pusherPos = 0.9;   // raise pusher
+                    }
+
+                } else {
+                    // X NOT pressed
+
+                    pusherPos = 0.3;  // lower pusher immediately
+
+                    // Start or continue the "X not pressed" timer
+                    if (releaseTimer.seconds() > 3) {
+                        // X has been unpressed for > 3 seconds → stop flywheel
+                        flywheelRunning = false;
+                        flyWheelPower = 0;
+                    }
+                }
+            } else{
+                if(gamepad1.x){
+                    pusherPos = 0.9;
+                }else{
+                    pusherPos = 0.3;
                 }
             }
             pusher.setPosition(pusherPos);
             flyWheel.setVelocity(flyWheelPower);
 
+            telemetry.addData("auto power", autoAdjust);
             telemetry.addData("target turret power", flyWheelPower);
             telemetry.addData("stop flywheel delay", releaseTimer.seconds());
             telemetry.addData("spin up delay", spinUpDelay.seconds());
+            telemetry.addData("bearing", bearing);
             telemetry.addData("Turret Position", turretPos);
             telemetry.addData("Field Centric", fieldCentric);
             telemetry.addData("auto adjust camera", autoAdjust);
