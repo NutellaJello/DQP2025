@@ -100,7 +100,7 @@ public class RedTeleopWebcam extends LinearOpMode{
 
         initWebcam();
         waitForStart();
-        while (visionPortal.getCameraState() != VisionPortal.CameraState.STREAMING) {
+        while (visionPortal.getCameraState() != VisionPortal.CameraState.STREAMING && !isStopRequested()) {
             sleep(20);
         }
         // exposure and gain
@@ -138,21 +138,19 @@ public class RedTeleopWebcam extends LinearOpMode{
                 intakePower = 0;
             }
             intake.setPower(intakePower);
-            if(gamepad2.a) { // auto
+            if(gamepad2.b) { // auto
+                flyWheelMode = 0;
+            }else if(gamepad2.a){ // 2200
                 flyWheelMode = 1;
-            }else if(gamepad2.y){ // 2200
-                flyWheelMode = 2;
-            }else if(gamepad2.b) {
-                flyWheelMode = 0;//off
-            }else if(gamepad2.x){
+            }else if(gamepad2.x) {
+                flyWheelMode = 2;//off
+            }else if(gamepad2.y){
                 flyWheelMode = 3;
             }
 
             if(flyWheelMode == 0){
                 flyWheelPower = 0;
-            } else if (flyWheelMode == 1) {
-            }
-            else if (flyWheelMode == 2) {
+            } else if (flyWheelMode == 2) {
                 flyWheelPower = 2000;
             }
             else if (flyWheelMode == 3) {
@@ -212,9 +210,15 @@ public class RedTeleopWebcam extends LinearOpMode{
                 }
                 else if(gamepad2.right_trigger > 0){
                     pidTurretPower = -Range.clip(gamepad2.right_trigger/2., 0, 0.5);
+                }else if(gamepad1.left_bumper ) {
+                    pidTurretPower = 0.4;
+                }else if(gamepad1.right_bumper){
+                    pidTurretPower = -0.4;
                 }else{
                     pidTurretPower = 0;
                 }
+
+
             } //end pid control
             if(targetingTimer.seconds() < 1){
                 pidTurretPower += 0.40 * Range.clip(Math.abs(gamepad1.right_stick_x) * gamepad1.right_stick_x, -1, 1);
@@ -222,7 +226,7 @@ public class RedTeleopWebcam extends LinearOpMode{
             pidTurretPower = Range.clip(pidTurretPower,-0.8, 0.8);
 
             // limit turret pos
-            if ((pidTurretPower > 0 && turretPos < 670) || (pidTurretPower < 0 && turretPos > -670)) { //left, right limits
+            if ((pidTurretPower > 0 && turretPos < 600) || (pidTurretPower < 0 && turretPos > -600)) { //left, right limits
                 turret.setPower(pidTurretPower);
             } else {
                 turret.setPower(0);   // stop at limits
@@ -233,13 +237,13 @@ public class RedTeleopWebcam extends LinearOpMode{
 
                     if (fireState == 0) {
                         // Step 1: Start flywheel
-                        flyWheelPower = 11.5 * range + 1200;
+                        flyWheelPower = 11.5 * range + 1250;
                         fireState = 1;   // go to SPINNING_UP
                     }
 
                     else if (fireState == 1) {
                         // Step 2: Wait until flywheel reaches speed
-                        if (flyWheel.getVelocity() >= flyWheelPower) {
+                        if (flyWheel.getVelocity() >= flyWheelPower || flyWheel.getVelocity() >= 2580) {
                             pusherPos = 0.67;   // fire
                             fireTimer.reset();
                             fireState = 2;     // go to PUSH_UP
@@ -281,8 +285,8 @@ public class RedTeleopWebcam extends LinearOpMode{
             flyWheel.setVelocity(flyWheelPower);
 
 //            telemetry.addData("auto power", autoAdjust);
-//            telemetry.addData("range",range);
-//            telemetry.addData("target turret power", 12.658 * range + 1300);
+            telemetry.addData("range",range);
+            telemetry.addData("target turret power", 11.5 * range + 1250);
 //            telemetry.addData("turret turn power", pidTurretPower);
 //            telemetry.addData("flywheel velocity", flyWheelVel);
 //            telemetry.addData("dt",dt);
@@ -291,11 +295,11 @@ public class RedTeleopWebcam extends LinearOpMode{
 //            telemetry.addData("stop flywheel delay", releaseTimer.seconds());
 //            telemetry.addData("spin up delay", spinUpDelay.seconds());
 //            telemetry.addData("bearing", bearing);
-            telemetry.addData("Turret Position", turretPos);
+         //   telemetry.addData("Turret Position", turretPos);
 //            telemetry.addData("Field Centric", fieldCentric);
 //            telemetry.addData("auto adjust camera", autoAdjust);
 //            telemetry.addData("pusher position", pusher.getPosition());
-//            telemetry.addData("flywheel power", flyWheelPower);
+            telemetry.addData("flywheel velocity", flyWheel.getVelocity());
             telemetry.update();
 
 
