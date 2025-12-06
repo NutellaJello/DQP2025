@@ -103,12 +103,12 @@ public class DecodeDriveTrain {
             double max;
 //            YawPitchRollAngles robotOrientation;
 //            robotOrientation = imu.getRobotYawPitchRollAngles();
-            if(gamepad.dpad_up){
+            if(gamepad.dpad_right){
                 pinpoint.resetPosAndIMU();
             }
-            if(gamepad.right_bumper){
-                dampSpeedRatio = 0.25;
-                dampTurnRatio = -0.2;
+            if(gamepad.right_trigger > 0.1){
+                dampSpeedRatio = 0.4;
+                dampTurnRatio = -0.3;
             }else{
                 dampSpeedRatio = 1;
                 dampTurnRatio = -0.6;
@@ -142,11 +142,11 @@ public class DecodeDriveTrain {
             br.setPower(PowerBR);
         }
         else{
-            if(gamepad.right_bumper){
-                dampSpeedRatio = 0.21;
-                dampTurnRatio = -0.2; // -0.15
+            if(gamepad.right_trigger > 0.1){
+                dampSpeedRatio = 0.4;
+                dampTurnRatio = -0.3; // -0.15
             }else{
-                dampSpeedRatio = 0.8;
+                dampSpeedRatio = 1;
                 dampTurnRatio = -0.6;
             }
 
