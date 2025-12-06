@@ -45,7 +45,7 @@ public class RedTeleopWebcam extends LinearOpMode {
     double intakePower = 0;
     int flyWheelMode = 1;
     double flyWheelPower = 0;
-    double pusherPos = 0.3;
+    double pusherPos = 0.4;
     double turretPos;
     double flyWheelVel;
     double idlePower = 0;
@@ -242,14 +242,14 @@ public class RedTeleopWebcam extends LinearOpMode {
                     } else if (fireState == 1) {
                         // Step 2: Wait until flywheel reaches speed
                         if (flyWheel.getVelocity() >= flyWheelPower || flyWheel.getVelocity() >= 2580) {
-                            pusherPos = 0.67;   // fire
+                            pusherPos = 0.9;   // fire
                             fireTimer.reset();
                             fireState = 2;     // go to PUSH_UP
                         }
                     } else if (fireState == 2) {
                         // Step 3: pusher up for 0.15s
                         if (fireTimer.seconds() > 0.3) {
-                            pusherPos = 1;   // retract
+                            pusherPos = 0.4;   // retract
                             fireTimer.reset();
                             fireState = 3;    // go to PUSH_DOWN
                         }
@@ -262,15 +262,15 @@ public class RedTeleopWebcam extends LinearOpMode {
                     }
                 } else {
                     // X RELEASED → reset firing system
-                    pusherPos = 1;
+                    pusherPos = 0.4;
                     flyWheelPower = idlePower;
                     fireState = 0;
                 }
             } else {
                 if (gamepad1.x) {
-                    pusherPos = 0.67;
+                    pusherPos = 0.9;
                 } else {
-                    pusherPos = 1;
+                    pusherPos = 0.4;
                 }
             }
 
