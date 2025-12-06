@@ -36,50 +36,32 @@ public class RedSideClose extends OpMode {
     private enum PathState{
         CYCLE1,
         OUTTAKE1,
+        INTAKE1,
         END
     }
 
     PathState pathState;
 
     private final Pose start = new Pose(130,130,Math.toRadians(45));
-    private final Pose outtake1 = new Pose(100,100,Math.toRadians(46));
+    private final Pose outtakePre = new Pose(95,90,Math.toRadians(45));
+    private final Pose intake1 = new Pose(135,90,Math.toRadians(0));
 
-    private PathChain cycle1;
+    private PathChain Cycle1;
+    private PathChain Intake1;
 
     public void buildPaths(){
-        cycle1 = follower.pathBuilder()
-                .addPath(new BezierLine(start, outtake1))
-                .setLinearHeadingInterpolation(start.getHeading(), outtake1.getHeading())
+        Cycle1 = follower.pathBuilder()
+                .addPath(new BezierLine(start, outtakePre))
+                .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
+                .build();
+        Intake1 = follower.pathBuilder()
+                .addPath(new BezierLine(outtakePre, intake1))
+                .setTangentHeadingInterpolation()
+                .setVelocityConstraint(1)
                 .build();
     }
 
-    public void statePathUpdate(){
-        switch(pathState){
-            case CYCLE1:
-                follower.followPath(cycle1, true);
-                pathState = PathState.OUTTAKE1;
-                break;
-            case OUTTAKE1:
-                if(!follower.isBusy()){
-                    loopOuttake(50);
-                    flyWheel.setVelocity(flyWheelPower);
-                    pusher.setPosition(pusherPos);
-                }
-                if (shotCount >= 3) {
-                    flyWheelPower = 0;
-                    pusherPos = 1;
-                    intake.setPower(0);
-                    fireState = 0;
-                    shotCount = 0;
-                    pathState = PathState.END;
-                    flyWheel.setVelocity(flyWheelPower);
-                    pusher.setPosition(pusherPos);
-                }
-                break;
-            case END:
-                break;
-        }
-    }
+
 
     public void setPathState(PathState newState){
         pathState = newState;
@@ -105,6 +87,7 @@ public class RedSideClose extends OpMode {
         turret.setDirection(DcMotorEx.Direction.FORWARD);
         turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        turret.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         pusher = hardwareMap.get(Servo.class, "pusher");
         pusher.setDirection(Servo.Direction.REVERSE);
@@ -118,7 +101,40 @@ public class RedSideClose extends OpMode {
         opmodeTimer.resetTimer();
         setPathState(pathState);
     }
-
+    public void statePathUpdate(){
+        switch(pathState){
+            case CYCLE1:
+                follower.followPath(Cycle1, true);
+                pathState = PathState.OUTTAKE1;
+                break;
+            case OUTTAKE1:
+                if(!follower.isBusy()){
+                    loopOuttake(62);
+                    flyWheel.setVelocity(flyWheelPower);
+                    pusher.setPosition(pusherPos);
+                }
+                if (shotCount >= 3) {
+                    flyWheelPower = 0;
+                    pusherPos = 1;
+                    fireState = 0;
+                    shotCount = 0;
+                    pathState = PathState.INTAKE1;
+                    flyWheel.setVelocity(flyWheelPower);
+                    pusher.setPosition(pusherPos);
+                }
+                break;
+            case INTAKE1:
+                intake.setPower(1);
+                follower.followPath(Intake1, true);
+                pathState = PathState.END;
+                break;
+            case END:
+                if(!follower.isBusy()){
+                    intake.setPower(0);
+                }
+                break;
+        }
+    }
     @Override
     public void loop(){
         follower.update();
@@ -142,7 +158,6 @@ public class RedSideClose extends OpMode {
         else if (fireState == 2) {
             if (fireTimer.getElapsedTime() > 300) {
                 pusherPos = 1;
-                shotCount++;
                 fireTimer.resetTimer();
                 fireState = 3;
             }
@@ -151,6 +166,7 @@ public class RedSideClose extends OpMode {
         else if (fireState == 3) {
             intake.setPower(0.9);
             if (fireTimer.getElapsedTime() > 500) {
+                shotCount++;
                 fireState = 1;
             }
         }
