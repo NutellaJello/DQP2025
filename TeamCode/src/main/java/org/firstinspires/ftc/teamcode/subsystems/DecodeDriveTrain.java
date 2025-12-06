@@ -67,7 +67,7 @@ public class DecodeDriveTrain {
          * number of ticks per unit of your odometry pod.  For example:
          *     pinpoint.setEncoderResolution(13.26291192, DistanceUnit.MM);
          */
-        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD);
 
         /*
          * Set the direction that each of the two odometry pods count. The X (forward) pod should
@@ -75,12 +75,12 @@ public class DecodeDriveTrain {
          * you move the robot to the left.
          */
         pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.FORWARD,
-                GoBildaPinpointDriver.EncoderDirection.FORWARD);
+                GoBildaPinpointDriver.EncoderDirection.REVERSED);
         pinpoint.resetPosAndIMU();
     }
 
     public void Teleop(Gamepad gamepad, Telemetry telemetry, boolean fieldCentric) {
-        Teleop(gamepad, telemetry, false, fieldCentric);
+        Teleop(gamepad, telemetry, true, fieldCentric);
     }
 
     public void Teleop(Gamepad gamepad, Telemetry telemetry, boolean showTelemetry, boolean field ){ //Code to be run in Teleop Mode void Loop at top level
