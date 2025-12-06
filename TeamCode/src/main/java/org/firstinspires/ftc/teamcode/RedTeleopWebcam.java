@@ -46,17 +46,17 @@ public class RedTeleopWebcam extends LinearOpMode {
     int flyWheelMode = 1;
     double flyWheelPower = 0;
     double pusherPos = 0.3;
-    double turretPower;
     double turretPos;
     double flyWheelVel;
+    double idlePower = 0;
 
     double range;
     double lastRange;
     double bearing;
     double elevation;
 
-    double turretKp = 0.028;
-    double turretKi = 0.000; //0.0005
+    double turretKp = 0.022;
+    double turretKi = 0.0004; //0.0005
     double turretKd = 0.0008;  //0.0001
 
     // PID state
@@ -122,13 +122,22 @@ public class RedTeleopWebcam extends LinearOpMode {
 
             turretPos = turret.getCurrentPosition();
             flyWheelVel = flyWheel.getVelocity();
+            if(autoAdjust){
+                if(gamepad1.dpad_up){
+                 idlePower = 1800;
+                }else if(gamepad1.dpad_down){
+                  idlePower = 0;
+                }
+            }
+            else{
+                idlePower = 0;
+            }
 
-
-            if (gamepad1.left_trigger > 0 && !gamepad1.x) {
-                intakePower = Range.clip(gamepad1.left_trigger, 0, 1);
-            } else if (gamepad1.right_trigger > 0 && !gamepad1.x) {
-                intakePower = -Range.clip(gamepad1.right_trigger, 0, 1);
-            } else {
+            if (gamepad1.left_trigger > 0.1 && !gamepad1.x) {
+                intakePower = 1;
+            } else if(gamepad1.a){
+                intakePower = -1;
+            }else {
                 intakePower = 0;
             }
             intake.setPower(intakePower);
@@ -228,7 +237,7 @@ public class RedTeleopWebcam extends LinearOpMode {
 
                     if (fireState == 0) {
                         // Step 1: Start flywheel
-                        flyWheelPower = 11.5 * range + 1250;
+                        flyWheelPower = 11.5 * range + 1220;
                         fireState = 1;   // go to SPINNING_UP
                     } else if (fireState == 1) {
                         // Step 2: Wait until flywheel reaches speed
@@ -254,7 +263,7 @@ public class RedTeleopWebcam extends LinearOpMode {
                 } else {
                     // X RELEASED → reset firing system
                     pusherPos = 1;
-                    flyWheelPower = 0;
+                    flyWheelPower = idlePower;
                     fireState = 0;
                 }
             } else {
