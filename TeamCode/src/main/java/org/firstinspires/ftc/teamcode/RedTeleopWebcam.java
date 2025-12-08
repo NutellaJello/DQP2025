@@ -59,7 +59,15 @@ public class RedTeleopWebcam extends LinearOpMode {
     double turretKi = 0.0004; //0.0005
     double turretKd = 0.0008;  //0.0001
 
-    // PID state
+    double flywheelKp = 0.2;    // start values, you will tune
+    double flywheelKi = 0.0;
+    double flywheelKd = 0.0;
+
+    double flywheelIntegral = 0;
+    double flywheelLastError = 0;
+    double flywheelCommandVel = 0;   // velocity we actually send to setVelocity
+
+    ElapsedTime flywheelPidTimer = new ElapsedTime();
     double turretIntegral = 0;
     double turretLastError = 0;
     int fireState = 0;      // 0 = idle, 1 = spinup, 2 = pushUp, 3 = pushDown
@@ -108,6 +116,7 @@ public class RedTeleopWebcam extends LinearOpMode {
         }).start();
         turretPidTimer.reset();
         releaseTimer.reset();
+        flywheelPidTimer.reset();
 
         while (opModeIsActive()) {
 
@@ -159,7 +168,39 @@ public class RedTeleopWebcam extends LinearOpMode {
                 flyWheelPower = 2500;
             }
 
-            // PID
+
+            // ---------- Flywheel velocity PID (NEW) ----------
+            double dtFly = flywheelPidTimer.seconds();
+            flywheelPidTimer.reset();
+            dtFly = Range.clip(dtFly, 0.001, 0.1);
+
+            double targetVel = flyWheelPower;   // desired velocity (ticks per second)
+            double currentVel = flyWheelVel;    // measured velocity
+            double velError = targetVel - currentVel;
+
+            // Prevent integral windup; clear integral when not trying to spin
+            if (targetVel == 0) {
+                flywheelIntegral = 0;
+            } else {
+                flywheelIntegral += velError * dtFly;
+                flywheelIntegral = Range.clip(flywheelIntegral, -2000, 2000);
+            }
+
+            double velDerivative = (velError - flywheelLastError) / dtFly;
+            flywheelLastError = velError;
+
+            // PID output is a correction in velocity units
+            double pidVelCorrection = flywheelKp * velError
+                    + flywheelKi * flywheelIntegral
+                    + flywheelKd * velDerivative;
+
+            // Final commanded velocity is target plus correction
+            flywheelCommandVel = targetVel + pidVelCorrection;
+
+            // Clip to a reasonable range so you do not command nonsense
+            flywheelCommandVel = Range.clip(flywheelCommandVel, 0, 3000);
+            // ---------- End flywheel velocity PID ----------
+
             if (gamepad2.left_bumper) {
                 autoAdjust = true;
             } else if (gamepad2.right_bumper) {
@@ -242,14 +283,14 @@ public class RedTeleopWebcam extends LinearOpMode {
                     } else if (fireState == 1) {
                         // Step 2: Wait until flywheel reaches speed
                         if (flyWheel.getVelocity() >= flyWheelPower || flyWheel.getVelocity() >= 2580) {
-                            pusherPos = 0.9;   // fire
+                            pusherPos = 0.95;   // fire
                             fireTimer.reset();
                             fireState = 2;     // go to PUSH_UP
                         }
                     } else if (fireState == 2) {
                         // Step 3: pusher up for 0.15s
                         if (fireTimer.seconds() > 0.3) {
-                            pusherPos = 0.4;   // retract
+                            pusherPos = 0.45;   // retract
                             fireTimer.reset();
                             fireState = 3;    // go to PUSH_DOWN
                         }
@@ -275,7 +316,7 @@ public class RedTeleopWebcam extends LinearOpMode {
             }
 
             pusher.setPosition(pusherPos);
-            flyWheel.setVelocity(flyWheelPower);
+            flyWheel.setVelocity(flywheelCommandVel);
 
 //            telemetry.addData("auto power", autoAdjust);
             telemetry.addData("range", range);
