@@ -59,13 +59,13 @@ public class RedTeleopWebcam extends LinearOpMode {
     double turretKi = 0.0004; //0.0005
     double turretKd = 0.0008;  //0.0001
 
-    double flywheelKp = 0.2;    // start values, you will tune
+    double flywheelKp = 0.0004;   // you will tune these
     double flywheelKi = 0.0;
     double flywheelKd = 0.0;
 
     double flywheelIntegral = 0;
     double flywheelLastError = 0;
-    double flywheelCommandVel = 0;   // velocity we actually send to setVelocity
+    double flywheelPidPower = 0;
 
     ElapsedTime flywheelPidTimer = new ElapsedTime();
     double turretIntegral = 0;
@@ -114,9 +114,11 @@ public class RedTeleopWebcam extends LinearOpMode {
                 Thread.currentThread().interrupt();
             }
         }).start();
+
+
         turretPidTimer.reset();
         releaseTimer.reset();
-        flywheelPidTimer.reset();
+        //flywheelPidTimer.reset();
 
         while (opModeIsActive()) {
 
@@ -169,39 +171,8 @@ public class RedTeleopWebcam extends LinearOpMode {
             }
 
 
-            // ---------- Flywheel velocity PID (NEW) ----------
-            double dtFly = flywheelPidTimer.seconds();
-            flywheelPidTimer.reset();
-            dtFly = Range.clip(dtFly, 0.001, 0.1);
 
-            double targetVel = flyWheelPower;   // desired velocity (ticks per second)
-            double currentVel = flyWheelVel;    // measured velocity
-            double velError = targetVel - currentVel;
-
-            // Prevent integral windup; clear integral when not trying to spin
-            if (targetVel == 0) {
-                flywheelIntegral = 0;
-            } else {
-                flywheelIntegral += velError * dtFly;
-                flywheelIntegral = Range.clip(flywheelIntegral, -2000, 2000);
-            }
-
-            double velDerivative = (velError - flywheelLastError) / dtFly;
-            flywheelLastError = velError;
-
-            // PID output is a correction in velocity units
-            double pidVelCorrection = flywheelKp * velError
-                    + flywheelKi * flywheelIntegral
-                    + flywheelKd * velDerivative;
-
-            // Final commanded velocity is target plus correction
-            flywheelCommandVel = targetVel + pidVelCorrection;
-
-            // Clip to a reasonable range so you do not command nonsense
-            flywheelCommandVel = Range.clip(flywheelCommandVel, 0, 3000);
-            // ---------- End flywheel velocity PID ----------
-
-            if (gamepad2.left_bumper) {
+           if (gamepad2.left_bumper) {
                 autoAdjust = true;
             } else if (gamepad2.right_bumper) {
                 autoAdjust = false;
@@ -230,7 +201,7 @@ public class RedTeleopWebcam extends LinearOpMode {
                 }
             }
 
-            if (hasTarget && dt > 0) {
+  /*          if (hasTarget && dt > 0) {
                 // PID terms
                 turretIntegral += error * dt;
 
@@ -261,6 +232,7 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
             } //end pid control
+
             if (targetingTimer.seconds() < 1) {
                 pidTurretPower += 0.38 * Range.clip(Math.abs(gamepad1.right_stick_x) * gamepad1.right_stick_x, -1, 1);
             }
@@ -314,9 +286,9 @@ public class RedTeleopWebcam extends LinearOpMode {
                     pusherPos = 0.4;
                 }
             }
-
+*/
             pusher.setPosition(pusherPos);
-            flyWheel.setVelocity(flywheelCommandVel);
+            //flyWheel.setVelocity(flywheelPidPower);
 
 //            telemetry.addData("auto power", autoAdjust);
             telemetry.addData("range", range);
@@ -390,5 +362,37 @@ public class RedTeleopWebcam extends LinearOpMode {
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
         }
+    }
+    public void flyWheelPid( double flyTarget) {
+        double dtFly = flywheelPidTimer.milliseconds();
+        flywheelPidTimer.reset();
+        dtFly = Range.clip(dtFly, 0.001, 0.1);
+
+        double targetVel = flyTarget;   // desired velocity (ticks per second)
+        double currentVel = flyWheelVel;    // measured velocity
+        double error = targetVel - currentVel;
+
+        // integral term
+        if (targetVel == 0) {
+            flywheelIntegral = 0;           // clear when not spinning
+        } else {
+            flywheelIntegral += error * dtFly;
+            // optional clamp to prevent windup
+            flywheelIntegral = Range.clip(flywheelIntegral, -5000, 5000);
+        }
+
+        // derivative term
+        double derivative = (error - flywheelLastError) / dtFly;
+        flywheelLastError = error;
+
+        // PID output is a power command
+        flywheelPidPower = flywheelKp * error
+                + flywheelKi * flywheelIntegral
+                + flywheelKd * derivative;
+
+        // clip power to valid range
+        flywheelPidPower = Range.clip(flywheelPidPower, 0, 1);
+
+
     }
 }
