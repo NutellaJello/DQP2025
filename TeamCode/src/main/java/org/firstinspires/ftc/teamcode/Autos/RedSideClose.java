@@ -50,11 +50,11 @@ public class RedSideClose extends OpMode {
     PathState pathState;
     //positions
     private final Pose start = new Pose(130,130,Math.toRadians(41));
-    private final Pose outtakePre = new Pose(90,90,Math.toRadians(41));
-    private final Pose intake1 = new Pose(137,88,Math.toRadians(0));
+    private final Pose outtakePre = new Pose(95,90,Math.toRadians(41));
+    private final Pose intake1 = new Pose(135.5,88,Math.toRadians(0));
     private final Pose outtake = new Pose(100,90, Math.toRadians(0));
     private final Pose intake2p1 = new Pose(90,71, Math.toRadians(0));
-    private final Pose intake2p2 = new Pose(134,71-7,Math.toRadians(0));
+    private final Pose intake2p2 = new Pose(139,71-7,Math.toRadians(0));
     private final Pose end = new Pose(130,90,Math.toRadians(0));
 
     //paths
@@ -151,7 +151,7 @@ public class RedSideClose extends OpMode {
         switch(pathState){
             case PRELOAD:
                 if(!moving) {
-                    turret.setTargetPosition(20);
+                    turret.setTargetPosition(30);
                     follower.followPath(Preload, true);
                     moving = true;
                 }
@@ -163,7 +163,7 @@ public class RedSideClose extends OpMode {
                 break;
             case SHOOTPRE:
                 if(!follower.isBusy()){
-                    loopOuttake(66);
+                    loopOuttake(67);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -182,7 +182,7 @@ public class RedSideClose extends OpMode {
                 if(!moving){
                     turret.setTargetPosition(240);
                     intake.setPower(1);
-                    follower.followPath(Intake1, false);
+                    follower.followPath(Intake1, 0.5,false);
                     moving = true;
                 }
                 if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
@@ -223,7 +223,7 @@ public class RedSideClose extends OpMode {
             case INTAKE2:
                 if(!moving){
                     intake.setPower(1);
-                    follower.followPath(Intake2, false);
+                    follower.followPath(Intake2,0.35, false);
                     moving = true;
                 }
                 if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){

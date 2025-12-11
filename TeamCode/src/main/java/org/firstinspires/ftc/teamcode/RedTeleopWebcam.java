@@ -180,7 +180,7 @@ public class RedTeleopWebcam extends LinearOpMode {
                     range = (detection.ftcPose.range + lastRange) / 2; //range smoothing
                     bearing = detection.ftcPose.bearing;   // in degrees
                     elevation = detection.ftcPose.elevation;
-                    error = bearing + (Math.toDegrees(Math.atan(2 / range)));                       // error = current bearing - desired (0)
+                    error = bearing - (Math.toDegrees(Math.atan(2 / range)));                       // error = current bearing - desired (0)
                     lastRange = detection.ftcPose.range;
                     targetingTimer.reset();
                     hasTarget = true;
@@ -231,6 +231,8 @@ public class RedTeleopWebcam extends LinearOpMode {
             } else {
                 turret.setPower(0);   // stop at limits
             }
+
+
 
             if (autoAdjust) {
                 if (gamepad1.x) {
