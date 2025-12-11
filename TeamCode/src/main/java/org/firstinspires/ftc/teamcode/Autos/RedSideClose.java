@@ -31,33 +31,68 @@ public class RedSideClose extends OpMode {
     private int fireState = 0;
     private Timer fireTimer = new Timer();
     private double flyWheelPower = 0;
-    private double pusherPos = 1.0;
+    private double pusherPos = 0.4;
     private int shotCount = 0;
+    private boolean moving = false;
     private enum PathState{
-        CYCLE1,
-        OUTTAKE1,
+        PRELOAD,
+        SHOOTPRE,
         INTAKE1,
-        END
+        OUTTAKE1,
+        SHOOT1,
+        INTAKE2,
+        OUTTAKE2,
+        SHOOT2,
+        END,
+        STOP
     }
 
     PathState pathState;
+    //positions
+    private final Pose start = new Pose(130,130,Math.toRadians(41));
+    private final Pose outtakePre = new Pose(90,90,Math.toRadians(41));
+    private final Pose intake1 = new Pose(137,88,Math.toRadians(0));
+    private final Pose outtake = new Pose(100,90, Math.toRadians(0));
+    private final Pose intake2p1 = new Pose(90,71, Math.toRadians(0));
+    private final Pose intake2p2 = new Pose(134,71-7,Math.toRadians(0));
+    private final Pose end = new Pose(130,90,Math.toRadians(0));
 
-    private final Pose start = new Pose(130,130,Math.toRadians(45));
-    private final Pose outtakePre = new Pose(95,90,Math.toRadians(45));
-    private final Pose intake1 = new Pose(135,90,Math.toRadians(0));
-
-    private PathChain Cycle1;
+    //paths
+    private PathChain Preload;
     private PathChain Intake1;
+    private PathChain Outtake1;
+    private PathChain Intake2;
+    private PathChain Outtake2;
+    private PathChain End;
 
     public void buildPaths(){
-        Cycle1 = follower.pathBuilder()
+        Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
-                .setTangentHeadingInterpolation()
                 .setVelocityConstraint(1)
+                .setConstantHeadingInterpolation(0)
+                .build();
+        Outtake1 = follower.pathBuilder()
+                .addPath(new BezierLine(intake1, outtake))
+                .setConstantHeadingInterpolation(0)
+                .build();
+        Intake2 = follower.pathBuilder()
+                .addPath(new BezierLine(outtake, intake2p1))
+                .setConstantHeadingInterpolation(0)
+                .addPath(new BezierLine(intake2p1,intake2p2))
+                .setVelocityConstraint(1)
+                .setConstantHeadingInterpolation(0)
+                .build();
+        Outtake2 = follower.pathBuilder()
+                .addPath(new BezierLine(intake2p2, outtake))
+                .setConstantHeadingInterpolation(0)
+                .build();
+        End = follower.pathBuilder()
+                .addPath(new BezierLine(outtake,end))
+                .setConstantHeadingInterpolation(0)
                 .build();
     }
 
@@ -71,7 +106,7 @@ public class RedSideClose extends OpMode {
 
     @Override
     public void init(){
-        pathState = PathState.CYCLE1;
+        pathState = PathState.PRELOAD;
         pathTimer = new Timer();
         opmodeTimer = new Timer();
         follower = Constants.createFollower(hardwareMap);
@@ -85,8 +120,11 @@ public class RedSideClose extends OpMode {
 
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
-        turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        turret.setTargetPosition(0);
+        turret.setPower(0.3);
+        turret.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         turret.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         pusher = hardwareMap.get(Servo.class, "pusher");
@@ -102,37 +140,138 @@ public class RedSideClose extends OpMode {
         setPathState(pathState);
     }
     public void statePathUpdate(){
+        telemetry.addData("step",pathState);
+        telemetry.addData("busy",follower.isBusy());
+        telemetry.addData("heading", follower.getHeading());
+        telemetry.addData("velocity", follower.getVelocity());
+        telemetry.addData("turretPos", turret.getCurrentPosition());
+        telemetry.update();
+
+
         switch(pathState){
-            case CYCLE1:
-                follower.followPath(Cycle1, true);
-                pathState = PathState.OUTTAKE1;
+            case PRELOAD:
+                if(!moving) {
+                    turret.setTargetPosition(20);
+                    follower.followPath(Preload, true);
+                    moving = true;
+                }
+                if(!follower.isBusy() && pathTimer.getElapsedTime() > 50) {
+                    pathState = PathState.SHOOTPRE;
+                    pathTimer.resetTimer();
+                    moving = false;
+                }
                 break;
-            case OUTTAKE1:
+            case SHOOTPRE:
                 if(!follower.isBusy()){
-                    loopOuttake(62);
+                    loopOuttake(66);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
                 if (shotCount >= 3) {
                     flyWheelPower = 0;
-                    pusherPos = 1;
+                    pusherPos = 0.4;
                     fireState = 0;
                     shotCount = 0;
                     pathState = PathState.INTAKE1;
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
+                    pathTimer.resetTimer();
                 }
                 break;
             case INTAKE1:
-                intake.setPower(1);
-                follower.followPath(Intake1, true);
-                pathState = PathState.END;
-                break;
-            case END:
-                if(!follower.isBusy()){
+                if(!moving){
+                    turret.setTargetPosition(240);
+                    intake.setPower(1);
+                    follower.followPath(Intake1, false);
+                    moving = true;
+                }
+                if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
                     intake.setPower(0);
+                    pathState = PathState.OUTTAKE1;
+                    pathTimer.resetTimer();
+                    moving = false;
                 }
                 break;
+            case OUTTAKE1:
+                if(!moving){
+                    follower.followPath(Outtake1, true);
+                    moving = true;
+                }
+                if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
+                    pathState = PathState.SHOOT1;
+                    pathTimer.resetTimer();
+                    moving = false;
+                }
+                break;
+            case SHOOT1:
+                if(!follower.isBusy()){
+                    loopOuttake(66);
+                    flyWheel.setVelocity(flyWheelPower);
+                    pusher.setPosition(pusherPos);
+                }
+                if (shotCount >= 3) {
+                    flyWheelPower = 0;
+                    pusherPos = 0.4;
+                    fireState = 0;
+                    shotCount = 0;
+                    pathState = PathState.INTAKE2;
+                    flyWheel.setVelocity(flyWheelPower);
+                    pusher.setPosition(pusherPos);
+                    pathTimer.resetTimer();
+                }
+                break;
+            case INTAKE2:
+                if(!moving){
+                    intake.setPower(1);
+                    follower.followPath(Intake2, false);
+                    moving = true;
+                }
+                if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
+                    intake.setPower(0);
+                    pathState = PathState.OUTTAKE2;
+                    pathTimer.resetTimer();
+                    moving = false;
+                }
+                break;
+            case OUTTAKE2:
+                if(!moving){
+                    follower.followPath(Outtake2, true);
+                    moving = true;
+                }
+                if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
+                    pathState = PathState.SHOOT2;
+                    pathTimer.resetTimer();
+                    moving = false;
+                }
+                break;
+            case SHOOT2:
+                if(!follower.isBusy()){
+                    loopOuttake(68);
+                    flyWheel.setVelocity(flyWheelPower);
+                    pusher.setPosition(pusherPos);
+                }
+                if (shotCount >= 3) {
+                    flyWheelPower = 0;
+                    pusherPos = 0.4;
+                    fireState = 0;
+                    shotCount = 0;
+                    pathState = PathState.END;
+                    flyWheel.setVelocity(flyWheelPower);
+                    pusher.setPosition(pusherPos);
+                    pathTimer.resetTimer();
+                }
+                break;
+            case END:
+                if(!moving) {
+                    intake.setPower(0);
+                    turret.setTargetPosition(0);
+                    follower.followPath(End,false);
+                    moving = true;
+                }
+                if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
+                    moving = false;
+                    pathState = PathState.STOP;
+                }
         }
     }
     @Override
@@ -149,7 +288,7 @@ public class RedSideClose extends OpMode {
 
         else if (fireState == 1) {
             if (flyWheel.getVelocity() >= flyWheelPower || flyWheel.getVelocity() >= 2580) {
-                pusherPos = 0.67;
+                pusherPos = 0.95;
                 fireTimer.resetTimer();
                 fireState = 2;
             }
@@ -157,7 +296,7 @@ public class RedSideClose extends OpMode {
 
         else if (fireState == 2) {
             if (fireTimer.getElapsedTime() > 300) {
-                pusherPos = 1;
+                pusherPos = 0.4;
                 fireTimer.resetTimer();
                 fireState = 3;
             }
