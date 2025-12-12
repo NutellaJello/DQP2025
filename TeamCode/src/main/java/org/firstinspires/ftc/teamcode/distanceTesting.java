@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -26,9 +25,9 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
-@TeleOp(name = "Red Teleop", group = "TeleOp")
+@TeleOp(name = "distance test", group = "TeleOp")
 
-public class RedTeleopWebcam extends LinearOpMode {
+public class distanceTesting extends LinearOpMode {
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
@@ -45,6 +44,9 @@ public class RedTeleopWebcam extends LinearOpMode {
     double intakePower = 0;
     int flyWheelMode = 1;
     double flyWheelVTarget = 0;
+
+    int velUpCount=0;
+
     double pusherPos = 0.4;
     double turretPos;
     double flyWheelVel;
@@ -94,6 +96,7 @@ public class RedTeleopWebcam extends LinearOpMode {
     ElapsedTime spinUpDelay = new ElapsedTime();
     ElapsedTime releaseTimer = new ElapsedTime();
     ElapsedTime targetingTimer = new ElapsedTime();
+    ElapsedTime velUpTimer = new ElapsedTime();
 
 
     @Override
@@ -161,13 +164,15 @@ public class RedTeleopWebcam extends LinearOpMode {
 
             setTurretPid(detectedTags);
 
+            setVelUpCount();
+
             setPusherPos();
 
-
-            //flyWheelTarget = 11.5 * range + 1250; <- old regression
-            //flyWheelPID(flyWheelVTarget);
-
             flyWheel.setVelocity(flyWheelVTarget);
+
+            //flyWheel.setVelocity(flywheelPidPower);
+            //flyWheelTarget = 11.5 * range + 1250;
+ //           flyWheelPID(flyWheelVTarget);
 
             botTelemetry();
 
@@ -177,6 +182,19 @@ public class RedTeleopWebcam extends LinearOpMode {
     }
 
 
+    public void setVelUpCount(){
+
+        if (gamepad1.dpad_right && velUpTimer.seconds() >0.3){
+            velUpCount++;
+            velUpTimer.reset();
+        }
+        else if (gamepad1.dpad_left && velUpTimer.seconds() > 0.3){
+            if (velUpCount>-6.7){
+                velUpCount--;
+                velUpTimer.reset();
+            }
+        }
+    }
 
 
 
@@ -318,7 +336,7 @@ public class RedTeleopWebcam extends LinearOpMode {
                 range = (detection.ftcPose.range + lastRange) / 2; //range smoothing
                 bearing = detection.ftcPose.bearing;   // in degrees
                 elevation = detection.ftcPose.elevation;
-                error = bearing + (Math.toDegrees(Math.atan(3 / range)));                       // error = current bearing - desired (0)
+                error = bearing - (Math.toDegrees(Math.atan(3 / range)));                       // error = current bearing - desired (0)
                 lastRange = detection.ftcPose.range;
                 targetingTimer.reset();
                 hasTarget = true;
@@ -406,6 +424,7 @@ public class RedTeleopWebcam extends LinearOpMode {
         //finally set power to the flywheel
 
         flyWheel.setPower(flywheelPidPower);
+
         tempPIDvar = flywheelPidPower;
         integralCheck = flywheelKi * flywheelIntegral;
         dCheck = flywheelKd * derivative;
@@ -425,7 +444,7 @@ public class RedTeleopWebcam extends LinearOpMode {
 
                 if (fireState == 0) {
                     // Step 1: Start flywheel
-                    flyWheelVTarget = 10.27 * range + 1278.25;//11.5 * range + 1220
+                    flyWheelVTarget = 1500+velUpCount*50;
                     fireState = 1;   // go to SPINNING_UP
                 } else if (fireState == 1) {
                     // Step 2: Wait until flywheel reaches speed
@@ -491,6 +510,8 @@ public class RedTeleopWebcam extends LinearOpMode {
 //            telemetry.addData("auto adjust camera", autoAdjust);
 //            telemetry.addData("pusher position", pusher.getPosition());
         telemetry.addData("flywheel velocity", flyWheel.getVelocity());
+        telemetry.addData("range", range);
+        telemetry.addData("velUp counter velocity", 1500+velUpCount*50);
         telemetry.update();
 
     }

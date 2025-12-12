@@ -98,7 +98,13 @@ public class DecodeDriveTrain {
         double x = Range.clip(-gamepad.left_stick_x, -1, 1);
         //right stick x value
         double rx = Range.clip(-gamepad.right_stick_x, -1, 1);
-
+        if(gamepad.right_trigger > 0.1){
+            dampSpeedRatio = 1 - 0.8 * gamepad.right_trigger;
+            dampTurnRatio = -0.6 + 0.4 * gamepad.right_trigger;
+        }else{
+            dampSpeedRatio = 1;
+            dampTurnRatio = -0.6;
+        }
         if (field){
             double max;
 //            YawPitchRollAngles robotOrientation;
@@ -106,13 +112,7 @@ public class DecodeDriveTrain {
             if(gamepad.dpad_right){
                 pinpoint.resetPosAndIMU();
             }
-            if(gamepad.right_trigger > 0.1){
-                dampSpeedRatio = 0.4;
-                dampTurnRatio = -0.3;
-            }else{
-                dampSpeedRatio = 1;
-                dampTurnRatio = -0.6;
-            }
+
 
             double axial   = y * Math.cos(heading) - x * Math.sin(heading);
             double lateral = 1.1 * y * Math.sin(heading) + x * Math.cos(heading);
