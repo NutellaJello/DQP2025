@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -27,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 
 @TeleOp(name = "Blue Teleop", group = "TeleOp")
 
-public class BlueTeleopWebcam extends LinearOpMode{
+public class BlueTeleopWebcam extends LinearOpMode {
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
@@ -43,22 +44,48 @@ public class BlueTeleopWebcam extends LinearOpMode{
     boolean autoAdjust = true;
     double intakePower = 0;
     int flyWheelMode = 1;
-    double flyWheelPower = 0;
-    double pusherPos = 0.3;
-    double turretPower;
+    double flyWheelVTarget = 0;
+    double pusherPos = 0.4;
     double turretPos;
     double flyWheelVel;
+    double idlePower = 0;
+
+    //double flyWheelTarget = 0;
 
     double range;
     double lastRange;
     double bearing;
     double elevation;
 
-    double turretKp = 0.016;
-    double turretKi = 0.0007; //0.0005
-    double turretKd = 0.0002;  //0.0001
+    double turretKp = 0.022;
+    double turretKi = 0.0004; //0.0005
+    double turretKd = 0.0008;  //0.0001
 
-    // PID state
+
+
+
+
+    //the PACIFIC
+
+
+
+
+
+    double flywheelKp = 0.0018;   // you will tune these0.003
+    double flywheelKi = 0.0000018;
+    double flywheelKd = 0.05;//.08
+
+    double flywheelIntegral = 0;
+    double flywheelLastError = 0;
+    double flywheelPidPower = 0;
+
+    double tempPIDvar = 0;
+    double integralCheck = 0;
+
+    double dCheck = 0 ;
+    double pCheck = 0;
+
+    ElapsedTime flywheelPidTimer = new ElapsedTime();
     double turretIntegral = 0;
     double turretLastError = 0;
     int fireState = 0;      // 0 = idle, 1 = spinup, 2 = pushUp, 3 = pushDown
@@ -78,14 +105,14 @@ public class BlueTeleopWebcam extends LinearOpMode{
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap);
 
-        intake=hardwareMap.get(DcMotorEx.class, "intake");
+        intake = hardwareMap.get(DcMotorEx.class, "intake");
         intake.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
 
-        flyWheel=hardwareMap.get(DcMotorEx.class, "FW");
+        flyWheel = hardwareMap.get(DcMotorEx.class, "FW");
         flyWheel.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
         flyWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        turret=hardwareMap.get(DcMotorEx.class, "turret");
+        turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
         turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 //        turret.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -95,24 +122,21 @@ public class BlueTeleopWebcam extends LinearOpMode{
         pusher.setDirection(Servo.Direction.REVERSE);
 
 
-
-
-
         initWebcam();
         waitForStart();
-        while (visionPortal.getCameraState() != VisionPortal.CameraState.STREAMING && !isStopRequested()) {
-            sleep(20);
-        }
-        // exposure and gain
-        ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
-        GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
 
-        exposureControl.setMode(ExposureControl.Mode.Manual);
-        exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
+        new Thread(() -> {
+            try {
+                cameraControls();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
 
-        gainControl.setGain(100);
+
         turretPidTimer.reset();
         releaseTimer.reset();
+        //flywheelPidTimer.reset();
 
         while (opModeIsActive()) {
 
@@ -123,192 +147,40 @@ public class BlueTeleopWebcam extends LinearOpMode{
             // toggle for field centric
 
             // all the movement controls.
-            drivetrain.Teleop(gamepad1,telemetry, fieldCentric);
+            drivetrain.Teleop(gamepad1, telemetry, fieldCentric);
 
             turretPos = turret.getCurrentPosition();
+
             flyWheelVel = flyWheel.getVelocity();
 
+            setIdlePower();
 
-            if(gamepad1.left_trigger > 0 && !gamepad1.x){
-                intakePower = Range.clip(gamepad1.left_trigger, 0, 1);
-            }else if (gamepad1.right_trigger > 0 && !gamepad1.x){
-                intakePower = -Range.clip(gamepad1.right_trigger, 0, 1);
-            }
-            else{
-                intakePower = 0;
-            }
-            intake.setPower(intakePower);
-            if(gamepad2.b) { // auto
-                flyWheelMode = 0;
-            }else if(gamepad2.a){ // 2200
-                flyWheelMode = 1;
-            }else if(gamepad2.x) {
-                flyWheelMode = 2;//off
-            }else if(gamepad2.y){
-                flyWheelMode = 3;
-            }
+            setIntakePower();
 
-            if(flyWheelMode == 0){
-                flyWheelPower = 0;
-            } else if (flyWheelMode == 2) {
-                flyWheelPower = 2000;
-            }
-            else if (flyWheelMode == 3) {
-                flyWheelPower = 2500;
-            }
+            setManualControls();
 
-            // PID
-            if(gamepad2.left_bumper){
-                autoAdjust = true;
-            } else if(gamepad2.right_bumper){
-                autoAdjust = false;
-            }
-            //start pid control
-            double dt = turretPidTimer.seconds();
-            turretPidTimer.reset();
-            dt = Range.clip(dt,0.001, 0.1);
+            setTurretPid(detectedTags);
 
-            double pidTurretPower = 0;
-            boolean hasTarget = false;
-            double error = 0;
-
-            // Find our tag and compute error (target bearing = 0)
-            for (AprilTagDetection detection : detectedTags) {
-                if (detection.metadata != null && detection.id == 20) { // your desired tag ID
-                    range = (detection.ftcPose.range + lastRange)/2; //range smoothing
-                    bearing = detection.ftcPose.bearing;   // in degrees
-                    elevation = detection.ftcPose.elevation;
-                    error = bearing - (Math.toDegrees(Math.atan(3/range)));                       // error = current bearing - desired (0)
-                    lastRange = detection.ftcPose.range;
-                    targetingTimer.reset();
-                    hasTarget = true;
-                    break; // we found our tag, no need to keep looping
-
-                }
-            }
-
-            if (hasTarget && dt > 0) {
-                // PID terms
-                turretIntegral += error * dt;
-
-                // Prevent integral windup (optional, tune limits)
-                turretIntegral = Range.clip(turretIntegral, -100, 100);
-
-                double derivative = (turretLastError - error) / dt;
-
-                pidTurretPower = turretKp * error
-                        + turretKi * turretIntegral
-                        + turretKd * derivative;
-                turretLastError = error;
-
-            } else {
-                // No target: stop PID contributions & reset integral & use manual control
-                turretIntegral = 0;
-                turretLastError = 0;
-                if(gamepad2.left_trigger > 0){
-                    pidTurretPower = Range.clip(gamepad2.left_trigger/2, 0, 0.5);
-                }
-                else if(gamepad2.right_trigger > 0){
-                    pidTurretPower = -Range.clip(gamepad2.right_trigger/2., 0, 0.5);
-                }else if(gamepad1.left_bumper ) {
-                    pidTurretPower = 0.4;
-                }else if(gamepad1.right_bumper){
-                    pidTurretPower = -0.4;
-                }else{
-                    pidTurretPower = 0;
-                }
+            setPusherPos();
 
 
-            } //end pid control
-            if(targetingTimer.seconds() < 1){
-                pidTurretPower += 0.40 * Range.clip(Math.abs(gamepad1.right_stick_x) * gamepad1.right_stick_x, -1, 1);
-            }
-            pidTurretPower = Range.clip(pidTurretPower,-0.8, 0.8);
+            //flyWheelTarget = 11.5 * range + 1250; <- old regression
+            //flyWheelPID(flyWheelVTarget);
 
-            // limit turret pos
-            if ((pidTurretPower > 0 && turretPos < 600) || (pidTurretPower < 0 && turretPos > -600)) { //left, right limits
-                turret.setPower(pidTurretPower);
-            } else {
-                turret.setPower(0);   // stop at limits
-            }
+            flyWheel.setVelocity(flyWheelVTarget);
 
-            if (autoAdjust) {
-                if (gamepad1.x) {
-
-                    if (fireState == 0) {
-                        // Step 1: Start flywheel
-                        flyWheelPower = 11.5 * range + 1250;
-                        fireState = 1;   // go to SPINNING_UP
-                    }
-
-                    else if (fireState == 1) {
-                        // Step 2: Wait until flywheel reaches speed
-                        if (flyWheel.getVelocity() >= flyWheelPower || flyWheel.getVelocity() >= 2580) {
-                            pusherPos = 0.67;   // fire
-                            fireTimer.reset();
-                            fireState = 2;     // go to PUSH_UP
-                        }
-                    }
-
-                    else if (fireState == 2) {
-                        // Step 3: pusher up for 0.15s
-                        if (fireTimer.seconds() > 0.3) {
-                            pusherPos = 1;   // retract
-                            fireTimer.reset();
-                            fireState = 3;    // go to PUSH_DOWN
-                        }
-                    }
-
-                    else if (fireState == 3) {
-                        intake.setPower(0.9);
-                        // Step 4: wait 0.15s then fire again
-                        if (fireTimer.seconds() > 0.5) {
-                            fireState = 1;   // loop back→ SPINNING_UP → fire again
-                        }
-                    }
-                }
-                else {
-                    // X RELEASED → reset firing system
-                    pusherPos = 1;
-                    flyWheelPower = 0;
-                    fireState = 0;
-                }
-            } else{
-                if(gamepad1.x){
-                    pusherPos = 0.67;
-                }else{
-                    pusherPos = 1;
-                }
-            }
-
-            pusher.setPosition(pusherPos);
-            flyWheel.setVelocity(flyWheelPower);
-
-//            telemetry.addData("auto power", autoAdjust);
-            telemetry.addData("range",range);
-            telemetry.addData("target turret power", 11.5 * range + 1250);
-//            telemetry.addData("turret turn power", pidTurretPower);
-//            telemetry.addData("flywheel velocity", flyWheelVel);
-//            telemetry.addData("dt",dt);
-//            telemetryWebcam();
-            //          telemetry.addData("fire timer", fireTimer);
-//            telemetry.addData("stop flywheel delay", releaseTimer.seconds());
-//            telemetry.addData("spin up delay", spinUpDelay.seconds());
-//            telemetry.addData("bearing", bearing);
-            //   telemetry.addData("Turret Position", turretPos);
-//            telemetry.addData("Field Centric", fieldCentric);
-//            telemetry.addData("auto adjust camera", autoAdjust);
-//            telemetry.addData("pusher position", pusher.getPosition());
-            telemetry.addData("flywheel velocity", flyWheel.getVelocity());
-            telemetry.update();
-
-
-
+            botTelemetry();
 
         }
         visionPortal.close();
 
     }
+
+
+
+
+
+
     private void initWebcam() {
 
         // Create the AprilTag processor.
@@ -343,30 +215,287 @@ public class BlueTeleopWebcam extends LinearOpMode{
 
         // Build the Vision Portal, using the above settings.
         visionPortal = builder.build();
-        sleep(500);
 
     }
-    private void telemetryWebcam() {
 
-        List<AprilTagDetection> detectedTags = aprilTag.getDetections();
-        telemetry.addData("# AprilTags Detected", detectedTags.size());
 
-        // Step through the list of detections and display info for each one.
-        for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null) {
-                telemetry.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
-                telemetry.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
-            } else {
-                telemetry.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
-                telemetry.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
+
+
+    public void cameraControls() throws InterruptedException {
+        Thread.sleep(3000);
+        if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
+            // exposure and gain
+            ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
+            GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
+
+            exposureControl.setMode(ExposureControl.Mode.Manual);
+            exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
+            gainControl.setGain(100);
+        }
+    }
+
+
+
+
+
+    public void setIdlePower(){
+        if(autoAdjust){
+            if(gamepad1.dpad_up){
+                idlePower = 1800;
+            }else if(gamepad1.dpad_down){
+                idlePower = 0;
             }
-        }   // end for() loop
+        }
+        else{
+            idlePower = 0;
+        }
+    }
 
-        // Add "key" information to telemetry
-//        telemetry.addLine("\nkey:\nXYZ = X (Right), Y (Forward), Z (Up) dist.");
-//        telemetry.addLine("PRY = Pitch, Roll & Yaw (XYZ Rotation)");
-        telemetry.addLine("RBE = Range, Bearing & Elevation");
+
+
+
+
+    public void setIntakePower(){
+        if (gamepad1.left_trigger > 0.1 && !gamepad1.x) {
+            intakePower = 1;
+        } else if(gamepad1.a){
+            intakePower = -1;
+        }else {
+            intakePower = 0;
+        }
+        intake.setPower(intakePower);
+    }
+
+
+
+
+    public void setManualControls(){
+        if (gamepad2.b) { // auto
+            flyWheelMode = 0;
+        } else if (gamepad2.a) { // 2200
+            flyWheelMode = 1;
+        } else if (gamepad2.x) {
+            flyWheelMode = 2;//off
+        } else if (gamepad2.y) {
+            flyWheelMode = 3;
+        }
+
+        if (flyWheelMode == 0) {
+            flyWheelVTarget = 0;
+        } else if (flyWheelMode == 2) {
+            flyWheelVTarget = 2000;
+        } else if (flyWheelMode == 3) {
+            flyWheelVTarget = 2500;
+        }
+
+
+        if (gamepad2.left_bumper) {
+            autoAdjust = true;
+        } else if (gamepad2.right_bumper) {
+            autoAdjust = false;
+        }
+
 
     }
+
+
+
+
+
+    public void setTurretPid(List<AprilTagDetection> detectedTags){
+
+        double dt = turretPidTimer.seconds();
+        turretPidTimer.reset();
+        dt = Range.clip(dt, 0.001, 0.1);
+
+        double pidTurretPower = 0;
+        boolean hasTarget = false;
+        double error = 0;
+
+        // Find our tag and compute error (target bearing = 0)
+        for (AprilTagDetection detection : detectedTags) {
+            if (detection.metadata != null && detection.id == 20) { // your desired tag ID
+                range = (detection.ftcPose.range + lastRange) / 2; //range smoothing
+                bearing = detection.ftcPose.bearing;   // in degrees
+                elevation = detection.ftcPose.elevation;
+                error = bearing - (Math.toDegrees(Math.atan(3 / range)));                       // error = current bearing - desired (0)
+                lastRange = detection.ftcPose.range;
+                targetingTimer.reset();
+                hasTarget = true;
+                break; // we found our tag, no need to keep looping
+
+            }
+        }
+
+        if (hasTarget && dt > 0) {
+            // PID terms
+            turretIntegral += error * dt;
+
+            // Prevent integral windup (optional, tune limits)
+
+            double derivative = -(turretLastError - error) / dt;
+
+            pidTurretPower = turretKp * error
+                    + turretKi * turretIntegral
+                    + turretKd * derivative;
+            turretLastError = error;
+
+        } else {
+            // No target: stop PID contributions & reset integral & use manual control
+            turretIntegral = 0;
+            turretLastError = 0;
+            if (gamepad2.left_trigger > 0) {
+                pidTurretPower = Range.clip(gamepad2.left_trigger / 2, 0, 0.5);
+            } else if (gamepad2.right_trigger > 0) {
+                pidTurretPower = -Range.clip(gamepad2.right_trigger / 2., 0, 0.5);
+            } else if (gamepad1.left_bumper) {
+                pidTurretPower = 0.4;
+            } else if (gamepad1.right_bumper) {
+                pidTurretPower = -0.4;
+            } else {
+                pidTurretPower = 0;
+            }
+        }
+        if (targetingTimer.seconds() < 1) {
+            pidTurretPower += 0.38 * Range.clip(Math.abs(gamepad1.right_stick_x) * gamepad1.right_stick_x, -1, 1);
+        }
+        pidTurretPower = Range.clip(pidTurretPower, -0.8, 0.8);
+
+        // limit turret pos
+        if ((pidTurretPower > 0 && turretPos < 600) || (pidTurretPower < 0 && turretPos > -600)) { //left, right limits
+            turret.setPower(pidTurretPower);
+        } else {
+            turret.setPower(0);   // stop at limits
+        }
+
+    }
+
+
+
+
+    public void flyWheelPID( double flyTarget) {
+        double dtFly = flywheelPidTimer.milliseconds();
+        flywheelPidTimer.reset();
+        //dtFly = Range.clip(dtFly, 0.001, 0.1);
+
+        double targetVel = flyTarget;   // desired velocity (ticks per second)
+        double currentVel = flyWheelVel;    // measured velocity
+        double error = targetVel - currentVel;
+
+        // integral term
+        if (targetVel == 0) {
+            flywheelIntegral = 0;           // clear when not spinning
+        } else {
+            flywheelIntegral += error * dtFly;
+            // optional clamp to prevent windup
+            //flywheelIntegral = Range.clip(flywheelIntegral, -5000, 5000);
+        }
+
+        // derivative term
+        double derivative = (error - flywheelLastError) / dtFly;
+        flywheelLastError = error;
+
+        // PID output is a power command
+        flywheelPidPower = flywheelKp * error
+                + flywheelKi * flywheelIntegral
+                + flywheelKd * derivative;
+
+        // clip power to valid range
+        flywheelPidPower = Range.clip(flywheelPidPower, 0, 1);
+
+        //finally set power to the flywheel
+
+        flyWheel.setPower(flywheelPidPower);
+        tempPIDvar = flywheelPidPower;
+        integralCheck = flywheelKi * flywheelIntegral;
+        dCheck = flywheelKd * derivative;
+        pCheck = flywheelKp * error;
+
+        //d is no longer <0.1 but needs to be tuned, massive oscillations
+
+    }
+
+
+
+
+
+    public void setPusherPos(){
+        if (autoAdjust) {
+            if (gamepad1.x) {
+
+                if (fireState == 0) {
+                    // Step 1: Start flywheel
+                    flyWheelVTarget = 10.27 * range + 1278.25;//11.5 * range + 1220
+                    fireState = 1;   // go to SPINNING_UP
+                } else if (fireState == 1) {
+                    // Step 2: Wait until flywheel reaches speed
+                    if (flyWheel.getVelocity() >= flyWheelVTarget ) {
+                        pusherPos = 0.95;   // fire
+                        fireTimer.reset();
+                        fireState = 2;     // go to PUSH_UP
+                    }
+                } else if (fireState == 2) {
+                    // Step 3: pusher up for 0.15s
+                    if (fireTimer.seconds() > 0.3) {
+                        pusherPos = 0.45;   // retract
+                        fireTimer.reset();
+                        fireState = 3;    // go to PUSH_DOWN
+                    }
+                } else if (fireState == 3) {
+                    intake.setPower(1);
+                    // Step 4: wait 0.15s then fire again
+                    if (fireTimer.seconds() > 0.5) {
+                        fireState = 1;   // loop back→ SPINNING_UP → fire again
+                    }
+                }
+            } else {
+                // X RELEASED → reset firing system
+                pusherPos = 0.4;
+                flyWheelVTarget = idlePower;
+                fireState = 0;
+            }
+        } else {
+            if (gamepad1.x) {
+                pusherPos = 0.9;
+            } else {
+                pusherPos = 0.4;
+            }
+        }
+
+        pusher.setPosition(pusherPos);
+    }
+
+
+
+
+    public void botTelemetry(){
+        //            telemetry.addData("auto power", autoAdjust);
+        telemetry.addData("d", dCheck);
+        telemetry.addData("p", pCheck);
+
+        //telemetry.addData("range", range);
+        telemetry.addData("target fly power", flyWheelVTarget);
+        telemetry.addData("integral", integralCheck);
+        telemetry.addData("totalPowpowpow", tempPIDvar);
+
+        //telemetry.addData("turret error", error);
+//            telemetry.addData("turret turn power", pidTurretPower);
+//            telemetry.addData("flywheel velocity", flyWheelVel);
+//            telemetry.addData("dt",dt);
+//            telemetryWebcam();
+        //          telemetry.addData("fire timer", fireTimer);
+//            telemetry.addData("stop flywheel delay", releaseTimer.seconds());
+//            telemetry.addData("spin up delay", spinUpDelay.seconds());
+//            telemetry.addData("bearing", bearing);
+        //   telemetry.addData("Turret Position", turretPos);
+//            telemetry.addData("Field Centric", fieldCentric);
+//            telemetry.addData("auto adjust camera", autoAdjust);
+//            telemetry.addData("pusher position", pusher.getPosition());
+        telemetry.addData("flywheel velocity", flyWheel.getVelocity());
+        telemetry.update();
+
+    }
+
 
 }
+
