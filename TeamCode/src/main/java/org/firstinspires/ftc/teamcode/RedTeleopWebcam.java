@@ -71,9 +71,9 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
 
-    double flywheelKp = 0.002;   // you will tune these
-    double flywheelKi = 0.0004;
-    double flywheelKd = 0.0005;
+    double flywheelKp = 0.0018;   // you will tune these0.003
+    double flywheelKi = 0.0000018;
+    double flywheelKd = 0.05;//.08
 
     double flywheelIntegral = 0;
     double flywheelLastError = 0;
@@ -388,7 +388,7 @@ public class RedTeleopWebcam extends LinearOpMode {
         } else {
             flywheelIntegral += error * dtFly;
             // optional clamp to prevent windup
-            flywheelIntegral = Range.clip(flywheelIntegral, -5000, 5000);
+            //flywheelIntegral = Range.clip(flywheelIntegral, -5000, 5000);
         }
 
         // derivative term
@@ -476,6 +476,7 @@ public class RedTeleopWebcam extends LinearOpMode {
         //telemetry.addData("range", range);
         telemetry.addData("target fly power", flyWheelVTarget);
         telemetry.addData("integral", integralCheck);
+        telemetry.addData("totalPowpowpow", tempPIDvar);
 
         //telemetry.addData("turret error", error);
 //            telemetry.addData("turret turn power", pidTurretPower);
