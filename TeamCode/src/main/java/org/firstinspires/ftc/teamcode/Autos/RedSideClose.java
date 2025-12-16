@@ -40,7 +40,8 @@ public class RedSideClose extends OpMode {
         INTAKE1,
         OUTTAKE1,
         SHOOT1,
-        INTAKE2,
+        INTAKE21,
+        INTAKE22,
         OUTTAKE2,
         SHOOT2,
         END,
@@ -51,17 +52,18 @@ public class RedSideClose extends OpMode {
     //positions
     private final Pose start = new Pose(130,130,Math.toRadians(41));
     private final Pose outtakePre = new Pose(95,90,Math.toRadians(41));
-    private final Pose intake1 = new Pose(135.5,88,Math.toRadians(0));
     private final Pose outtake = new Pose(100,90, Math.toRadians(0));
-    private final Pose intake2p1 = new Pose(90,71, Math.toRadians(0));
-    private final Pose intake2p2 = new Pose(139,71-7,Math.toRadians(0));
+    private final Pose intake1 = new Pose(133,88,Math.toRadians(0));
+    private final Pose intake2p1 = new Pose(100,68, Math.toRadians(0));
+    private final Pose intake2p2 = new Pose(126,68-5,Math.toRadians(0));
     private final Pose end = new Pose(130,90,Math.toRadians(0));
 
     //paths
     private PathChain Preload;
     private PathChain Intake1;
     private PathChain Outtake1;
-    private PathChain Intake2;
+    private PathChain Intake21;
+    private PathChain Intake22;
     private PathChain Outtake2;
     private PathChain End;
 
@@ -72,18 +74,18 @@ public class RedSideClose extends OpMode {
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
-                .setVelocityConstraint(1)
                 .setConstantHeadingInterpolation(0)
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setConstantHeadingInterpolation(0)
                 .build();
-        Intake2 = follower.pathBuilder()
+        Intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
                 .setConstantHeadingInterpolation(0)
+                .build();
+        Intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p1,intake2p2))
-                .setVelocityConstraint(1)
                 .setConstantHeadingInterpolation(0)
                 .build();
         Outtake2 = follower.pathBuilder()
@@ -109,7 +111,7 @@ public class RedSideClose extends OpMode {
         pathState = PathState.PRELOAD;
         pathTimer = new Timer();
         opmodeTimer = new Timer();
-        follower = Constants.createFollower(hardwareMap);
+        follower = Constants.createAutoFollower(hardwareMap);
 
         intake = hardwareMap.get(DcMotorEx.class, "intake");
         intake.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
@@ -138,6 +140,7 @@ public class RedSideClose extends OpMode {
     public void start(){
         opmodeTimer.resetTimer();
         setPathState(pathState);
+        pathTimer.resetTimer();
     }
     public void statePathUpdate(){
         telemetry.addData("step",pathState);
@@ -151,7 +154,7 @@ public class RedSideClose extends OpMode {
         switch(pathState){
             case PRELOAD:
                 if(!moving) {
-                    turret.setTargetPosition(30);
+                    turret.setTargetPosition(50);
                     follower.followPath(Preload, true);
                     moving = true;
                 }
@@ -163,7 +166,7 @@ public class RedSideClose extends OpMode {
                 break;
             case SHOOTPRE:
                 if(!follower.isBusy()){
-                    loopOuttake(67);
+                    loopOuttake(67.5);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -180,9 +183,9 @@ public class RedSideClose extends OpMode {
                 break;
             case INTAKE1:
                 if(!moving){
-                    turret.setTargetPosition(240);
+                    turret.setTargetPosition(290);
                     intake.setPower(1);
-                    follower.followPath(Intake1, 0.5,false);
+                    follower.followPath(Intake1, 0.3,false);
                     moving = true;
                 }
                 if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
@@ -205,7 +208,7 @@ public class RedSideClose extends OpMode {
                 break;
             case SHOOT1:
                 if(!follower.isBusy()){
-                    loopOuttake(66);
+                    loopOuttake(67);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -214,16 +217,29 @@ public class RedSideClose extends OpMode {
                     pusherPos = 0.4;
                     fireState = 0;
                     shotCount = 0;
-                    pathState = PathState.INTAKE2;
+                    intake.setPower(0);
+                    pathState = PathState.INTAKE21;
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                     pathTimer.resetTimer();
                 }
                 break;
-            case INTAKE2:
+            case INTAKE21:
                 if(!moving){
+                    follower.followPath(Intake21, false);
+                    moving = true;
+                }
+                if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
+                    pathState = PathState.INTAKE22;
+                    pathTimer.resetTimer();
+                    moving = false;
+                }
+                break;
+            case INTAKE22:
+                if(!moving){
+                    turret.setTargetPosition(270);
                     intake.setPower(1);
-                    follower.followPath(Intake2,0.35, false);
+                    follower.followPath(Intake22,0.3, false);
                     moving = true;
                 }
                 if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
@@ -246,7 +262,7 @@ public class RedSideClose extends OpMode {
                 break;
             case SHOOT2:
                 if(!follower.isBusy()){
-                    loopOuttake(68);
+                    loopOuttake(66);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -288,6 +304,7 @@ public class RedSideClose extends OpMode {
 
         else if (fireState == 1) {
             if (flyWheel.getVelocity() >= flyWheelPower || flyWheel.getVelocity() >= 2580) {
+                intake.setPower(0);
                 pusherPos = 0.95;
                 fireTimer.resetTimer();
                 fireState = 2;
@@ -295,7 +312,7 @@ public class RedSideClose extends OpMode {
         }
 
         else if (fireState == 2) {
-            if (fireTimer.getElapsedTime() > 300) {
+            if (fireTimer.getElapsedTime() > 400) {
                 pusherPos = 0.4;
                 fireTimer.resetTimer();
                 fireState = 3;
@@ -303,8 +320,8 @@ public class RedSideClose extends OpMode {
         }
 
         else if (fireState == 3) {
-            intake.setPower(0.9);
-            if (fireTimer.getElapsedTime() > 500) {
+            intake.setPower(1);
+            if (fireTimer.getElapsedTime() > 700) {
                 shotCount++;
                 fireState = 1;
             }
