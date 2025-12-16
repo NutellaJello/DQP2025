@@ -16,17 +16,32 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class Constants {
-    public static FollowerConstants followerConstants = new FollowerConstants()
+    public static FollowerConstants followerAutoConstants = new FollowerConstants()
             .useSecondaryTranslationalPIDF(true)
             .useSecondaryHeadingPIDF(true)
             .useSecondaryDrivePIDF(true)
             .mass(11.52125)
             .forwardZeroPowerAcceleration(-36.20)
             .lateralZeroPowerAcceleration(-66.38)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.1, 0, 0, 0))
-            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.1,0,0.01,0))
-            .headingPIDFCoefficients(new PIDFCoefficients(2,0,0.2,0))
-            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2,0,0.05,0))
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.08, 0.01, 0.01, 0.01))
+            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.09,0,0.01,0.03))
+            .headingPIDFCoefficients(new PIDFCoefficients(2,0,0.2,0.05))
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2,0,0.05,0.03))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.025,0,0.00001,0.6,0.01))
+            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0.02,0.01,0.000005,0.6,0.01))
+            .centripetalScaling(0.0005);
+
+    public static FollowerConstants followerTeleopConstants = new FollowerConstants()
+            .useSecondaryTranslationalPIDF(true)
+            .useSecondaryHeadingPIDF(true)
+            .useSecondaryDrivePIDF(true)
+            .mass(11.52125)
+            .forwardZeroPowerAcceleration(-36.20)
+            .lateralZeroPowerAcceleration(-66.38)
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.08, 0.01, 0.01, 0.01))
+            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.3,0,0.01,0.03))
+            .headingPIDFCoefficients(new PIDFCoefficients(2,0,0.2,0.05))
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(4,0,0.05,0.03))
             .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.025,0,0.00001,0.6,0.01))
             .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0.02,0.01,0.000005,0.6,0.01))
             .centripetalScaling(0.0005);
@@ -53,8 +68,15 @@ public class Constants {
             .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 
-    public static Follower createFollower(HardwareMap hardwareMap) {
-        return new FollowerBuilder(followerConstants, hardwareMap)
+    public static Follower createAutoFollower(HardwareMap hardwareMap) {
+        return new FollowerBuilder(followerAutoConstants, hardwareMap)
+                .pathConstraints(pathConstraints)
+                .mecanumDrivetrain(driveConstants)
+                .pinpointLocalizer(localizerConstants)
+                .build();
+    }
+    public static Follower createTeleopFollower(HardwareMap hardwareMap) {
+        return new FollowerBuilder(followerTeleopConstants, hardwareMap)
                 .pathConstraints(pathConstraints)
                 .mecanumDrivetrain(driveConstants)
                 .pinpointLocalizer(localizerConstants)
