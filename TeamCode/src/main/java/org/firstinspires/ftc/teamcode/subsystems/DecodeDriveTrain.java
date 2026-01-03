@@ -21,7 +21,6 @@ public class DecodeDriveTrain {
     private DcMotorEx fr; //Front right motor of drivetrain
     private DcMotorEx bl; //Back left motor of drivetrain
     private DcMotorEx br; //Back right motor of drivetrain
-    private IMU imu;
     GoBildaPinpointDriver pinpoint;
     private double dampSpeedRatio = 1;
     private double dampTurnRatio  = -1;
@@ -67,7 +66,7 @@ public class DecodeDriveTrain {
          * number of ticks per unit of your odometry pod.  For example:
          *     pinpoint.setEncoderResolution(13.26291192, DistanceUnit.MM);
          */
-        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD);
+        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD);
 
         /*
          * Set the direction that each of the two odometry pods count. The X (forward) pod should
@@ -98,6 +97,13 @@ public class DecodeDriveTrain {
         double x = Range.clip(-gamepad.left_stick_x, -1, 1);
         //right stick x value
         double rx = Range.clip(-gamepad.right_stick_x, -1, 1);
+        if(gamepad.right_trigger > 0.1){
+            dampSpeedRatio = 1 - 0.6 * gamepad.right_trigger;
+            dampTurnRatio = -0.6 + 0.3 * gamepad.right_trigger;
+        }else{
+            dampSpeedRatio = 1;
+            dampTurnRatio = -0.6;
+        }
 
         if (field){
             double max;
@@ -106,16 +112,9 @@ public class DecodeDriveTrain {
             if(gamepad.dpad_up){
                 pinpoint.resetPosAndIMU();
             }
-            if(gamepad.right_bumper){
-                dampSpeedRatio = 0.25;
-                dampTurnRatio = -0.2;
-            }else{
-                dampSpeedRatio = 1;
-                dampTurnRatio = -0.6;
-            }
 
             double axial   = y * Math.cos(heading) - x * Math.sin(heading);
-            double lateral = 1.1 * y * Math.sin(heading) + x * Math.cos(heading);
+            double lateral = 1.2 * y * Math.sin(heading) + x * Math.cos(heading);
 
             double turn     =  0.8 * -gamepad.right_stick_x;
 
@@ -142,13 +141,6 @@ public class DecodeDriveTrain {
             br.setPower(PowerBR);
         }
         else{
-            if(gamepad.right_bumper){
-                dampSpeedRatio = 0.21;
-                dampTurnRatio = -0.2; // -0.15
-            }else{
-                dampSpeedRatio = 0.8;
-                dampTurnRatio = -0.6;
-            }
 
             PowerFL = (y - x) * dampSpeedRatio + dampTurnRatio * rx;
             PowerFR = (y + x) * dampSpeedRatio - dampTurnRatio * rx;
