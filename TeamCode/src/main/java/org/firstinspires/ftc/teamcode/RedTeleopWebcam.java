@@ -21,8 +21,10 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.Exposur
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
+import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -61,15 +63,7 @@ public class RedTeleopWebcam extends LinearOpMode {
     double lastRange;
     double bearing;
     double elevation;
-
-    double turretKp = 0.022;
-    double turretKi = 0.0004; //0.0005
-    double turretKd = 0.0004;  //0.0001
-
-
-
-    double turretIntegral = 0;
-    double turretLastError = 0;
+    GoalPos goalPos = new GoalPos(30,50);
     int fireState = 0;      // 0 = idle, 1 = spinup, 2 = pushUp, 3 = pushDown
     ElapsedTime fireTimer = new ElapsedTime();
     ElapsedTime turretPidTimer = new ElapsedTime();
@@ -81,6 +75,8 @@ public class RedTeleopWebcam extends LinearOpMode {
     private PathChain Hold;
     private boolean holding = false;
 
+    private boolean LBPress = false;
+    private double turretTarget = 0;
 
     @Override
     public void runOpMode() {
@@ -104,7 +100,9 @@ public class RedTeleopWebcam extends LinearOpMode {
         turret.setDirection(DcMotorEx.Direction.FORWARD);
         turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 //        turret.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        turret.setTargetPosition(0);
+        turret.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        turret.setPower(1);
 
         pusher = hardwareMap.get(Servo.class, "pusher");
         pusher.setDirection(Servo.Direction.REVERSE);
@@ -121,13 +119,12 @@ public class RedTeleopWebcam extends LinearOpMode {
             }
         }).start();
 
-
+        follower.setStartingPose(new Pose(0,0,0));
         turretPidTimer.reset();
         releaseTimer.reset();
-        //flywheelPidTimer.reset();
 
         while (opModeIsActive()) {
-
+            follower.update();
             //telemetryWebcam();
             List<AprilTagDetection> detectedTags = aprilTag.getDetections();
 
@@ -146,7 +143,7 @@ public class RedTeleopWebcam extends LinearOpMode {
 
             setManualControls();
 
-            setTurretPid(detectedTags);
+            aiming(detectedTags);
 
             firing();
 
@@ -285,81 +282,28 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
 
-    public void setTurretPid(List<AprilTagDetection> detectedTags){
-
-        double dt = turretPidTimer.seconds();
-        turretPidTimer.reset();
-        dt = Range.clip(dt, 0.001, 0.1);
-
-        double pidTurretPower = 0;
-        boolean hasTarget = false;
-        double error = 0;
-
-        // Find our tag and compute error (target bearing = 0)
+    public void aiming(List<AprilTagDetection> detectedTags){
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // your desired tag ID
-                range = (detection.ftcPose.range + lastRange) / 2; //range smoothing
-                bearing = detection.ftcPose.bearing;   // in degrees
-                elevation = detection.ftcPose.elevation;
-                error = bearing + (Math.toDegrees(Math.atan(3.5 / range)));                       // error = current bearing - desired (0)
+                range = (detection.ftcPose.range + lastRange) / 2;
                 lastRange = detection.ftcPose.range;
-                targetingTimer.reset();
-                hasTarget = true;
+                bearing = detection.ftcPose.bearing + Math.toDegrees(follower.getPose().getHeading()) + turretPos * 90/489;   // in degrees
+                goalPos = goalPos.update(follower.getPose().getX(), follower.getPose().getY(), Math.toRadians(bearing));
                 break; // we found our tag, no need to keep looping
-
             }
         }
-
-        if (hasTarget && dt > 0) {
-            // PID terms
-            turretIntegral += error * dt;
-
-            // Prevent integral windup (optional, tune limits)
-
-            double derivative = -(turretLastError - error) / dt;
-
-            pidTurretPower = turretKp * error
-                    + turretKi * turretIntegral
-                    + turretKd * derivative;
-            turretLastError = error;
-            telemetry.addData("dsign", (int)Math.signum(derivative));
-            telemetry.addData("psign", (int)Math.signum(error));
-
-        } else {
-            // No target: stop PID contributions & reset integral & use manual control
-            turretIntegral = 0;
-            turretLastError = 0;
-            // manual turret power
-            if (gamepad2.left_trigger > 0) {
-                pidTurretPower = Range.clip(gamepad2.left_trigger / 2, 0, 0.5);
-            } else if (gamepad2.right_trigger > 0) {
-                pidTurretPower = -Range.clip(gamepad2.right_trigger / 2., 0, 0.5);
-            } else if (gamepad1.left_bumper) {
-                pidTurretPower = 0.4;
-            } else if (gamepad1.right_bumper) {
-                pidTurretPower = -0.4;
-            } else {
-                pidTurretPower = 0;
-            }
-        }
-        if (targetingTimer.seconds() < 1) {
-            pidTurretPower += 0.38 * Range.clip(Math.abs(gamepad1.right_stick_x) * gamepad1.right_stick_x, -1, 1);
-        }
-        pidTurretPower = Range.clip(pidTurretPower, -0.8, 0.8);
-
-        // limit turret pos
-        if ((pidTurretPower > 0 && turretPos < 450) || (pidTurretPower < 0 && turretPos > -450)) { //left, right limits
-            turret.setPower(pidTurretPower);
-        } else {
-            turret.setPower(0);   // stop at limits
-        }
+        turretTarget = goalPos.findAngle(
+                follower.getPose().getX(),
+                follower.getPose().getY()
+        ) - Math.toDegrees(follower.getPose().getHeading());
+        turretTarget = Range.clip(489.0 / 90.0 * (turretTarget), -489, 489);
+        turret.setTargetPosition((int) turretTarget);
 
     }
 
 
     public void firing(){
         if (gamepad1.x) {
-            follower.update();
             if(!holding){
                 Hold = follower.pathBuilder()
                         .addPath(new BezierLine(follower.getPose(), new Pose(follower.getPose().getX() + 0.00000001,follower.getPose().getY(),follower.getPose().getHeading())))
@@ -370,7 +314,7 @@ public class RedTeleopWebcam extends LinearOpMode {
             }
             if (fireState == 0) {
                 // Step 1: Start flywheel
-                flyWheelVTarget = 10.27 * range + 1290;//10.27 * range + 1278.25
+                flyWheelVTarget = 10.27 * range + 1300;//10.27 * range + 1278.25
                 fireState = 1;   // go to SPINNING_UP
             } else if (fireState == 1) {
                 // Step 2: Wait until flywheel reaches speed
@@ -410,23 +354,14 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
     public void botTelemetry(){
-        //            telemetry.addData("auto power", autoAdjust);
-
-        //telemetry.addData("range", range);
-        //telemetry.addData("turret error", error);
-//            telemetry.addData("turret turn power", pidTurretPower);
-//            telemetry.addData("flywheel velocity", flyWheelVel);
-//            telemetry.addData("dt",dt);
-//            telemetryWebcam();
-        //          telemetry.addData("fire timer", fireTimer);
-//            telemetry.addData("stop flywheel delay", releaseTimer.seconds());
-//            telemetry.addData("spin up delay", spinUpDelay.seconds());
-//            telemetry.addData("bearing", bearing);
-        //   telemetry.addData("Turret Position", turretPos);
-//            telemetry.addData("Field Centric", fieldCentric);
-//            telemetry.addData("auto adjust camera", autoAdjust);
-//            telemetry.addData("pusher position", pusher.getPosition());
-        telemetry.addData("flywheel velocity", flyWheel.getVelocity());
+        telemetry.addData("Goal Estimate", goalPos.toString());
+        telemetry.addData("turret position", turretPos);
+        telemetry.addData("bearing", bearing);
+        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
+        telemetry.addData("turret target", (int) 489.0/90 * (goalPos.findAngle(
+                follower.getPose().getX(), follower.getPose().getY()
+        ) - Math.toDegrees(follower.getPose().getHeading())));
+        telemetry.addData("target bearing", (goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())));
         telemetry.update();
 
     }
