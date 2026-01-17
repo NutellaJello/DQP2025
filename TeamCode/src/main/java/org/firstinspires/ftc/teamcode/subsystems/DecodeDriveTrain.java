@@ -25,6 +25,7 @@ public class DecodeDriveTrain {
     private double dampSpeedRatio = 1;
     private double dampTurnRatio  = -1;
     private Pose2D pose2D;
+    private double headingOffset = 0;
 
 
     public DecodeDriveTrain(HardwareMap hardwareMap){                 // Motor Mapping
@@ -104,15 +105,12 @@ public class DecodeDriveTrain {
             dampSpeedRatio = 1;
             dampTurnRatio = -0.6;
         }
-
+        if(gamepad.dpad_up){
+            headingOffset = heading;
+        }
         if (field){
+            heading -= headingOffset;
             double max;
-//            YawPitchRollAngles robotOrientation;
-//            robotOrientation = imu.getRobotYawPitchRollAngles();
-            if(gamepad.dpad_up){
-                pinpoint.resetPosAndIMU();
-            }
-
             double axial   = y * Math.cos(heading) - x * Math.sin(heading);
             double lateral = 1.2 * y * Math.sin(heading) + x * Math.cos(heading);
 
