@@ -98,9 +98,9 @@ public class DecodeDriveTrain {
         double x = Range.clip(-gamepad.left_stick_x, -1, 1);
         //right stick x value
         double rx = Range.clip(-gamepad.right_stick_x, -1, 1);
-        if(gamepad.right_trigger > 0.1){
-            dampSpeedRatio = 1 - 0.6 * gamepad.right_trigger;
-            dampTurnRatio = -0.6 + 0.3 * gamepad.right_trigger;
+        if(gamepad.right_bumper){
+            dampSpeedRatio = 1 - 0.65;
+            dampTurnRatio = -0.6 + 0.3;
         }else{
             dampSpeedRatio = 1;
             dampTurnRatio = -0.6;
