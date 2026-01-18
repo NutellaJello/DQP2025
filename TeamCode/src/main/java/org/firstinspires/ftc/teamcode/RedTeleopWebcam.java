@@ -48,17 +48,12 @@ public class RedTeleopWebcam extends LinearOpMode {
     boolean fieldCentric = true;
 
     boolean useWebcam = true;
-    boolean autoAdjust = true;
     double intakePower = 0;
-    int flyWheelMode = 1;
     double flyWheelVTarget = 0;
     double pusherPos = 0.4;
     double turretPos;
     double flyWheelVel;
     double idlePower = 0;
-
-    //double flyWheelTarget = 0;
-
     double range;
     double lastRange;
     double bearing;
@@ -67,16 +62,11 @@ public class RedTeleopWebcam extends LinearOpMode {
     int fireState = 0;      // 0 = idle, 1 = spinup, 2 = pushUp, 3 = pushDown
     ElapsedTime fireTimer = new ElapsedTime();
     ElapsedTime turretPidTimer = new ElapsedTime();
-    ElapsedTime spinUpDelay = new ElapsedTime();
     ElapsedTime releaseTimer = new ElapsedTime();
-    ElapsedTime targetingTimer = new ElapsedTime();
 
     private Follower follower;
-    private PathChain Hold;
     private boolean holding = false;
-
-    private boolean LBPress = false;
-    private double turretTarget = 0;
+    private boolean a2Press = false;
 
     @Override
     public void runOpMode() {
@@ -141,13 +131,11 @@ public class RedTeleopWebcam extends LinearOpMode {
 
             setIntakePower();
 
-            setManualControls();
-
             aiming(detectedTags);
 
             firing();
 
-            flyWheel.setVelocity(flyWheelVTarget);
+            brake();
 
             botTelemetry();
 
@@ -219,14 +207,9 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
     public void setIdlePower(){
-        if(autoAdjust){
-            if(gamepad1.dpad_left){
-                idlePower = 1800;
-            }else if(gamepad1.dpad_right){
-                idlePower = 0;
-            }
-        }
-        else{
+        if(gamepad1.dpad_left){
+            idlePower = 1800;
+        }else if(gamepad1.dpad_right){
             idlePower = 0;
         }
     }
@@ -249,69 +232,65 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
 
-    public void setManualControls(){
-        if (gamepad2.b) { // auto
-            flyWheelMode = 0;
-        } else if (gamepad2.a) { // 2200
-            flyWheelMode = 1;
-        } else if (gamepad2.x) {
-            flyWheelMode = 2;//off
-        } else if (gamepad2.y) {
-            flyWheelMode = 3;
-        }
-
-        if (flyWheelMode == 0) {
-            flyWheelVTarget = 0;
-        } else if (flyWheelMode == 2) {
-            flyWheelVTarget = 2000;
-        } else if (flyWheelMode == 3) {
-            flyWheelVTarget = 2500;
-        }
-
-
-        if (gamepad2.left_bumper) {
-            autoAdjust = true;
-        } else if (gamepad2.right_bumper) {
-            autoAdjust = false;
-        }
-
-
-    }
-
-
-
-
 
     public void aiming(List<AprilTagDetection> detectedTags){
         for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 24) { // your desired tag ID
+            if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
                 range = (detection.ftcPose.range + lastRange) / 2;
                 lastRange = detection.ftcPose.range;
                 bearing = detection.ftcPose.bearing + Math.toDegrees(follower.getPose().getHeading()) + turretPos * 90/489;   // in degrees
-                goalPos = goalPos.update(follower.getPose().getX(), follower.getPose().getY(), Math.toRadians(bearing));
-                break; // we found our tag, no need to keep looping
+                goalPos.update(follower.getPose().getX(), follower.getPose().getY(), Math.toRadians(bearing));
+                break;
             }
         }
-        turretTarget = goalPos.findAngle(
-                follower.getPose().getX(),
-                follower.getPose().getY()
-        ) - Math.toDegrees(follower.getPose().getHeading());
-        turretTarget = Range.clip(489.0 / 90.0 * (turretTarget), -489, 489);
-        turret.setTargetPosition((int) turretTarget);
 
+        //required turret angle
+        double turretTarget = goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY()) - Math.toDegrees(follower.getPose().getHeading());
+        if (turretTarget > 190) { //wrap angle
+            turretTarget -= 360;
+        } else if (turretTarget < -190) {
+            turretTarget += 360;
+        }
+        turretTarget = 489.0 / 90.0 * turretTarget; // convert to encoder ticks
+        // hardware limit
+        turretTarget = Range.clip(turretTarget, -489, 489); //(Math.toDegrees(Math.atan(3.5 / range)));
+
+        if (gamepad2.a){
+            double turretPower = 0;
+            if(!a2Press){
+                turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                a2Press = true;
+            }
+            if(gamepad2.left_bumper){
+                turretPower = 0.3;
+            } else if (gamepad2.right_bumper){
+                turretPower = -0.3;
+            }else{
+                turretPower = 0;
+            }
+            if ((turretPower > 0 && turretPos < 489) || (turretPower < 0 && turretPos > -489)) { //left, right limits
+                turret.setPower(turretPower);
+            } else {
+                turret.setPower(0);   // stop at limits
+            }
+        }else{ // manual aiming
+            if(a2Press){
+                turret.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                turret.setPower(1);
+                a2Press = false;
+            }
+            turret.setTargetPosition((int) turretTarget);
+        }
+
+        if(gamepad2.dpad_up){
+            goalPos.setX(follower.getPose().getX() + 150 * Math.cos(Math.toRadians(bearing)));
+            goalPos.setY(follower.getPose().getY() + 150 * Math.sin(Math.toRadians(bearing)));
+        }
     }
 
 
     public void firing(){
         if (gamepad1.x) {
-            if(!holding){
-                Hold = follower.pathBuilder()
-                        .addPath(new BezierLine(follower.getPose(), new Pose(follower.getPose().getX() + 0.00000001,follower.getPose().getY(),follower.getPose().getHeading())))
-                        .setConstantHeadingInterpolation(follower.getHeading())
-                        .build();
-                follower.followPath(Hold, true);
-                holding = true;
-            }
             if (fireState == 0) {
                 // Step 1: Start flywheel
                 flyWheelVTarget = 10.27 * range + 1300;//10.27 * range + 1278.25
@@ -338,30 +317,43 @@ public class RedTeleopWebcam extends LinearOpMode {
                 }
             }
         } else {
-            if(holding) {
-                follower.breakFollowing();
-                holding = false;
-            }
             // X RELEASED → reset firing system
             pusherPos = 0.4;
             flyWheelVTarget = idlePower;
             fireState = 0;
         }
         pusher.setPosition(pusherPos);
+        flyWheel.setVelocity(flyWheelVTarget);
     }
 
 
-
+    public void brake(){
+        if(gamepad1.x || (gamepad2.left_trigger > 0.8 && gamepad2.right_trigger > 0.8)){
+            if(!holding){
+                PathChain hold = follower.pathBuilder()
+                        .addPath(new BezierLine(follower.getPose(), new Pose(follower.getPose().getX() + 0.00000001, follower.getPose().getY(), follower.getPose().getHeading())))
+                        .setConstantHeadingInterpolation(follower.getHeading())
+                        .build();
+                follower.followPath(hold, true);
+                holding = true;
+            }
+        }else{
+            if(holding) {
+                follower.breakFollowing();
+                holding = false;
+            }
+        }
+    }
 
     public void botTelemetry(){
         telemetry.addData("Goal Estimate", goalPos.toString());
-        telemetry.addData("turret position", turretPos);
-        telemetry.addData("bearing", bearing);
-        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
-        telemetry.addData("turret target", (int) 489.0/90 * (goalPos.findAngle(
-                follower.getPose().getX(), follower.getPose().getY()
-        ) - Math.toDegrees(follower.getPose().getHeading())));
-        telemetry.addData("target bearing", (goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())));
+//        telemetry.addData("turret position", turretPos);
+       telemetry.addData("bearing", bearing);
+//        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
+//        telemetry.addData("turret target", (int) 489.0/90 * (goalPos.findAngle(
+//                follower.getPose().getX(), follower.getPose().getY()
+//        ) - Math.toDegrees(follower.getPose().getHeading())));
+//        telemetry.addData("target bearing", (goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())));
         telemetry.update();
 
     }
