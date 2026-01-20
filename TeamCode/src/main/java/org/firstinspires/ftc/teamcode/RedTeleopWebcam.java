@@ -67,6 +67,9 @@ public class RedTeleopWebcam extends LinearOpMode {
     private Follower follower;
     private boolean holding = false;
     private boolean a2Press = false;
+    private boolean hasEst = false;
+    private double xEst;
+    private double yEst;
 
     @Override
     public void runOpMode() {
@@ -240,15 +243,20 @@ public class RedTeleopWebcam extends LinearOpMode {
                 lastRange = detection.ftcPose.range;
                 bearing = detection.ftcPose.bearing + Math.toDegrees(follower.getPose().getHeading()) + turretPos * 90/489;   // in degrees
                 goalPos.update(follower.getPose().getX(), follower.getPose().getY(), Math.toRadians(bearing));
+                xEst = follower.getPose().getX() + 1.1 * range * Math.cos(Math.toRadians(bearing));
+                yEst = follower.getPose().getY() + 1.1 * range * Math.sin(Math.toRadians(bearing));
+                hasEst = true;
                 break;
             }
         }
 
         //required turret angle
-        double turretTarget = goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY()) - Math.toDegrees(follower.getPose().getHeading());
-        if (turretTarget > 190) { //wrap angle
+        double turretTarget = goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())
+                - Math.toDegrees(follower.getPose().getHeading())
+                + (Math.toDegrees(Math.atan(3 / range))); // SIDE DEPENDENT
+        if (turretTarget > 200) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < -190) {
+        } else if (turretTarget < -200) {
             turretTarget += 360;
         }
         turretTarget = 489.0 / 90.0 * turretTarget; // convert to encoder ticks
@@ -262,9 +270,9 @@ public class RedTeleopWebcam extends LinearOpMode {
                 a2Press = true;
             }
             if(gamepad2.left_bumper){
-                turretPower = 0.3;
+                turretPower = 0.45;
             } else if (gamepad2.right_bumper){
-                turretPower = -0.3;
+                turretPower = -0.45;
             }else{
                 turretPower = 0;
             }
@@ -273,6 +281,10 @@ public class RedTeleopWebcam extends LinearOpMode {
             } else {
                 turret.setPower(0);   // stop at limits
             }
+            if(hasEst){
+                goalPos.setX(xEst);
+                goalPos.setY(yEst);
+            }
         }else{ // manual aiming
             if(a2Press){
                 turret.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -280,11 +292,6 @@ public class RedTeleopWebcam extends LinearOpMode {
                 a2Press = false;
             }
             turret.setTargetPosition((int) turretTarget);
-        }
-
-        if(gamepad2.dpad_up){
-            goalPos.setX(follower.getPose().getX() + 150 * Math.cos(Math.toRadians(bearing)));
-            goalPos.setY(follower.getPose().getY() + 150 * Math.sin(Math.toRadians(bearing)));
         }
     }
 
