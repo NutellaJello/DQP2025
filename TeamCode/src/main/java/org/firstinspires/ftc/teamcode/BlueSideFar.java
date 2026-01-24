@@ -118,7 +118,7 @@ public class BlueSideFar extends OpMode {
         pathState = PathState.PRELOAD;
         pathTimer = new Timer();
         opmodeTimer = new Timer();
-        follower = Constants.createFollower(hardwareMap);
+        follower = Constants.createAutoFollower(hardwareMap);
 
         intake = hardwareMap.get(DcMotorEx.class, "intake");
         intake.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
