@@ -54,7 +54,7 @@ public class RedTeleopWebcam extends LinearOpMode {
     double turretPos;
     double flyWheelVel;
     double idlePower = 0;
-    double range;
+    double camRange;
     double lastRange;
     double bearing;
     double elevation;
@@ -70,6 +70,9 @@ public class RedTeleopWebcam extends LinearOpMode {
     private boolean hasEst = false;
     private double xEst;
     private double yEst;
+    private double range1,range2,range3;
+    private double range;
+    private double xPos = 0, yPos = 0, heading = 0;
 
     @Override
     public void runOpMode() {
@@ -111,13 +114,14 @@ public class RedTeleopWebcam extends LinearOpMode {
                 Thread.currentThread().interrupt();
             }
         }).start();
-
-        follower.setStartingPose(new Pose(0,0,0));
         turretPidTimer.reset();
         releaseTimer.reset();
 
         while (opModeIsActive()) {
             follower.update();
+            xPos = follower.getPose().getX();
+            yPos = follower.getPose().getY();
+            heading = follower.getPose().getHeading();
             //telemetryWebcam();
             List<AprilTagDetection> detectedTags = aprilTag.getDetections();
 
@@ -239,20 +243,27 @@ public class RedTeleopWebcam extends LinearOpMode {
     public void aiming(List<AprilTagDetection> detectedTags){
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
-                range = (detection.ftcPose.range + lastRange) / 2;
+                camRange = (detection.ftcPose.range + lastRange) / 2;
                 lastRange = detection.ftcPose.range;
-                bearing = detection.ftcPose.bearing + Math.toDegrees(follower.getPose().getHeading()) + turretPos * 90/489;   // in degrees
-                goalPos.update(follower.getPose().getX(), follower.getPose().getY(), Math.toRadians(bearing));
-                xEst = follower.getPose().getX() + 1.1 * range * Math.cos(Math.toRadians(bearing));
-                yEst = follower.getPose().getY() + 1.1 * range * Math.sin(Math.toRadians(bearing));
+                bearing = detection.ftcPose.bearing + Math.toDegrees(heading) + turretPos * 90/489;   // in degrees
+                //goalPos.update(xPos, yPos, Math.toRadians(bearing));
+                if(!gamepad1.x){
+                    goalPos.update(xPos, yPos, Math.toRadians(bearing), camRange);
+                }
+                xEst = xPos + camRange * Math.cos(Math.toRadians(bearing));
+                yEst = yPos + camRange * Math.sin(Math.toRadians(bearing));
+                if(!hasEst){
+                    goalPos.setX(xEst);
+                    goalPos.setY(yEst);
+                }
                 hasEst = true;
                 break;
             }
         }
 
         //required turret angle
-        double turretTarget = goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())
-                - Math.toDegrees(follower.getPose().getHeading())
+        double turretTarget = goalPos.findAngle(xPos, yPos)
+                - Math.toDegrees(heading)
                 + (Math.toDegrees(Math.atan(3 / range))); // SIDE DEPENDENT
         if (turretTarget > 200) { //wrap angle
             turretTarget -= 360;
@@ -297,10 +308,11 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
     public void firing(){
+        range = goalPos.findRange(xPos, yPos);
         if (gamepad1.x) {
             if (fireState == 0) {
                 // Step 1: Start flywheel
-                flyWheelVTarget = 10.27 * range + 1300;//10.27 * range + 1278.25
+                flyWheelVTarget = 10.27 * range + 1300;// 10.27 * range + 1300
                 fireState = 1;   // go to SPINNING_UP
             } else if (fireState == 1) {
                 // Step 2: Wait until flywheel reaches speed
@@ -338,8 +350,8 @@ public class RedTeleopWebcam extends LinearOpMode {
         if(gamepad1.x || (gamepad2.left_trigger > 0.8 && gamepad2.right_trigger > 0.8)){
             if(!holding){
                 PathChain hold = follower.pathBuilder()
-                        .addPath(new BezierLine(follower.getPose(), new Pose(follower.getPose().getX() + 0.00000001, follower.getPose().getY(), follower.getPose().getHeading())))
-                        .setConstantHeadingInterpolation(follower.getHeading())
+                        .addPath(new BezierLine(follower.getPose(), new Pose(xPos + 0.00000001, yPos, heading)))
+                        .setConstantHeadingInterpolation(heading)
                         .build();
                 follower.followPath(hold, true);
                 holding = true;
@@ -353,9 +365,9 @@ public class RedTeleopWebcam extends LinearOpMode {
     }
 
     public void botTelemetry(){
-        telemetry.addData("Goal Estimate", goalPos.toString());
+        telemetry.addData("range", range);
 //        telemetry.addData("turret position", turretPos);
-       telemetry.addData("bearing", bearing);
+        telemetry.addData("cam range", camRange);
 //        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
 //        telemetry.addData("turret target", (int) 489.0/90 * (goalPos.findAngle(
 //                follower.getPose().getX(), follower.getPose().getY()
