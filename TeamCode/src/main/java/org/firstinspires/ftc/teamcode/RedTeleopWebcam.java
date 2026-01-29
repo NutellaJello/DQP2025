@@ -39,8 +39,9 @@ public class RedTeleopWebcam extends LinearOpMode {
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
-    private DcMotorEx flyWheel;
-    private Servo pusher;
+    private DcMotorEx flyWheel1;
+    private DcMotorEx flyWheel2;
+    private Servo stopper;
 
 
     private AprilTagProcessor aprilTag;
@@ -49,20 +50,20 @@ public class RedTeleopWebcam extends LinearOpMode {
 
     boolean useWebcam = true;
     double intakePower = 0;
-    double flyWheelVTarget = 0;
-    double pusherPos = 0.4;
+    double FW1Target = 0;
+    double FW2Target = 0;
+    double stopperPos = 0.9;
     double turretPos;
-    double flyWheelVel;
+    double FWV1;
+    double FWV2;
     double idlePower = 0;
-    double camRange;
+    double camRange = 0;
     double lastRange;
-    double bearing;
-    double elevation;
+    double bearing = 0;
+    double elevation = 0;
     GoalPos goalPos = new GoalPos(30,50);
-    int fireState = 0;      // 0 = idle, 1 = spinup, 2 = pushUp, 3 = pushDown
     ElapsedTime fireTimer = new ElapsedTime();
     ElapsedTime turretPidTimer = new ElapsedTime();
-    ElapsedTime releaseTimer = new ElapsedTime();
 
     private Follower follower;
     private boolean holding = false;
@@ -70,60 +71,62 @@ public class RedTeleopWebcam extends LinearOpMode {
     private boolean hasEst = false;
     private double xEst;
     private double yEst;
-    private double range1,range2,range3;
     private double range;
     private double xPos = 0, yPos = 0, heading = 0;
+    private final double camOffset = 2; //inches left of center
 
     @Override
     public void runOpMode() {
-        if (visionPortal != null) {
-            visionPortal.close();
-            sleep(250);
-        }
+//        if (visionPortal != null) {
+//            visionPortal.close();
+//            sleep(250);
+//        }
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap);
         follower = Constants.createTeleopFollower(hardwareMap);
         follower.setStartingPose(new Pose(0,0,Math.toRadians(0)));
 
         intake = hardwareMap.get(DcMotorEx.class, "intake");
-        intake.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
+        intake.setDirection(DcMotorEx.Direction.REVERSE); // Change this to either FORWARD or REVERSE
 
-        flyWheel = hardwareMap.get(DcMotorEx.class, "FW");
-        flyWheel.setDirection(DcMotorEx.Direction.FORWARD); // Change this to either FORWARD or REVERSE
-        flyWheel.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
+        flyWheel1.setDirection(DcMotorEx.Direction.REVERSE); // Change this to either FORWARD or REVERSE
+        flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+
+        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
+        flyWheel2.setDirection(DcMotorEx.Direction.REVERSE); // Change this to either FORWARD or REVERSE
+        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
-        turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-//        turret.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        turret.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         turret.setTargetPosition(0);
-        turret.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         turret.setPower(1);
 
-        pusher = hardwareMap.get(Servo.class, "pusher");
-        pusher.setDirection(Servo.Direction.REVERSE);
+        stopper = hardwareMap.get(Servo.class, "stopper");
+        stopper.setDirection(Servo.Direction.FORWARD);
 
 
-        initWebcam();
+//        initWebcam();
         waitForStart();
 
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
+//        new Thread(() -> {
+//            try {
+//                cameraControls();
+//            } catch (InterruptedException e) {
+//                Thread.currentThread().interrupt();
+//            }
+//        }).start();
         turretPidTimer.reset();
-        releaseTimer.reset();
 
         while (opModeIsActive()) {
             follower.update();
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
-            //telemetryWebcam();
-            List<AprilTagDetection> detectedTags = aprilTag.getDetections();
+
+           // List<AprilTagDetection> detectedTags = aprilTag.getDetections();
 
             // all the movement controls.
             if(!holding){
@@ -132,22 +135,28 @@ public class RedTeleopWebcam extends LinearOpMode {
 
             turretPos = turret.getCurrentPosition();
 
-            flyWheelVel = flyWheel.getVelocity();
-
+            FWV1 = flyWheel1.getVelocity();
+            FWV2 = flyWheel2.getVelocity();
             setIdlePower();
 
-            setIntakePower();
+            if(!gamepad1.x){
+                setIntakePower();
+            }
 
-            aiming(detectedTags);
+            //aiming(detectedTags);
+            if(gamepad1.left_trigger < 0.1){
+                firing();
+            }
 
-            firing();
 
             brake();
+
+            intake.setPower(intakePower);
 
             botTelemetry();
 
         }
-        visionPortal.close();
+       // visionPortal.close();
 
     }
 
@@ -226,14 +235,11 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
     public void setIntakePower(){
-        if (gamepad1.left_trigger > 0.1 && !gamepad1.x) {
+        if (gamepad1.left_trigger > 0.1) {
             intakePower = 1;
         } else if(gamepad1.a){
             intakePower = -1;
-        }else {
-            intakePower = 0;
         }
-        intake.setPower(intakePower);
     }
 
 
@@ -243,10 +249,16 @@ public class RedTeleopWebcam extends LinearOpMode {
     public void aiming(List<AprilTagDetection> detectedTags){
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
-                camRange = (detection.ftcPose.range + lastRange) / 2;
-                lastRange = detection.ftcPose.range;
-                bearing = detection.ftcPose.bearing + Math.toDegrees(heading) + turretPos * 90/489;   // in degrees
-                //goalPos.update(xPos, yPos, Math.toRadians(bearing));
+                camRange = detection.ftcPose.range;
+                bearing = detection.ftcPose.bearing;
+                camRange = Math.sqrt(
+                        Math.pow(camOffset, 2)
+                        - 2 * camOffset * camRange * Math.sin(Math.toRadians(bearing))
+                        + Math.pow(camRange,2)
+                );
+                bearing = Math.acos(detection.ftcPose.range * Math.cos(Math.toRadians(bearing)) / camRange);
+                bearing += Math.toDegrees(heading) + turretPos * 90/489;   // in degrees
+                goalPos.update(xPos, yPos, Math.toRadians(bearing));
                 if(!gamepad1.x){
                     goalPos.update(xPos, yPos, Math.toRadians(bearing), camRange);
                 }
@@ -264,7 +276,7 @@ public class RedTeleopWebcam extends LinearOpMode {
         //required turret angle
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - Math.toDegrees(heading)
-                + (Math.toDegrees(Math.atan(3 / range))); // SIDE DEPENDENT
+                + (Math.toDegrees(Math.atan(0 / range))); // SIDE DEPENDENT
         if (turretTarget > 200) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < -200) {
@@ -277,7 +289,7 @@ public class RedTeleopWebcam extends LinearOpMode {
         if (gamepad2.a){
             double turretPower = 0;
             if(!a2Press){
-                turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                turret.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
                 a2Press = true;
             }
             if(gamepad2.left_bumper){
@@ -298,7 +310,7 @@ public class RedTeleopWebcam extends LinearOpMode {
             }
         }else{ // manual aiming
             if(a2Press){
-                turret.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
                 turret.setPower(1);
                 a2Press = false;
             }
@@ -310,39 +322,22 @@ public class RedTeleopWebcam extends LinearOpMode {
     public void firing(){
         range = goalPos.findRange(xPos, yPos);
         if (gamepad1.x) {
-            if (fireState == 0) {
-                // Step 1: Start flywheel
-                flyWheelVTarget = 10.27 * range + 1300;// 10.27 * range + 1300
-                fireState = 1;   // go to SPINNING_UP
-            } else if (fireState == 1) {
-                // Step 2: Wait until flywheel reaches speed
-                if (flyWheel.getVelocity() >= flyWheelVTarget ) {
-                    pusherPos = 0.95;   // fire
-                    fireTimer.reset();
-                    fireState = 2;     // go to PUSH_UP
-                }
-            } else if (fireState == 2) {
-                // Step 3: pusher up for 0.15s
-                if (fireTimer.seconds() > 0.3) {
-                    pusherPos = 0.4;   // retract
-                    fireTimer.reset();
-                    fireState = 3;    // go to PUSH_DOWN
-                }
-            } else if (fireState == 3) {
-                intake.setPower(1);
-                // Step 4: wait 0.15s then fire again
-                if (fireTimer.seconds() > 0.5) {
-                    fireState = 1;   // loop back→ SPINNING_UP → fire again
-                }
+            FW1Target = 10.27 * range + 1300;
+            FW1Target /= 2;
+            FW2Target = FW1Target;
+            if(FWV1 >= FW1Target && FWV2 >= FW2Target){
+                stopperPos = 0.965; // open
+                intakePower = 1;
             }
         } else {
-            // X RELEASED → reset firing system
-            pusherPos = 0.4;
-            flyWheelVTarget = idlePower;
-            fireState = 0;
+            intakePower = 0;
+            stopperPos = 0.9; // closed
+            FW1Target = idlePower;
+            FW2Target = idlePower;
         }
-        pusher.setPosition(pusherPos);
-        flyWheel.setVelocity(flyWheelVTarget);
+        flyWheel1.setVelocity(FW1Target);
+        flyWheel2.setVelocity(FW2Target);
+        stopper.setPosition(stopperPos);
     }
 
 
@@ -365,9 +360,9 @@ public class RedTeleopWebcam extends LinearOpMode {
     }
 
     public void botTelemetry(){
-        telemetry.addData("range", range);
+        telemetry.addData("FW 1 V", FWV1);
 //        telemetry.addData("turret position", turretPos);
-        telemetry.addData("cam range", camRange);
+        telemetry.addData("FW 2 V", FWV2);
 //        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
 //        telemetry.addData("turret target", (int) 489.0/90 * (goalPos.findAngle(
 //                follower.getPose().getX(), follower.getPose().getY()
