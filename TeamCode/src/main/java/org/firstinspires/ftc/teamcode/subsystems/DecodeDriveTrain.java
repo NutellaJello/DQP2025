@@ -4,6 +4,7 @@ import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -17,10 +18,10 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 public class DecodeDriveTrain {
     // Instantiate the drivetrain motor variables
-    private DcMotorEx fl; //Front left motor of drivetrain
-    private DcMotorEx fr; //Front right motor of drivetrain
-    private DcMotorEx bl; //Back left motor of drivetrain
-    private DcMotorEx br; //Back right motor of drivetrain
+    private DcMotorEx FL; //Front left motor of drivetrain
+    private DcMotorEx FR; //Front right motor of drivetrain
+    private DcMotorEx BL; //Back left motor of drivetrain
+    private DcMotorEx BR; //Back right motor of drivetrain
     GoBildaPinpointDriver pinpoint;
     private double dampSpeedRatio = 1;
     private double dampTurnRatio  = -1;
@@ -29,17 +30,17 @@ public class DecodeDriveTrain {
 
 
     public DecodeDriveTrain(HardwareMap hardwareMap){                 // Motor Mapping
-        fl = hardwareMap.get(DcMotorEx.class, "FL");
-        fr = hardwareMap.get(DcMotorEx.class, "FR");
-        bl = hardwareMap.get(DcMotorEx.class, "BL");
-        br = hardwareMap.get(DcMotorEx.class, "BR");
+        FL = hardwareMap.get(DcMotorEx.class, "FL");
+        FR = hardwareMap.get(DcMotorEx.class, "FR");
+        BL = hardwareMap.get(DcMotorEx.class, "BL");
+        BR = hardwareMap.get(DcMotorEx.class, "BR");
 
 
         // Set motor direction based on which side of the robot the motors are on
-        fr.setDirection(DcMotorEx.Direction.FORWARD);
-        br.setDirection(DcMotorEx.Direction.REVERSE);
-        fl.setDirection(DcMotorEx.Direction.REVERSE);
-        bl.setDirection(DcMotorEx.Direction.REVERSE);
+        FR.setDirection(DcMotorEx.Direction.FORWARD);
+        BR.setDirection(DcMotorEx.Direction.FORWARD);
+        FL.setDirection(DcMotorEx.Direction.REVERSE);
+        BL.setDirection(DcMotorEx.Direction.FORWARD);
 
 //        imu = hardwareMap.get(IMU.class, "imu");
 //        IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
@@ -58,7 +59,7 @@ public class DecodeDriveTrain {
          *  The Y pod offset refers to how far forwards from the tracking point the Y (strafe) odometry pod is.
          *  Forward of center is a positive number, backwards is a negative number.
          */
-        pinpoint.setOffsets(9.25, -0.2, DistanceUnit.INCH); //these are tuned for 3110-0002-0001 Product Insight #1
+        pinpoint.setOffsets(-2, 0, DistanceUnit.INCH); //these are tuned for 3110-0002-0001 Product Insight #1
 
         /*
          * Set the kind of pods used by your robot. If you're using goBILDA odometry pods, select either
@@ -133,10 +134,10 @@ public class DecodeDriveTrain {
                 PowerBR  /= max;
             }
             //telemetry.addData("heading",Math.toDegrees(heading));
-            fl.setPower(PowerFL);
-            fr.setPower(PowerFR);
-            bl.setPower(PowerBL);
-            br.setPower(PowerBR);
+            FL.setPower(PowerFL);
+            FR.setPower(PowerFR);
+            BL.setPower(PowerBL);
+            BR.setPower(PowerBR);
         }
         else{
 
@@ -156,10 +157,10 @@ public class DecodeDriveTrain {
                 PowerBR /= maxPower;
             }
             //finally moving the motors
-            fl.setPower(PowerFL);
-            bl.setPower(PowerBL);
-            fr.setPower(PowerFR);
-            br.setPower(PowerBR);
+            FL.setPower(PowerFL);
+            BL.setPower(PowerBL);
+            FR.setPower(PowerFR);
+            BR.setPower(PowerBR);
         }
         if(showTelemetry) {
             telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
