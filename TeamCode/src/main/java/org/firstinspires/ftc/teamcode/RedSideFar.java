@@ -14,7 +14,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
-
+@Disabled
 @Autonomous(name = "Red Side Far", group = "Autos")
 public class RedSideFar extends OpMode {
     private DecodeDriveTrain drivetrain;
