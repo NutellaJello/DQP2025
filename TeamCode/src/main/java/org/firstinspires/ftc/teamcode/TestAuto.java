@@ -75,6 +75,7 @@ import java.util.List;
  * Remove or comment out the @Disabled line to add this OpMode to the Driver Station OpMode list
  */
 
+@Disabled
 @Autonomous(name="Close april tag", group="Robot")
 
 public class TestAuto extends LinearOpMode {
