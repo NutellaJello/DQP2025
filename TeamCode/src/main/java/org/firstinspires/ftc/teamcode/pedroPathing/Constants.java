@@ -39,9 +39,9 @@ public class Constants {
             .forwardZeroPowerAcceleration(-36.20)
             .lateralZeroPowerAcceleration(-66.38)
             .translationalPIDFCoefficients(new PIDFCoefficients(0.08, 0.01, 0.01, 0.01))
-            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.3,0,0.01,0.03))
+            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.3,0,0.015,0.035))
             .headingPIDFCoefficients(new PIDFCoefficients(2,0,0.2,0.05))
-            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(4,0,0.05,0.03))
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2.5,0,0.08,0.03))
             .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.025,0,0.00001,0.6,0.01))
             .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0.02,0.01,0.000005,0.6,0.01))
             .centripetalScaling(0.0005);
