@@ -279,8 +279,7 @@ public class RedTeleopWebcam extends LinearOpMode {
         //required turret angle
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
-                - Math.toDegrees(heading)
-                + (Math.toDegrees(Math.atan(0 / range))); // SIDE DEPENDENT
+                - Math.toDegrees(heading);
         if (turretTarget > 200) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < -200) {
@@ -330,7 +329,7 @@ public class RedTeleopWebcam extends LinearOpMode {
             FW1Target /= 2;
             FW2Target = FW1Target;
             if(FWV1 >= FW1Target && FWV2 >= FW2Target){
-                stopperPos = 0.965; // open
+                stopperPos = 0.97; // open
                 intakePower = 0.8;
             }
         } else {
