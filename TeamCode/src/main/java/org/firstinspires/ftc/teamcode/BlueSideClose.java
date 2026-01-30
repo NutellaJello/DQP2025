@@ -14,7 +14,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
-
+@Disabled
 @Autonomous(name = "Blue Side Close", group = "Autos")
 public class BlueSideClose extends OpMode {
     private DecodeDriveTrain drivetrain;
