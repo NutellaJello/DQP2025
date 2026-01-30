@@ -59,10 +59,10 @@ public class RedClose extends OpMode {
     private final Pose start = new Pose(130, 130, Math.toRadians(41));
     private final Pose outtakePre = new Pose(95, 90, Math.toRadians(41));
     private final Pose outtake = new Pose(100, 90, Math.toRadians(0));
-    private final Pose intake1 = new Pose(133, 88, Math.toRadians(0));
+    private final Pose intake1 = new Pose(134, 88, Math.toRadians(0));
     private final Pose intake2p1 = new Pose(100, 65, Math.toRadians(0));
-    private final Pose intake2p2 = new Pose(129, 65 - 4, Math.toRadians(0));
-    private final Pose end = new Pose(130, 90, Math.toRadians(0));
+    private final Pose intake2p2 = new Pose(133, 65 - 4, Math.toRadians(0));
+    private final Pose end = new Pose(126, 77, Math.toRadians(0));
 
     //Paths
     private PathChain Preload;
@@ -235,20 +235,20 @@ public class RedClose extends OpMode {
     public void shoot(double FW1Target, double FW2Target, PathState nextPath){
         if (!follower.isBusy() && !atFWV) {
             intake.setPower(0);
-            stopper.setPosition(0.9);
+            stopper.setPosition(0.88);
           //  flyWheel1.setVelocity(FW1Target);
            // flyWheel2.setVelocity(FW2Target);
         }
         double FWV1 = 1200;//flyWheel1.getVelocity();
         double FWV2 = 1200;//flyWheel2.getVelocity();
         if(FWV1 >= FW1Target && FWV2 >= FW2Target){
-            stopper.setPosition(0.965);
+            stopper.setPosition(0.97);
             intake.setPower(0.8);
             atFWV = true;
         }
         if (actionTimer.getElapsedTime() > 4000) {
             intake.setPower(0);
-            stopper.setPosition(0.9);
+            stopper.setPosition(0.88);
          //   flyWheel1.setVelocity(0);
            // flyWheel2.setVelocity(0);
             pathState = nextPath;
