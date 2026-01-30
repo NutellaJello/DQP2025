@@ -60,11 +60,11 @@ public class RedClose extends OpMode {
     private final Pose outtakePre = new Pose(95, 90, Math.toRadians(41));
     private final Pose outtake = new Pose(100, 90, Math.toRadians(0));
     private final Pose intake1 = new Pose(133, 88, Math.toRadians(0));
-    private final Pose intake2p1 = new Pose(100, 68, Math.toRadians(0));
-    private final Pose intake2p2 = new Pose(126, 68 - 5, Math.toRadians(0));
+    private final Pose intake2p1 = new Pose(100, 65, Math.toRadians(0));
+    private final Pose intake2p2 = new Pose(129, 65 - 4, Math.toRadians(0));
     private final Pose end = new Pose(130, 90, Math.toRadians(0));
 
-    //paths
+    //Paths
     private PathChain Preload;
     private PathChain Intake1;
     private PathChain Outtake1;
@@ -151,15 +151,17 @@ public class RedClose extends OpMode {
     }
 
     public void statePathUpdate() {
-        telemetry.addData("step", pathState);
-        telemetry.addData("busy", follower.isBusy());
-        telemetry.addData("heading", follower.getHeading());
-        telemetry.addData("velocity", follower.getVelocity());
-        telemetry.addData("turretPos", turret.getCurrentPosition());
-        telemetry.update();
+//        telemetry.addData("step", pathState);
+//        telemetry.addData("busy", follower.isBusy());
+//        telemetry.addData("heading", follower.getHeading());
+//        telemetry.addData("velocity", follower.getVelocity());
+//        telemetry.addData("turretPos", turret.getCurrentPosition());
+//        telemetry.update();
 
         if(pathState != PathState.END && pathState != PathState.STOP){
             aiming();
+        }else{
+            turret.setTargetPosition(0);
         }
         switch (pathState) {
             case PRELOAD:
@@ -191,7 +193,6 @@ public class RedClose extends OpMode {
                 break;
             case END:
                 move(End, PathState.STOP);
-                turret.setTargetPosition(0);
                 break;
         }
     }
