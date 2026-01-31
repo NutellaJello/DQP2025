@@ -326,8 +326,8 @@ public class BlueTeleopWebcam extends LinearOpMode {
     public void firing(){
         range = goalPos.findRange(xPos, yPos);
         if (gamepad1.x) {
-            FW1Target = 2.937 * range + 690;  //10.27 * range + 1300;2.937 * range + 716.11;
-            FW2Target = 2.937 * range + 690;
+            FW1Target = 2.937 * range + 692;  //10.27 * range + 1300;2.937 * range + 716.11;
+            FW2Target = 2.937 * range + 692;
 //            if(range > 90){
 //                FW1Target = 1000;
 //                FW2Target = 900;
