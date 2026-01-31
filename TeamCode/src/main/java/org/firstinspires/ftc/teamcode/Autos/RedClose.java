@@ -1,4 +1,6 @@
 package org.firstinspires.ftc.teamcode.Autos; // make sure this aligns with class location
+import android.util.Size;
+
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -8,9 +10,16 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
@@ -19,6 +28,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Autonomous(name = "Red Close", group = "Autos")
 public class RedClose extends OpMode {
@@ -40,6 +50,13 @@ public class RedClose extends OpMode {
     private final double startingAngle = 180; // angle from straight forward (counterclockwise)
     private final double lowLimit = -450;
     private final double highLimit = 730;
+    private double camRange;
+    private double bearing;
+    private double xEst;
+    private double yEst;
+    private final double camOffsetX = 2;
+    private double turretPos;
+    private boolean hasEst = false;
     private enum PathState {
         PRELOAD,
         SHOOTPRE,
@@ -56,13 +73,13 @@ public class RedClose extends OpMode {
 
     private PathState pathState;
     //positions
-    private final Pose start = new Pose(130, 130, Math.toRadians(41));
-    private final Pose outtakePre = new Pose(95, 90, Math.toRadians(41));
-    private final Pose outtake = new Pose(100, 90, Math.toRadians(0));
-    private final Pose intake1 = new Pose(134, 88, Math.toRadians(0));
+    private final Pose start = new Pose(130, 142, Math.toRadians(221-360));
+    private final Pose outtakePre = new Pose(95, 90, Math.toRadians(-90));
+    private final Pose outtake = new Pose(100, 90, Math.toRadians(-90));
+    private final Pose intake1 = new Pose(130, 88, Math.toRadians(0));
     private final Pose intake2p1 = new Pose(100, 65, Math.toRadians(0));
     private final Pose intake2p2 = new Pose(133, 65 - 4, Math.toRadians(0));
-    private final Pose end = new Pose(126, 77, Math.toRadians(0));
+    private final Pose end = new Pose(122, 77, Math.toRadians(0));
 
     //Paths
     private PathChain Preload;
@@ -84,7 +101,7 @@ public class RedClose extends OpMode {
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
-                .setConstantHeadingInterpolation(0)
+                .setLinearHeadingInterpolation(0,Math.toRadians(-90))
                 .build();
         Intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
@@ -96,7 +113,7 @@ public class RedClose extends OpMode {
                 .build();
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
-                .setConstantHeadingInterpolation(0)
+                .setLinearHeadingInterpolation(0,Math.toRadians(-90))
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
@@ -120,14 +137,14 @@ public class RedClose extends OpMode {
 
         intake = hardwareMap.get(DcMotorEx.class, "intake");
         intake.setDirection(DcMotorEx.Direction.REVERSE);
-//
-//        flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
-//        flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
-//        flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-//
-//        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
-//        flyWheel2.setDirection(DcMotorEx.Direction.REVERSE);
-//        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+
+        flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
+        flyWheel1.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+
+        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
+        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
@@ -141,6 +158,7 @@ public class RedClose extends OpMode {
 
 
         buildPaths();
+        initWebcam();
         follower.setPose(start);
     }
 
@@ -148,6 +166,13 @@ public class RedClose extends OpMode {
         opmodeTimer.resetTimer();
         setPathState(pathState);
         actionTimer.resetTimer();
+        new Thread(() -> {
+            try {
+                cameraControls();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
     }
 
     public void statePathUpdate() {
@@ -156,10 +181,10 @@ public class RedClose extends OpMode {
 //        telemetry.addData("heading", follower.getHeading());
 //        telemetry.addData("velocity", follower.getVelocity());
 //        telemetry.addData("turretPos", turret.getCurrentPosition());
-//        telemetry.update();
-
+        telemetry.update();
+        List<AprilTagDetection> detectedTags = aprilTag.getDetections();
         if(pathState != PathState.END && pathState != PathState.STOP){
-            aiming();
+            aiming(detectedTags);
         }else{
             turret.setTargetPosition(0);
         }
@@ -168,7 +193,7 @@ public class RedClose extends OpMode {
                 move(Preload, PathState.SHOOTPRE);
                 break;
             case SHOOTPRE:
-                shoot(1000,1000, PathState.INTAKE1);
+                shoot(900,900, PathState.INTAKE1);
                 break;
             case INTAKE1:
                 moveIntake(Intake1, PathState.OUTTAKE1);
@@ -177,7 +202,7 @@ public class RedClose extends OpMode {
                 move(Outtake1, PathState.SHOOT1);
                 break;
             case SHOOT1:
-                shoot(1000,1000,PathState.INTAKE21);
+                shoot(900,900,PathState.INTAKE21);
                 break;
             case INTAKE21:
                 move(Intake21, PathState.INTAKE22);
@@ -189,7 +214,7 @@ public class RedClose extends OpMode {
                 move(Outtake2, PathState.SHOOT2);
                 break;
             case SHOOT2:
-                shoot(1000,1000,PathState.END);
+                shoot(900,900,PathState.END);
                 break;
             case END:
                 move(End, PathState.STOP);
@@ -203,6 +228,7 @@ public class RedClose extends OpMode {
         xPos = follower.getPose().getX();
         yPos = follower.getPose().getY();
         heading = follower.getPose().getHeading();
+        turretPos = turret.getCurrentPosition();
         statePathUpdate();
     }
 
@@ -220,7 +246,7 @@ public class RedClose extends OpMode {
 
     public void moveIntake(PathChain path, PathState nextPath){
         if (!moving) {
-            follower.followPath(path,0.3, true);
+            follower.followPath(path,0.35, true);
             intake.setPower(0.8);
             moving = true;
         }
@@ -233,60 +259,58 @@ public class RedClose extends OpMode {
     }
 
     public void shoot(double FW1Target, double FW2Target, PathState nextPath){
-        if (!follower.isBusy() && !atFWV) {
-            intake.setPower(0);
-            stopper.setPosition(0.88);
-          //  flyWheel1.setVelocity(FW1Target);
-           // flyWheel2.setVelocity(FW2Target);
+        range = goalPos.findRange(xPos, yPos);
+        flyWheel1.setVelocity(2.937 * range + 690);
+        flyWheel2.setVelocity(2.937 * range + 690);
+        double FWV1 = flyWheel1.getVelocity();
+        double FWV2 = flyWheel2.getVelocity();
+        telemetry.addData("FW1",FWV1);
+        telemetry.addData("FW2",FWV2);
+        if(actionTimer.getElapsedTime() > 1000){
+            stopper.setPosition(0.973);
+            intake.setPower(0.6);
         }
-        double FWV1 = 1200;//flyWheel1.getVelocity();
-        double FWV2 = 1200;//flyWheel2.getVelocity();
-        if(FWV1 >= FW1Target && FWV2 >= FW2Target){
-            stopper.setPosition(0.97);
-            intake.setPower(0.8);
-            atFWV = true;
-        }
-        if (actionTimer.getElapsedTime() > 4000) {
+        if (actionTimer.getElapsedTime() > 4500) {
             intake.setPower(0);
-            stopper.setPosition(0.88);
-         //   flyWheel1.setVelocity(0);
-           // flyWheel2.setVelocity(0);
+            stopper.setPosition(0.9);
+            flyWheel1.setVelocity(0);
+            flyWheel2.setVelocity(0);
             pathState = nextPath;
             actionTimer.resetTimer();
-            atFWV = false;
         }
     }
 
-    public void aiming(){//){}List<AprilTagDetection> detectedTags){
-//        for (AprilTagDetection detection : detectedTags) {
-//            if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
-//                camRange = detection.ftcPose.range;
+    public void aiming(List<AprilTagDetection> detectedTags){
+        for (AprilTagDetection detection : detectedTags) {
+            if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
+                camRange = detection.ftcPose.range + camOffsetX;
+                bearing = detection.ftcPose.bearing;
 //                bearing = Math.toRadians(detection.ftcPose.bearing);
 //                double xCam = camRange * Math.cos(bearing); //cartesian coordinates in cam frame of reference
 //                double yCam = camRange * Math.sin(bearing) - camOffset;
 //                range = Math.hypot(xCam, yCam); // corrected range
 //                bearing = Math.toDegrees(Math.atan2(yCam, xCam)); // corrected bearing
-//
-//                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
-//                bearing = Math.toRadians(bearing);
-//                if(!gamepad1.x){
-//                    goalPos.update(xPos, yPos, bearing, camRange);
-//                }
-//                xEst = xPos + camRange * Math.cos(bearing);
-//                yEst = yPos + camRange * Math.sin(bearing);
-//                if(!hasEst){
-//                    goalPos.setX(xEst);
-//                    goalPos.setY(yEst);
-//                }
-//                hasEst = true;
-//                break;
-//            }
-//        }
+
+                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
+                bearing = Math.toRadians(bearing);
+                if(!gamepad1.x){
+                    goalPos.update(xPos, yPos, bearing, camRange);
+                }
+                xEst = xPos + camRange * Math.cos(bearing);
+                yEst = yPos + camRange * Math.sin(bearing);
+                if(!hasEst){
+                    goalPos.setX(xEst);
+                    goalPos.setY(yEst);
+                }
+                hasEst = true;
+                break;
+            }
+        }
 
         //required turret angle
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
-                - Math.toDegrees(heading);
+                - Math.toDegrees(heading); // SIDE DEPENDENT
         if (turretTarget > 200) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < -200) {
@@ -294,8 +318,51 @@ public class RedClose extends OpMode {
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
         // hardware limit
-        //turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
-
+        turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
         turret.setTargetPosition((int) turretTarget);
+    }
+    private void initWebcam() {
+
+        // Create the AprilTag processor.
+        aprilTag = new AprilTagProcessor.Builder()
+                .setDrawAxes(true)
+                .setDrawCubeProjection(true)
+                .setDrawTagOutline(true)
+                .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
+                .build();
+        // Decimation = 1 ..  Detect 2" Tag from 10 feet away at 10 Frames per second
+        // Decimation = 2 ..  Detect 2" Tag from 6  feet away at 22 Frames per second
+        // Decimation = 3 ..  Detect 2" Tag from 4  feet away at 30 Frames Per Second (default)
+        // Decimation = 3 ..  Detect 5" Tag from 10 feet away at 30 Frames Per Second (default)
+        // Note: Decimation can be changed on-the-fly to adapt during a match.
+        aprilTag.setDecimation(3);
+
+        // Create the vision portal by using a builder.
+        VisionPortal.Builder builder = new VisionPortal.Builder();
+
+        // Set the camera (webcam vs. built-in RC phone camera).
+        builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
+
+
+        builder.setCameraResolution(new Size(640, 480)); //640 480
+
+        builder.enableLiveView(false);
+        builder.addProcessor(aprilTag);
+
+        // Build the Vision Portal, using the above settings.
+        visionPortal = builder.build();
+
+    }
+    public void cameraControls() throws InterruptedException {
+        Thread.sleep(3000);
+        if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
+            // exposure and gain
+            ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
+            GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
+
+            exposureControl.setMode(ExposureControl.Mode.Manual);
+            exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
+            gainControl.setGain(100);
+        }
     }
 }
