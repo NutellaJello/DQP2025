@@ -59,7 +59,6 @@ public class RedTeleopWebcam extends LinearOpMode {
     double FWV2;
     double idlePower = 0;
     double camRange = 0;
-    double lastRange;
     double bearing = 0;
     double elevation = 0;
     GoalPos goalPos = new GoalPos(30,50);
@@ -74,6 +73,10 @@ public class RedTeleopWebcam extends LinearOpMode {
     private double yEst;
     private double range;
     private double xPos = 0, yPos = 0, heading = 0;
+    // Low-pass filter parameters for range (tune as needed)
+    private final double RANGE_FILTER_ALPHA = 0.25; // 0..1, higher = less smoothing
+    private final double RANGE_MAX_JUMP = 30.0; // inches, max allowed immediate jump before clamping/outlier handling
+    private double lastRange = -1.0; // stores previous filtered range
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 180; // angle from straight forward (counterclockwise)
@@ -370,15 +373,41 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
     public void firing(){
-        range = goalPos.findRange(xPos, yPos);
-        if (gamepad1.x) {
-            FW1Target = 2.937 * range + 692;  //10.27 * range + 1300;2.937 * range + 716.11;
-            FW2Target = 2.937 * range + 692;
-            if(FWV1 >= FW1Target && FWV2 >= FW2Target){
-                stopperPos = 0.973; // open
-                intakePower = 0.7;
+        // Compute raw range from goalPos and apply a lightweight low-pass filter.
+        double rawRange = goalPos.findRange(xPos, yPos);
+        // Defensive checks: ignore invalid measurements
+        if (Double.isNaN(rawRange) || rawRange <= 0) {
+            // keep previous filtered range if available
+            if (lastRange > 0) {
+                range = lastRange;
+            } else {
+                range = rawRange; // fallback (may be NaN or non-positive)
             }
         } else {
+            if (lastRange <= 0) {
+                // first valid measurement -> initialize filter
+                range = rawRange;
+            } else {
+                // outlier handling: clamp large sudden jumps to avoid impulsive control
+                double jump = rawRange - lastRange;
+                if (Math.abs(jump) > RANGE_MAX_JUMP) {
+                    // clamp the change directionally to a max jump
+                    rawRange = lastRange + Math.signum(jump) * RANGE_MAX_JUMP;
+                }
+                // exponential moving average (low-pass)
+                range = RANGE_FILTER_ALPHA * rawRange + (1.0 - RANGE_FILTER_ALPHA) * lastRange;
+            }
+            lastRange = range;
+        }
+
+         if (gamepad1.x) {
+             FW1Target = 2.937 * range + 692;  //10.27 * range + 1300;2.937 * range + 716.11;
+             FW2Target = 2.937 * range + 692;
+             if(FWV1 >= FW1Target && FWV2 >= FW2Target){
+                 stopperPos = 0.973; // open
+                 intakePower = 0.7;
+             }
+         } else {
             intakePower = 0;
             stopperPos = 0.9; // closed
             FW1Target = idlePower;
