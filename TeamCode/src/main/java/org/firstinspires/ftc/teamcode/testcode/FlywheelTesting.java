@@ -41,7 +41,6 @@ public class FlywheelTesting extends LinearOpMode {
     private DcMotorEx intake;
     private DcMotorEx turret;
     private DcMotorEx flyWheel1;
-    private DcMotorEx flyWheel2;
     private Servo stopper;
     private Servo flap;
 
@@ -53,16 +52,13 @@ public class FlywheelTesting extends LinearOpMode {
     boolean useWebcam = true;
     double intakePower = 0;
     double FW1Target = 0;
-    double FW2Target = 0;
     double stopperPos = 0.9;
-
-    double topFlapPos = 0;
     double flapPos = 0.2;
 
     double shotFreq = 0;
     double feedPower = 1;
 
-    double p = 140;
+    double p = 200;
     double d = 0;
     double i = 0;
     double f = 13.5;
@@ -79,7 +75,7 @@ public class FlywheelTesting extends LinearOpMode {
     double lastRange;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goalPos = new GoalPos(30,50);
+    GoalPos goalPos = new GoalPos(20,50);
     ElapsedTime clickTimer1 = new ElapsedTime();
     ElapsedTime clickTimer2 = new ElapsedTime();
     ElapsedTime shootDelay = new ElapsedTime();
@@ -94,9 +90,9 @@ public class FlywheelTesting extends LinearOpMode {
     private double xPos = 0, yPos = 0, heading = 0;
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
-    private final double startingAngle = 180; // angle from straight forward (counterclockwise)
-    private final double lowLimit = -450;
-    private final double highLimit = 890;
+    private final double startingAngle = 0; // angle from straight forward (counterclockwise)
+    private final double lowLimit = 0;
+    private final double highLimit = 1865;
 
 
     @Override
@@ -117,11 +113,6 @@ public class FlywheelTesting extends LinearOpMode {
         flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
         flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel1.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, fwPID);
-
-
-        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
-        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
-        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
@@ -157,13 +148,12 @@ public class FlywheelTesting extends LinearOpMode {
 
             // all the movement controls.
             if(!holding){
-                drivetrain.Teleop(gamepad1, telemetry, fieldCentric);
+                drivetrain.Teleop(gamepad1, heading, telemetry, fieldCentric);
             }
 
             turretPos = turret.getCurrentPosition();
 
             FWV1 = flyWheel1.getVelocity();
-            FWV2 = flyWheel2.getVelocity();
             setIdlePower();
 
             if(!gamepad1.x){
@@ -278,7 +268,7 @@ public class FlywheelTesting extends LinearOpMode {
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
-                bearing = detection.ftcPose.bearing;
+                bearing = detection.ftcPose.bearing + Math.atan(1/range);
 //                bearing = Math.toRadians(detection.ftcPose.bearing);
 //                double xCam = camRange * Math.cos(bearing); //cartesian coordinates in cam frame of reference
 //                double yCam = camRange * Math.sin(bearing) - camOffset;
@@ -305,9 +295,9 @@ public class FlywheelTesting extends LinearOpMode {
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading);
-        if (turretTarget > 200) { //wrap angle
+        if (turretTarget > 360 + 20) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < -200) {
+        } else if (turretTarget < 0 - 20) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
@@ -349,6 +339,8 @@ public class FlywheelTesting extends LinearOpMode {
 
     public void firing(){
         range = goalPos.findRange(xPos, yPos);
+        flapPos = range/600;
+        flap.setPosition(flapPos);
         if(gamepad2.dpad_up && clickTimer1.seconds() > 0.05){
             FW1Target += 50;
             clickTimer1.reset();
@@ -357,27 +349,15 @@ public class FlywheelTesting extends LinearOpMode {
             clickTimer1.reset();
         }
 
-        //changing PID
-        if(gamepad2.y && clickTimer2.seconds() > 0.1){
-            flapPos += 0.02;
-            clickTimer2.reset();
-        } else if (gamepad2.a && clickTimer2.seconds() > 0.1) {
-            flapPos -= 0.02;
-            clickTimer2.reset();
-        }
-
-        flap.setPosition(flapPos);
-
         if (gamepad1.x) {
             flyWheel1.setVelocity(FW1Target);
-            flyWheel2.setVelocity(FW2Target);
-            if(FWV1 >= FW1Target && FWV2 >= FW2Target){
+            if(FWV1 >= FW1Target){
                 if(!atSpeed) {
                     atSpeed = true;
                     shootDelay.reset();
                 }
                 if (shootDelay.seconds() > shotFreq && atSpeed) {
-                    stopperPos = 0.97; // open
+                    stopperPos = 0.973; // open
                     intakePower = feedPower;
                 }
             }
@@ -386,12 +366,7 @@ public class FlywheelTesting extends LinearOpMode {
             intakePower = 0;
             stopperPos = 0.9; // closed
             flyWheel1.setVelocity(0);
-            flyWheel2.setVelocity(0);
         }
-
-
-        PIDFCoefficients fwPID = new PIDFCoefficients(p, 0, 0,  f);
-        flyWheel1.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, fwPID);
         stopper.setPosition(stopperPos);
     }
 
