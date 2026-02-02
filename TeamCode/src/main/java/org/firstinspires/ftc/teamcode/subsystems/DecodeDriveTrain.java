@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.AnalogInput;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
@@ -41,15 +42,14 @@ public class DecodeDriveTrain {
         BR.setDirection(DcMotorEx.Direction.FORWARD);
         FL.setDirection(DcMotorEx.Direction.REVERSE);
         BL.setDirection(DcMotorEx.Direction.FORWARD);
+//
+//        FR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        BR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        FL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        BL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-//        imu = hardwareMap.get(IMU.class, "imu");
-//        IMU.Parameters parameters = new IMU.Parameters(new RevHubOrientationOnRobot(
-//                RevHubOrientationOnRobot.LogoFacingDirection.LEFT,
-//                RevHubOrientationOnRobot.UsbFacingDirection.UP));
-//        imu.initialize(parameters);
-
-        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
-        configurePinpoint();
+//        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
+//        configurePinpoint();
     }
     public void configurePinpoint(){
         /*
@@ -80,15 +80,12 @@ public class DecodeDriveTrain {
         pinpoint.resetPosAndIMU();
     }
 
-    public void Teleop(Gamepad gamepad, Telemetry telemetry, boolean fieldCentric) {
-        Teleop(gamepad, telemetry, false, fieldCentric);
+    public void Teleop(Gamepad gamepad, double heading, Telemetry telemetry,  boolean fieldCentric) {
+        Teleop(gamepad, heading, telemetry, false, fieldCentric);
     }
 
-    public void Teleop(Gamepad gamepad, Telemetry telemetry, boolean showTelemetry, boolean field ){ //Code to be run in Teleop Mode void Loop at top level
-        pinpoint.update();
-        pose2D = pinpoint.getPosition();
-        double heading   = -pose2D.getHeading(AngleUnit.RADIANS);
-
+    public void Teleop(Gamepad gamepad, double heading, Telemetry telemetry, boolean showTelemetry, boolean field){ //Code to be run in Teleop Mode void Loop at top level
+        heading = -heading;
         double PowerFL;
         double PowerFR;
         double PowerBL;
