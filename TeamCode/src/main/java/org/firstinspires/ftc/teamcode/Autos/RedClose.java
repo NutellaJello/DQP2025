@@ -10,18 +10,16 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 
-import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
@@ -35,28 +33,34 @@ public class RedClose extends OpMode {
     private DcMotorEx intake;
     private DcMotorEx turret;
     private DcMotorEx flyWheel1;
-    private DcMotorEx flyWheel2;
     private Servo stopper;
+    private Servo flap;
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
     private Follower follower;
     private Timer actionTimer, opmodeTimer;
     private boolean moving = false;
-    private boolean atFWV = false;
     GoalPos goalPos = new GoalPos(147,144);
     private double xPos = 0, yPos = 0, heading = 0;
     private double range;
-    private final double startingAngle = 180; // angle from straight forward (counterclockwise)
-    private final double lowLimit = -450;
-    private final double highLimit = 730;
+    private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
+    private final double lowLimit = 0;
+    private final double highLimit = 1865;
     private double camRange;
     private double bearing;
     private double xEst;
     private double yEst;
     private final double camOffsetX = 2;
     private double turretPos;
+    private double flapPos = 0.2;
     private boolean hasEst = false;
+    double p = 380;
+    double d = 0;
+    double i = 0;
+    double f = 13.5;
+    PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
+    private final double outtakeBrake = 0.7;
     private enum PathState {
         PRELOAD,
         SHOOTPRE,
@@ -67,19 +71,25 @@ public class RedClose extends OpMode {
         INTAKE22,
         OUTTAKE2,
         SHOOT2,
+        INTAKE31,
+        INTAKE32,
+        OUTTAKE3,
+        SHOOT3,
         END,
         STOP
     }
 
     private PathState pathState;
     //positions
-    private final Pose start = new Pose(130, 142, Math.toRadians(221-360));
-    private final Pose outtakePre = new Pose(95, 90, Math.toRadians(-90));
-    private final Pose outtake = new Pose(100, 90, Math.toRadians(-90));
-    private final Pose intake1 = new Pose(130, 88, Math.toRadians(0));
-    private final Pose intake2p1 = new Pose(100, 65, Math.toRadians(0));
-    private final Pose intake2p2 = new Pose(133, 65 - 4, Math.toRadians(0));
-    private final Pose end = new Pose(122, 77, Math.toRadians(0));
+    private final Pose start = new Pose(130, 142, Math.toRadians(-139));
+    private final Pose outtakePre = new Pose(93, 90, Math.toRadians(0));
+    private final Pose outtake = new Pose(100, 90, Math.toRadians(0));
+    private final Pose intake1 = new Pose(125, 88, Math.toRadians(0));
+    private final Pose intake2p1 = new Pose(100, 67, Math.toRadians(0));
+    private final Pose intake2p2 = new Pose(128, 67 - 2, Math.toRadians(0));
+    private final Pose intake3p1 = new Pose(100, 39, Math.toRadians(0));
+    private final Pose intake3p2 = new Pose(128, 39, Math.toRadians(0));
+    private final Pose end = new Pose(112, 77, Math.toRadians(0));
 
     //Paths
     private PathChain Preload;
@@ -88,12 +98,16 @@ public class RedClose extends OpMode {
     private PathChain Intake21;
     private PathChain Intake22;
     private PathChain Outtake2;
+    private PathChain Intake31;
+    private PathChain Intake32;
+    private PathChain Outtake3;
     private PathChain End;
 
     public void buildPaths() {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
+                .setBrakingStrength(outtakeBrake)
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
@@ -101,7 +115,8 @@ public class RedClose extends OpMode {
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
-                .setLinearHeadingInterpolation(0,Math.toRadians(-90))
+                .setConstantHeadingInterpolation(0)
+                .setBrakingStrength(outtakeBrake)
                 .build();
         Intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
@@ -113,7 +128,21 @@ public class RedClose extends OpMode {
                 .build();
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
-                .setLinearHeadingInterpolation(0,Math.toRadians(-90))
+                .setConstantHeadingInterpolation(0)
+                .setBrakingStrength(outtakeBrake)
+                .build();
+        Intake31 = follower.pathBuilder()
+                .addPath(new BezierLine(outtake, intake3p1))
+                .setConstantHeadingInterpolation(0)
+                .build();
+        Intake32 = follower.pathBuilder()
+                .addPath(new BezierLine(intake3p1, intake3p2))
+                .setConstantHeadingInterpolation(0)
+                .build();
+        Outtake3 = follower.pathBuilder()
+                .addPath(new BezierLine(intake3p2, outtake))
+                .setConstantHeadingInterpolation(0)
+                .setBrakingStrength(outtakeBrake)
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
@@ -139,12 +168,8 @@ public class RedClose extends OpMode {
         intake.setDirection(DcMotorEx.Direction.REVERSE);
 
         flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
-        flyWheel1.setDirection(DcMotorEx.Direction.FORWARD);
-        flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-
-        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
-        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
-        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
+        flyWheel1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, fwPID);
 
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
@@ -155,6 +180,9 @@ public class RedClose extends OpMode {
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
+
+        flap = hardwareMap.get(Servo.class, "flap");
+        flap.setDirection(Servo.Direction.FORWARD);
 
 
         buildPaths();
@@ -193,7 +221,7 @@ public class RedClose extends OpMode {
                 move(Preload, PathState.SHOOTPRE);
                 break;
             case SHOOTPRE:
-                shoot(900,900, PathState.INTAKE1);
+                shoot(PathState.INTAKE1);
                 break;
             case INTAKE1:
                 moveIntake(Intake1, PathState.OUTTAKE1);
@@ -202,7 +230,7 @@ public class RedClose extends OpMode {
                 move(Outtake1, PathState.SHOOT1);
                 break;
             case SHOOT1:
-                shoot(900,900,PathState.INTAKE21);
+                shoot(PathState.INTAKE21);
                 break;
             case INTAKE21:
                 move(Intake21, PathState.INTAKE22);
@@ -214,7 +242,19 @@ public class RedClose extends OpMode {
                 move(Outtake2, PathState.SHOOT2);
                 break;
             case SHOOT2:
-                shoot(900,900,PathState.END);
+                shoot(PathState.INTAKE31);
+                break;
+            case INTAKE31:
+                move(Intake31, PathState.INTAKE32);
+                break;
+            case INTAKE32:
+                moveIntake(Intake32, PathState.OUTTAKE3);
+                break;
+            case OUTTAKE3:
+                move(Outtake3, PathState.SHOOT3);
+                break;
+            case SHOOT3:
+                shoot(PathState.END);
                 break;
             case END:
                 move(End, PathState.STOP);
@@ -247,7 +287,7 @@ public class RedClose extends OpMode {
     public void moveIntake(PathChain path, PathState nextPath){
         if (!moving) {
             follower.followPath(path,0.35, true);
-            intake.setPower(0.8);
+            intake.setPower(1);
             moving = true;
         }
         if (!follower.isBusy() && actionTimer.getElapsedTime() > 50) {
@@ -258,23 +298,27 @@ public class RedClose extends OpMode {
         }
     }
 
-    public void shoot(double FW1Target, double FW2Target, PathState nextPath){
+    public void shoot(PathState nextPath){
+        double targetV = toFWV(range);
         range = goalPos.findRange(xPos, yPos);
-        flyWheel1.setVelocity(2.937 * range + 690);
-        flyWheel2.setVelocity(2.937 * range + 690);
-        double FWV1 = flyWheel1.getVelocity();
-        double FWV2 = flyWheel2.getVelocity();
-        telemetry.addData("FW1",FWV1);
-        telemetry.addData("FW2",FWV2);
-        if(actionTimer.getElapsedTime() > 1000){
-            stopper.setPosition(0.973);
-            intake.setPower(0.6);
+        flyWheel1.setVelocity(targetV);
+        if (range<40) {
+            flapPos = 0;
+        }else if (range < 95){
+            flapPos = 0.2;
+        }else{
+            flapPos = 0.24;
         }
-        if (actionTimer.getElapsedTime() > 4500) {
+        flap.setPosition(flapPos);
+        double FWV = flyWheel1.getVelocity();
+        if(FWV >= targetV){
+            stopper.setPosition(0.973);
+            intake.setPower(1);
+        }
+        if (actionTimer.getElapsedTime() > 3000) {
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
-            flyWheel2.setVelocity(0);
             pathState = nextPath;
             actionTimer.resetTimer();
         }
@@ -284,25 +328,14 @@ public class RedClose extends OpMode {
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
-                bearing = detection.ftcPose.bearing;
-//                bearing = Math.toRadians(detection.ftcPose.bearing);
-//                double xCam = camRange * Math.cos(bearing); //cartesian coordinates in cam frame of reference
-//                double yCam = camRange * Math.sin(bearing) - camOffset;
-//                range = Math.hypot(xCam, yCam); // corrected range
-//                bearing = Math.toDegrees(Math.atan2(yCam, xCam)); // corrected bearing
 
+                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5/range)); // SIDE DEPENDENT
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
+
                 if(!gamepad1.x){
                     goalPos.update(xPos, yPos, bearing, camRange);
                 }
-                xEst = xPos + camRange * Math.cos(bearing);
-                yEst = yPos + camRange * Math.sin(bearing);
-                if(!hasEst){
-                    goalPos.setX(xEst);
-                    goalPos.setY(yEst);
-                }
-                hasEst = true;
                 break;
             }
         }
@@ -364,5 +397,9 @@ public class RedClose extends OpMode {
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
         }
+    }
+
+    public double toFWV(double r){
+        return (0.00673 * range * range) + (5.54 * range) +  (1162);
     }
 }
