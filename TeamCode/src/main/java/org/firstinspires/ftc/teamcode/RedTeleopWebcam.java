@@ -48,6 +48,9 @@ public class RedTeleopWebcam extends LinearOpMode {
     private VisionPortal visionPortal;
     boolean fieldCentric = true;
 
+
+
+
     boolean useWebcam = true;
     double intakePower = 0;
     double feedPower = 1;
@@ -57,6 +60,8 @@ public class RedTeleopWebcam extends LinearOpMode {
     double turretPos;
     double FWV1;
     double idlePower = 0;
+
+    boolean idle = true;
     double camRange = 0;
     double bearing = 0;
     double elevation = 0;
@@ -83,10 +88,10 @@ public class RedTeleopWebcam extends LinearOpMode {
 
     @Override
     public void runOpMode() {
-        if (visionPortal != null) {
-            visionPortal.close();
-            sleep(250);
-        }
+//        if (visionPortal != null) {
+//            visionPortal.close();
+//            sleep(250);
+//        }
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap);
         follower = Constants.createTeleopFollower(hardwareMap);
@@ -157,17 +162,15 @@ public class RedTeleopWebcam extends LinearOpMode {
 
             intake.setPower(intakePower);
 
-            botTelemetry();
+           // botTelemetry();
 
         }
-        visionPortal.close();
+        if (visionPortal != null) {
+            visionPortal.close();
+            visionPortal = null;
+        }
 
     }
-
-
-
-
-
 
     private void initWebcam() {
 
@@ -320,20 +323,24 @@ public class RedTeleopWebcam extends LinearOpMode {
     public void firing(){
         range = goalPos.findRange(xPos, yPos);
         if (range<40) {
+            //ultra-close
             flapPos = 0;
+            feedPower = 1;
         }else if (range < 95){
-            flapPos = 0.2;
+            //close
+            flapPos = 0.22;
+            feedPower = 1;
         }else{
+            //far
             flapPos = 0.24;
+            feedPower = 0.67;
         }
         flap.setPosition(flapPos);
-        if (range> 95){
-            //far range piece
-            feedPower = 0.67;
-        }else{
-            // close range piece
-            feedPower = 1;
+
+        if (gamepad1.leftBumperWasPressed()){
+            idle = !idle;
         }
+
         if (gamepad1.x) {
             FW1Target = toFWV(range);
             if(FW1Target > 2000){
@@ -343,7 +350,9 @@ public class RedTeleopWebcam extends LinearOpMode {
                 stopperPos = 0.973; // open
                 intakePower = feedPower;
             }
-        } else {
+        }else if (idle){
+            FW1Target = 1000;
+        }else {
             intakePower = 0;
             stopperPos = 0.9; // closed
             FW1Target = idlePower;

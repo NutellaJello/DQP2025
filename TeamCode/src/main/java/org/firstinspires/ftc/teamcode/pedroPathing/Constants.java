@@ -59,12 +59,12 @@ public class Constants {
             .yVelocity(60.42);
 
     public static PinpointConstants localizerConstants = new PinpointConstants()
-            .forwardPodY(-2.36)
-            .strafePodX(-0.94)
+            .forwardPodY(-2.36) // -4.5
+            .strafePodX(-0.94) // -5
             .distanceUnit(DistanceUnit.INCH)
             .hardwareMapName("pinpoint")
             .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD)
-            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED)
+            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED) // these are fine
             .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
     public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 
