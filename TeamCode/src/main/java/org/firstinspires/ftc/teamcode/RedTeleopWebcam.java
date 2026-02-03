@@ -63,7 +63,7 @@ public class RedTeleopWebcam extends LinearOpMode {
     double lastRange;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goalPos = new GoalPos(30,50);
+    GoalPos goalPos = new GoalPos(24,58);
 
     private Follower follower;
     private boolean holding = false;
