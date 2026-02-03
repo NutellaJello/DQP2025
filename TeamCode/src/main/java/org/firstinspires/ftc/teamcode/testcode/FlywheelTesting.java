@@ -58,7 +58,7 @@ public class FlywheelTesting extends LinearOpMode {
     double shotFreq = 0;
     double feedPower = 1;
 
-    double p = 200;
+    double p = 380;
     double d = 0;
     double i = 0;
     double f = 13.5;
@@ -69,7 +69,7 @@ public class FlywheelTesting extends LinearOpMode {
 
     double turretPos;
     double FWV1;
-    double FWV2;
+    //double FWV2;
     double idlePower = 0;
     double camRange = 0;
     double lastRange;
@@ -341,13 +341,15 @@ public class FlywheelTesting extends LinearOpMode {
         range = goalPos.findRange(xPos, yPos);
         flapPos = range/600;
         flap.setPosition(flapPos);
-        if(gamepad2.dpad_up && clickTimer1.seconds() > 0.05){
-            FW1Target += 50;
+        if(gamepad2.dpadUpWasPressed()){
+            //FW1Target += 50;
             clickTimer1.reset();
-        } else if (gamepad2.dpad_down && clickTimer1.seconds() > 0.05) {
-            FW1Target -= 50;
+        } else if (gamepad2.dpadDownWasPressed() ) {
+            //FW1Target -= 50;
             clickTimer1.reset();
         }
+
+        FW1Target = (0.0335 * range * range) + (3.18 * range) +  (1156.69 );
 
         if (gamepad1.x) {
             flyWheel1.setVelocity(FW1Target);
