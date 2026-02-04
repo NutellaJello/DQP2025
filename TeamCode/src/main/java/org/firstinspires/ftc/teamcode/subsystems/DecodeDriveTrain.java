@@ -18,157 +18,178 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
 public class DecodeDriveTrain {
-    // Instantiate the drivetrain motor variables
-    private DcMotorEx FL; //Front left motor of drivetrain
-    private DcMotorEx FR; //Front right motor of drivetrain
-    private DcMotorEx BL; //Back left motor of drivetrain
-    private DcMotorEx BR; //Back right motor of drivetrain
-    GoBildaPinpointDriver pinpoint;
+    // Drivetrain motors
+    private DcMotorEx FL;
+    private DcMotorEx FR;
+    private DcMotorEx BL;
+    private DcMotorEx BR;
+
+    private IMU imu;
+
+    // Damping (kept exactly in your style)
     private double dampSpeedRatio = 1;
     private double dampTurnRatio  = -1;
-    private Pose2D pose2D;
+
+    // Field centric
     private double headingOffset = 0;
 
-
-    public DecodeDriveTrain(HardwareMap hardwareMap){                 // Motor Mapping
+    public DecodeDriveTrain(HardwareMap hardwareMap) {
         FL = hardwareMap.get(DcMotorEx.class, "FL");
         FR = hardwareMap.get(DcMotorEx.class, "FR");
         BL = hardwareMap.get(DcMotorEx.class, "BL");
         BR = hardwareMap.get(DcMotorEx.class, "BR");
 
-
-        // Set motor direction based on which side of the robot the motors are on
+        // Motor directions (keep yours, adjust if needed for your wiring)
         FR.setDirection(DcMotorEx.Direction.FORWARD);
-        BR.setDirection(DcMotorEx.Direction.FORWARD);
+        BR.setDirection(DcMotorEx.Direction.REVERSE);
         FL.setDirection(DcMotorEx.Direction.REVERSE);
-        BL.setDirection(DcMotorEx.Direction.FORWARD);
-//
-//        FR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-//        BR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-//        FL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-//        BL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        BL.setDirection(DcMotorEx.Direction.REVERSE);
 
-//        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
-//        configurePinpoint();
-    }
-    public void configurePinpoint(){
-        /*
-         *  The X pod offset refers to how far sideways from the tracking point the X (forward) odometry pod is.
-         *  Left of the center is a positive number, right of center is a negative number.
-         *
-         *  The Y pod offset refers to how far forwards from the tracking point the Y (strafe) odometry pod is.
-         *  Forward of center is a positive number, backwards is a negative number.
-         */
-        pinpoint.setOffsets(-2.36, -0.94, DistanceUnit.INCH); //these are tuned for 3110-0002-0001 Product Insight #1
+        imu = hardwareMap.get(IMU.class, "imu");
+        IMU.Parameters params = new IMU.Parameters(
+                new RevHubOrientationOnRobot(
+                        RevHubOrientationOnRobot.LogoFacingDirection.LEFT,
+                        RevHubOrientationOnRobot.UsbFacingDirection.DOWN
+                )
+        );
+        imu.initialize(params);
+        imu.resetYaw();
 
-        /*
-         * Set the kind of pods used by your robot. If you're using goBILDA odometry pods, select either
-         * the goBILDA_SWINGARM_POD, or the goBILDA_4_BAR_POD.
-         * If you're using another kind of odometry pod, uncomment setEncoderResolution and input the
-         * number of ticks per unit of your odometry pod.  For example:
-         *     pinpoint.setEncoderResolution(13.26291192, DistanceUnit.MM);
-         */
-        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD);
 
-        /*
-         * Set the direction that each of the two odometry pods count. The X (forward) pod should
-         * increase when you move the robot forward. And the Y (strafe) pod should increase when
-         * you move the robot to the left.
-         */
-        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED,
-                GoBildaPinpointDriver.EncoderDirection.FORWARD);
-        pinpoint.resetPosAndIMU();
+        // Optional braking
+        // FR.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        // BR.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        // FL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
+        // BL.setZeroPowerBehavior(DcMotorEx.ZeroPowerBehavior.BRAKE);
     }
 
-    public void Teleop(Gamepad gamepad, double heading, Telemetry telemetry,  boolean fieldCentric) {
-        Teleop(gamepad, heading, telemetry, false, fieldCentric);
+    public void stopDrive() {
+        FL.setPower(0);
+        FR.setPower(0);
+        BL.setPower(0);
+        BR.setPower(0);
     }
 
-    public void Teleop(Gamepad gamepad, double heading, Telemetry telemetry, boolean showTelemetry, boolean field){ //Code to be run in Teleop Mode void Loop at top level
+    public void Teleop(Gamepad gamepad, double heading, Telemetry telemetry, boolean fieldCentric) {
+        heading = imu.getRobotYawPitchRollAngles().getYaw(AngleUnit.RADIANS);
+    Teleop(gamepad, heading, telemetry, true, fieldCentric);
+    }
+
+    /*
+     * Control scheme requested:
+     * - Translation (x,y) on ONE joystick (left stick)
+     * - Turn on the OTHER joystick (right stick x)
+     *
+     * Field centric expects heading in radians.
+     */
+    public void Teleop(Gamepad gamepad,
+                       double heading,
+                       Telemetry telemetry,
+                       boolean showTelemetry,
+                       boolean field) {
+
+        // Keep your damping logic exactly
+        if (gamepad.right_bumper) {
+            dampSpeedRatio = 1 - 0.65;
+            dampTurnRatio = -0.6 + 0.3;
+        } else {
+            dampSpeedRatio = 1;
+            dampTurnRatio = -0.6;
+        }
+
+        // Keep your heading sign flip behavior
         heading = -heading;
+
+        if (gamepad.dpad_up) {
+            headingOffset = heading;
+        }
+
         double PowerFL;
         double PowerFR;
         double PowerBL;
         double PowerBR;
 
-        double y = Range.clip(-gamepad.left_stick_y, -1, 1);
-        //left stick x value
-        double x = Range.clip(-gamepad.left_stick_x, -1, 1);
-        //right stick x value
-        double rx = Range.clip(-gamepad.right_stick_x, -1, 1);
-        if(gamepad.right_bumper){
-            dampSpeedRatio = 1 - 0.65;
-            dampTurnRatio = -0.6 + 0.3;
-        }else{
-            dampSpeedRatio = 1;
-            dampTurnRatio = -0.6;
-        }
-        if(gamepad.dpad_up){
-            headingOffset = heading;
-        }
-        if (field){
+        // Translation on left stick, turn on right stick
+        double y  = Range.clip(-gamepad.left_stick_y, -1, 1);     // forward/back
+        double x  = Range.clip(-gamepad.left_stick_x, -1, 1);     // strafe
+        double rx = Range.clip(-gamepad.right_stick_x, -1, 1);    // turn
+
+        if (field) {
             heading -= headingOffset;
-            double max;
-            double axial   = y * Math.cos(heading) - x * Math.sin(heading);
-            double lateral = 1.2 * y * Math.sin(heading) + x * Math.cos(heading);
 
-            double turn     =  0.8 * -gamepad.right_stick_x;
+            // Rotate the translation vector into robot frame
+            // (rotation by -heading, consistent with heading sign handling above)
+            double xr = x * Math.cos(heading) + y * Math.sin(heading);
+            double yr = -x * Math.sin(heading) + y * Math.cos(heading);
 
-            PowerFL = dampSpeedRatio*(axial - lateral) + turn*dampTurnRatio;
-            PowerFR = dampSpeedRatio*(axial + lateral) - turn*dampTurnRatio;
-            PowerBL = dampSpeedRatio*(axial + lateral) + turn*dampTurnRatio;
-            PowerBR = dampSpeedRatio*(axial - lateral) - turn*dampTurnRatio;
+            double axial   = yr;
+            double lateral = 1.2 * xr;
 
-            // Normalize the values so no wheel power exceeds 100%
-            max = Math.max(Math.abs(PowerFL), Math.abs(PowerFR));
-            max = Math.max(max, Math.abs(PowerBL));
-            max = Math.max(max, Math.abs(PowerBR));
+            double turn = 0.8 * rx;
+
+            // Apply your damping multipliers in the same place you were doing it
+            PowerFL = dampSpeedRatio * (axial - lateral) + turn * dampTurnRatio;
+            PowerFR = dampSpeedRatio * (axial + lateral) - turn * dampTurnRatio;
+            PowerBL = dampSpeedRatio * (axial + lateral) + turn * dampTurnRatio;
+            PowerBR = dampSpeedRatio * (axial - lateral) - turn * dampTurnRatio;
+
+            // Normalize using absolute values (safer than max of signed values)
+            double max = Math.max(
+                    Math.max(Math.abs(PowerFL), Math.abs(PowerFR)),
+                    Math.max(Math.abs(PowerBL), Math.abs(PowerBR))
+            );
 
             if (max > 1.0) {
-                PowerFL  /= max;
+                PowerFL /= max;
                 PowerFR /= max;
-                PowerBL   /= max;
-                PowerBR  /= max;
+                PowerBL /= max;
+                PowerBR /= max;
             }
-            //telemetry.addData("heading",Math.toDegrees(heading));
+
             FL.setPower(PowerFL);
             FR.setPower(PowerFR);
             BL.setPower(PowerBL);
             BR.setPower(PowerBR);
-        }
-        else{
 
-            PowerFL = (y - x) * dampSpeedRatio + dampTurnRatio * rx;
-            PowerFR = (y + x) * dampSpeedRatio - dampTurnRatio * rx;
-            PowerBL = (y + x) * dampSpeedRatio + dampTurnRatio * rx;
-            PowerBR = (y - x) * dampSpeedRatio - dampTurnRatio * rx;
+        } else {
+            // Robot centric, same control scheme
+            double turn = rx;
 
-            double maxFront = Math.max(PowerFL, PowerFR);
-            double maxBack = Math.max(PowerBL, PowerBR);
-            double maxPower = Math.max(maxFront, maxBack);
+            PowerFL = (y - x) * dampSpeedRatio + dampTurnRatio * turn;
+            PowerFR = (y + x) * dampSpeedRatio - dampTurnRatio * turn;
+            PowerBL = (y + x) * dampSpeedRatio + dampTurnRatio * turn;
+            PowerBR = (y - x) * dampSpeedRatio - dampTurnRatio * turn;
 
-            if (maxPower > 1.0) {
-                PowerFL /= maxPower;
-                PowerFR /= maxPower;
-                PowerBL /= maxPower;
-                PowerBR /= maxPower;
+            // Normalize using absolute values
+            double max = Math.max(
+                    Math.max(Math.abs(PowerFL), Math.abs(PowerFR)),
+                    Math.max(Math.abs(PowerBL), Math.abs(PowerBR))
+            );
+
+            if (max > 1.0) {
+                PowerFL /= max;
+                PowerFR /= max;
+                PowerBL /= max;
+                PowerBR /= max;
             }
-            //finally moving the motors
-            FL.setPower(PowerFL);
-            BL.setPower(PowerBL);
-            FR.setPower(PowerFR);
-            BR.setPower(PowerBR);
-        }
-        if(showTelemetry) {
-            telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
-            telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
-            telemetry.addData("Heading angle (DEG)", pose2D.getHeading(AngleUnit.DEGREES));
-            telemetry.addData("FL Power", PowerFL);
-            telemetry.addData("BL Power", PowerBL);
-            telemetry.addData("FR Power", PowerFR);
-            telemetry.addData("BR Power", PowerBR);
+
+
+            FL.setPower(-PowerFL);
+            BL.setPower(-PowerBL);
+            FR.setPower(-PowerFR);
+            BR.setPower(-PowerBR);
         }
 
+        if (showTelemetry) {
+            telemetry.addData("field", field);
+            telemetry.addData("heading(rad)", heading);
+            telemetry.addData("headingOffset(rad)", headingOffset);
+            telemetry.addData("sticks y x rx", "%.2f %.2f %.2f", y, x, rx);
+            telemetry.addData("dampSpeedRatio", dampSpeedRatio);
+            telemetry.addData("dampTurnRatio", dampTurnRatio);
+            telemetry.addData("LSY", gamepad.left_stick_y);
+            telemetry.addData("y used", -gamepad.left_stick_y);
+            telemetry.update();
+        }
     }
-
 }
