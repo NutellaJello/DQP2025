@@ -63,7 +63,7 @@ public class BlueTeleopWebcam extends LinearOpMode {
     double camRange = 0;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goalPos = new GoalPos(24,58);
+    GoalPos goalPos = new GoalPos(10,135); // originally 24,58
 
     private Follower follower;
     private boolean holding = false;
@@ -253,7 +253,7 @@ public class BlueTeleopWebcam extends LinearOpMode {
 
     public void aiming(List<AprilTagDetection> detectedTags){
         for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
+            if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
 
                 bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(1.5/range));
