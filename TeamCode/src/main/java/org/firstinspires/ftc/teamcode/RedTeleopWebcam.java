@@ -333,12 +333,12 @@ public class RedTeleopWebcam extends LinearOpMode {
 
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
-        if (range<40) {
+        if (range<55) {
             flapPos = 0;
             feedPower = 1;
-            hOffset = 4;
+            hOffset = 1;
         }else if (range < 95){
-            flapPos = 0.22;
+            flapPos = 0.195;
             feedPower = 1;
             hOffset = 4;
         }else{
@@ -355,6 +355,9 @@ public class RedTeleopWebcam extends LinearOpMode {
             //setting target velocity
             FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
 
+            if (range< 55){
+                FW1Target-=60;
+            }
 
             if(FWV1 >= FW1Target){
                 stopperPos = 0.973; // open
