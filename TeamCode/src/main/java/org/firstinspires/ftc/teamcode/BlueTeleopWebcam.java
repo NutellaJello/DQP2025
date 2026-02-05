@@ -58,7 +58,7 @@ public class BlueTeleopWebcam extends LinearOpMode {
     double turretPos;
     double FWV1;
     double idlePower = 0;
-
+    private double hOffset = 0;
     boolean idle = true;
     double camRange = 0;
     double bearing = 0;
@@ -78,7 +78,7 @@ public class BlueTeleopWebcam extends LinearOpMode {
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = 0; //495/90
     private final double highLimit = 1865;
-    double p = 380;
+    double p = 350;
     double d = 0;
     double i = 0;
     double f = 13.5;
@@ -256,7 +256,7 @@ public class BlueTeleopWebcam extends LinearOpMode {
             if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(1.5/range));
+                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(hOffset/range));
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
@@ -320,18 +320,18 @@ public class BlueTeleopWebcam extends LinearOpMode {
 
     public void firing(){
         range = goalPos.findRange(xPos, yPos);
-        if (range<40) {
-            //ultra-close
+        if (range<45) {
             flapPos = 0;
             feedPower = 1;
+            hOffset = 4;
         }else if (range < 95){
-            //close
-            flapPos = 0.22;
+            flapPos = 0.195;
             feedPower = 1;
+            hOffset = 4;
         }else{
-            //far
             flapPos = 0.24;
             feedPower = 0.67;
+            hOffset = 2.5;
         }
         flap.setPosition(flapPos);
 
@@ -340,17 +340,19 @@ public class BlueTeleopWebcam extends LinearOpMode {
         }
 
         if (gamepad1.x) {
-            FW1Target = toFWV(range);
-            if(FW1Target > 2000){
-                FW1Target = 2000;
+
+            //setting target velocity
+            FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
+
+            if (range< 45){
+                FW1Target-=100;
             }
+
             if(FWV1 >= FW1Target){
                 stopperPos = 0.973; // open
                 intakePower = feedPower;
             }
-        }else if (idle){
-            FW1Target = 1000;
-        }else {
+        } else {
             intakePower = 0;
             stopperPos = 0.9; // closed
             FW1Target = idlePower;
