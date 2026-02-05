@@ -143,7 +143,7 @@ public class BlueTeleopWebcam extends LinearOpMode {
             turretPos = turret.getCurrentPosition();
 
             FWV1 = flyWheel1.getVelocity();
-            setIdlePower();
+            //setIdlePower();
 
             if(!gamepad1.x){
                 setIntakePower();
@@ -319,7 +319,11 @@ public class BlueTeleopWebcam extends LinearOpMode {
 
 
     public void firing(){
+
         range = goalPos.findRange(xPos, yPos);
+
+        //setting flap position
+        //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
         if (range<45) {
             flapPos = 0;
             feedPower = 1;
@@ -333,11 +337,9 @@ public class BlueTeleopWebcam extends LinearOpMode {
             feedPower = 0.67;
             hOffset = 2.5;
         }
+
         flap.setPosition(flapPos);
 
-        if (gamepad1.leftBumperWasPressed()){
-            idle = !idle;
-        }
 
         if (gamepad1.x) {
 
@@ -360,6 +362,7 @@ public class BlueTeleopWebcam extends LinearOpMode {
         flyWheel1.setVelocity(FW1Target);
         stopper.setPosition(stopperPos);
     }
+
 
     public double toFWV(double r){
         return  (0.00673 * range * range) + (5.54 * range) +  (1162);
