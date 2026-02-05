@@ -78,7 +78,7 @@ public class RedTeleopWebcam extends LinearOpMode {
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = 0; //495/90
     private final double highLimit = 1865;
-    double p = 380;
+    double p = 350;
     double d = 0;
     double i = 0;
     double f = 13.5;
@@ -333,18 +333,18 @@ public class RedTeleopWebcam extends LinearOpMode {
 
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
-        if (range<55) {
+        if (range<45) {
             flapPos = 0;
             feedPower = 1;
-            hOffset = 1;
+            hOffset = 4;
         }else if (range < 95){
             flapPos = 0.195;
             feedPower = 1;
             hOffset = 4;
         }else{
-            flapPos = 0.25;
+            flapPos = 0.24;
             feedPower = 0.67;
-            hOffset = 3;
+            hOffset = 2.5;
         }
 
         flap.setPosition(flapPos);
@@ -355,8 +355,8 @@ public class RedTeleopWebcam extends LinearOpMode {
             //setting target velocity
             FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
 
-            if (range< 55){
-                FW1Target-=60;
+            if (range< 45){
+                FW1Target-=100;
             }
 
             if(FWV1 >= FW1Target){
@@ -397,7 +397,7 @@ public class RedTeleopWebcam extends LinearOpMode {
         telemetry.addData("flap", flapPos);
         telemetry.addData("targetVel", FW1Target);
         telemetry.addData("currVel", flyWheel1.getVelocity());
-        telemetry.addData("hOffset", hOffset);
+        telemetry.addData("range", range);
 //        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
 //                follower.getPose().getX(), follower.getPose().getY()
 //        ) - Math.toDegrees(follower.getPose().getHeading())));
