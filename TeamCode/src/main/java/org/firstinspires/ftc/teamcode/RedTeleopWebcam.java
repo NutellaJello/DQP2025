@@ -50,7 +50,6 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
 
-
     boolean useWebcam = true;
     double intakePower = 0;
     double feedPower = 1;
@@ -59,9 +58,13 @@ public class RedTeleopWebcam extends LinearOpMode {
     double stopperPos = 0.9;
     double turretPos;
     double FWV1;
-    double idlePower = 0;
 
-    boolean idle = true;
+
+    double idlePower = 1200;
+
+    boolean idle = false;
+
+
     double camRange = 0;
     double bearing = 0;
     double elevation = 0;
@@ -80,6 +83,7 @@ public class RedTeleopWebcam extends LinearOpMode {
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = 0; //495/90
     private final double highLimit = 1865;
+
     double p = 380;
     double d = 0;
     double i = 0;
@@ -145,7 +149,7 @@ public class RedTeleopWebcam extends LinearOpMode {
             turretPos = turret.getCurrentPosition();
 
             FWV1 = flyWheel1.getVelocity();
-            setIdlePower();
+            //setIdlePower();
 
             if(!gamepad1.x){
                 setIntakePower();
@@ -231,9 +235,9 @@ public class RedTeleopWebcam extends LinearOpMode {
 
     public void setIdlePower(){
         if(gamepad1.dpad_left){
-            idlePower = 1800;
+            //idlePower = 1800;
         }else if(gamepad1.dpad_right){
-            idlePower = 0;
+            //idlePower = 0;
         }
     }
 
@@ -340,7 +344,9 @@ public class RedTeleopWebcam extends LinearOpMode {
         if (gamepad1.leftBumperWasPressed()){
             idle = !idle;
         }
-
+        if(gamepad1.xWasReleased()){
+            idle = false;
+        }
         if (gamepad1.x) {
             FW1Target = toFWV(range);
             if(FW1Target > 2000){
@@ -351,11 +357,11 @@ public class RedTeleopWebcam extends LinearOpMode {
                 intakePower = feedPower;
             }
         }else if (idle){
-            FW1Target = 1000;
+            FW1Target = idlePower;
         }else {
             intakePower = 0;
             stopperPos = 0.9; // closed
-            FW1Target = idlePower;
+            //FW1Target = idlePower;
         }
         flyWheel1.setVelocity(FW1Target);
         stopper.setPosition(stopperPos);
