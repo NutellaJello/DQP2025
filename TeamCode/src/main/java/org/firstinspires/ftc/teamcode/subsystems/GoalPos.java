@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode.subsystems;
 import androidx.annotation.NonNull;
 
 public class GoalPos {
-    static  final double weight = 8; // lower weight -> faster estimate update
+    static  final double weight = 15; // lower weight -> faster estimate update
     private double a;
     private double b;
 
