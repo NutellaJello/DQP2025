@@ -46,9 +46,11 @@ public class RedTeleopWebcam extends LinearOpMode {
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private boolean gainSet = false;
+    private ElapsedTime camControls = new ElapsedTime();
     boolean fieldCentric = true;
 
-    double hOffset = 0.25;
+    double hOffset = 0;//inches LEFT of goal
     double feedPower = 1;
 
     boolean useWebcam = true;
@@ -121,16 +123,12 @@ public class RedTeleopWebcam extends LinearOpMode {
 
         initWebcam();
         waitForStart();
-
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
+        camControls.reset();
 
         while (opModeIsActive()) {
+            if(camControls.seconds() > 3 && !gainSet){
+                cameraControls();
+            }
             follower.update();
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
@@ -215,8 +213,7 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
 
-    public void cameraControls() throws InterruptedException {
-        Thread.sleep(3000);
+    public void cameraControls(){
         if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             // exposure and gain
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
@@ -225,6 +222,7 @@ public class RedTeleopWebcam extends LinearOpMode {
             exposureControl.setMode(ExposureControl.Mode.Manual);
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
+            gainSet = true;
         }
     }
 
@@ -333,31 +331,36 @@ public class RedTeleopWebcam extends LinearOpMode {
 
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
-        if (range<45) {
-            flapPos = 0;
+        if (range<90) { //45
+            flapPos = 0.00571429 * range - 0.182857;//0.195
+            flapPos = Range.clip(flapPos, 0, 1);
             feedPower = 1;
-            hOffset = 4;
-        }else if (range < 95){
-            flapPos = 0.195;
-            feedPower = 1;
-            hOffset = 4;
-        }else{
+            hOffset = -3;
+        }
+        //else if (range < 90){
+//            flapPos = 0.0032222222 * range - 0.095;;//0.195
+//            flapPos = Range.clip(flapPos, 0.05, 0.195);
+//            feedPower = 1;
+//            hOffset = -2;
+        //}
+        else{
             flapPos = 0.24;
             feedPower = 0.67;
-            hOffset = 2.5;
+            hOffset = 2.7;
         }
 
         flap.setPosition(flapPos);
-
-
         if (gamepad1.x) {
 
             //setting target velocity
-            FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
-
-            if (range< 45){
-                FW1Target-=100;
+            if(range > 95){
+                FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);
+            } else {
+                FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);
             }
+//            if (range< 45){
+//                FW1Target-=100;
+//            }
 
             if(FWV1 >= FW1Target){
                 stopperPos = 0.973; // open
