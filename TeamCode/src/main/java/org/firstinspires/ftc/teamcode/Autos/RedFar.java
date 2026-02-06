@@ -57,6 +57,7 @@ public class RedFar extends OpMode {
     double turretPos = 0;
     double camRange = 0;
     double bearing = 0;
+    double fwv = 1878;
     boolean hasEst = false;
     double xEst;
     double yEst;
@@ -93,11 +94,11 @@ public class RedFar extends OpMode {
     private final Pose preintake1 = new Pose(120, 5, Math.toRadians(0));// need to align because doesnt curve
     // test bezier curve later.
 
-    private final Pose intake1 = new Pose(133, 0, Math.toRadians(0)); // intaking the batch @ loading
+    private final Pose intake1 = new Pose(136, 0, Math.toRadians(0)); // intaking the batch @ loading
 
 //    private final Pose intake2p1 = new Pose(90, 52, Math.toRadians(0)); // moving to get the second batch
 //    private final Pose intake2p2 = new Pose(120, 57, Math.toRadians(0)); // actually moving inward to get batch
-    private final Pose end = new Pose(100, 0, Math.toRadians(0));
+    private final Pose end = new Pose(100, 8, Math.toRadians(0));
 
     //paths
     private PathChain Preload;
@@ -272,8 +273,8 @@ public class RedFar extends OpMode {
             moving = true;
         }
         // since we are collecting from the loading zone + balls are in weird pos, need for time to
-        // completely intake. Switched from 50 to 2000
-        if (!follower.isBusy() && actionTimer.getElapsedTime() > 2000) {
+        // completely intake. Switched from 50 to 1500
+        if (!follower.isBusy() && actionTimer.getElapsedTime() > 1500) {
             intake.setPower(0);
             pathState = nextPath;
             actionTimer.resetTimer();
@@ -284,7 +285,7 @@ public class RedFar extends OpMode {
     public void shoot(PathState nextPath){
         double targetV = toFWV(range);
         range = goalPos.findRange(xPos, yPos);
-        flyWheel1.setVelocity(targetV);
+        flyWheel1.setVelocity(fwv);
         if (range<40) {
             flapPos = 0;
         }else if (range < 95){
@@ -294,11 +295,11 @@ public class RedFar extends OpMode {
         }
         flap.setPosition(flapPos);
         double FWV = flyWheel1.getVelocity();
-        if(FWV >= targetV){
+        if(FWV >= fwv){
             stopper.setPosition(0.973);
             intake.setPower(0.67);
         }
-        if (actionTimer.getElapsedTime() > 5000) { // moves onto next path after 5 seconds.
+        if (actionTimer.getElapsedTime() > 5500) { // moves onto next path after 5 seconds.
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);

@@ -53,6 +53,8 @@ public class BlueFar extends OpMode {
     private final double startingAngle = 0; // angle from straight forward (counterclockwise)
     private final double lowLimit = 0;
     private final double highLimit = 1865;
+     double targetV = 0;
+     double fwv = 1885;
     private double flapPos = 0.2;
     double turretPos = 0;
     double camRange = 0;
@@ -90,14 +92,14 @@ public class BlueFar extends OpMode {
     private final Pose outtakePre = new Pose(56, 10, Math.toRadians(90)); // moving out to shoot preload
     private final Pose outtake = new Pose(56, 10, Math.toRadians(90));  // general position to shoot after getting preload
 
-    private final Pose preintake1 = new Pose(26, 10, Math.toRadians(180));// need to align because doesnt curve
+    private final Pose preintake1 = new Pose(26, 7, Math.toRadians(180));// need to align because doesnt curve
     // test bezier curve later.
 
-    private final Pose intake1 = new Pose(0, 10, Math.toRadians(180)); // intaking the batch @ loading
+    private final Pose intake1 = new Pose(15, 7, Math.toRadians(180)); // intaking the batch @ loading
 
     //    private final Pose intake2p1 = new Pose(90, 52, Math.toRadians(0)); // moving to get the second batch
 //    private final Pose intake2p2 = new Pose(120, 57, Math.toRadians(0)); // actually moving inward to get batch
-    private final Pose end = new Pose(56, 0, Math.toRadians(180));
+    private final Pose end = new Pose(56, 8, Math.toRadians(90));
 
     //paths
     private PathChain Preload;
@@ -120,7 +122,7 @@ public class BlueFar extends OpMode {
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
@@ -140,7 +142,7 @@ public class BlueFar extends OpMode {
 //                .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
-                .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+                .setConstantHeadingInterpolation(Math.toRadians(90))
                 .build();
     }
 
@@ -222,7 +224,7 @@ public class BlueFar extends OpMode {
                 move(Outtake1, PathState.SHOOT1);
                 break;
             case SHOOT1:
-                shoot(PathState.END);
+                fixedshoot(PathState.END);
                 break;
 //            case INTAKE21:
 //                move(Intake21, PathState.INTAKE22);
@@ -272,8 +274,8 @@ public class BlueFar extends OpMode {
             moving = true;
         }
         // since we are collecting from the loading zone + balls are in weird pos, need for time to
-        // completely intake. Switched from 50 to 2000
-        if (!follower.isBusy() && actionTimer.getElapsedTime() > 2000) {
+        // completely intake. Switched from 50 to 1500
+        if (!follower.isBusy() && actionTimer.getElapsedTime() > 1500) {
             intake.setPower(0);
             pathState = nextPath;
             actionTimer.resetTimer();
@@ -282,9 +284,9 @@ public class BlueFar extends OpMode {
     }
 
     public void shoot(PathState nextPath){
-        double targetV = toFWV(range);
+        targetV = toFWV(range);
         range = goalPos.findRange(xPos, yPos);
-        flyWheel1.setVelocity(targetV);
+        flyWheel1.setVelocity(fwv);//
         if (range<40) {
             flapPos = 0;
         }else if (range < 95){
@@ -294,11 +296,35 @@ public class BlueFar extends OpMode {
         }
         flap.setPosition(flapPos);
         double FWV = flyWheel1.getVelocity();
-        if(FWV >= targetV){
+        if(FWV >= fwv){
             stopper.setPosition(0.973);
             intake.setPower(0.67);
         }
-        if (actionTimer.getElapsedTime() > 5000) { // moves onto next path after 5 seconds.
+        if (actionTimer.getElapsedTime() > 5500) { // moves onto next path after 5.5 seconds.
+            intake.setPower(0);
+            stopper.setPosition(0.9);
+            flyWheel1.setVelocity(0);
+            pathState = nextPath;
+            actionTimer.resetTimer();
+        }
+    }
+    public void fixedshoot(PathState nextPath){
+        range = goalPos.findRange(xPos, yPos);
+        flyWheel1.setVelocity(fwv);
+        if (range<40) {
+            flapPos = 0;
+        }else if (range < 95){
+            flapPos = 0.2;
+        }else{
+            flapPos = 0.24;
+        }
+        flap.setPosition(flapPos);
+        double FWV = flyWheel1.getVelocity();
+        if(FWV >= fwv){
+            stopper.setPosition(0.973);
+            intake.setPower(0.67);
+        }
+        if (actionTimer.getElapsedTime() > 5500) { // moves onto next path after 5.5 seconds.
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
@@ -381,8 +407,8 @@ public class BlueFar extends OpMode {
             gainControl.setGain(100);
         }
     }
-
-    public double toFWV(double r){
-        return (0.00673 * range * range) + (5.54 * range) +  (1162);
+    // this was shooting over when I tested, changing constant from 1162 -> 1025
+    public double toFWV(double r){ // this was shooting over when I tested, changing constant from
+        return (0.00673 * range * range) + (5.54 * range) +  (1025);
     }
 }

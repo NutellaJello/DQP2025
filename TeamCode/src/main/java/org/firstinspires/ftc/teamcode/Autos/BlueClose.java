@@ -61,6 +61,7 @@ public class BlueClose extends OpMode {
     double f = 13.5;
     PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
     private final double outtakeBrake = 0.7;
+    private final double intakeBreak = 0.7;
     private enum PathState {
         PRELOAD,
         SHOOTPRE,
@@ -82,13 +83,13 @@ public class BlueClose extends OpMode {
     private PathState pathState;
     //positions
     private final Pose start = new Pose(14, 142, Math.toRadians(139));
-    private final Pose outtakePre = new Pose(45, 95, Math.toRadians(135));
-    private final Pose outtake = new Pose(45, 95, Math.toRadians(135));
-    private final Pose intake1 = new Pose(4, 100, Math.toRadians(180));
+    private final Pose outtakePre = new Pose(40, 105, Math.toRadians(135));
+    private final Pose outtake = new Pose(40, 105, Math.toRadians(135));
+    private final Pose intake1 = new Pose(2, 105, Math.toRadians(180));
     private final Pose intake2p1 = new Pose(40, 77, Math.toRadians(180));
-    private final Pose intake2p2 = new Pose(4, 77 - 2, Math.toRadians(180));
-    private final Pose intake3p1 = new Pose(40, 54, Math.toRadians(180));
-    private final Pose intake3p2 = new Pose(4, 54-2, Math.toRadians(180));
+    private final Pose intake2p2 = new Pose(1, 77 - 2, Math.toRadians(180));
+    private final Pose intake3p1 = new Pose(40, 58, Math.toRadians(180));
+    private final Pose intake3p2 = new Pose(1, 54-2, Math.toRadians(180));
     private final Pose end = new Pose(20, 77, Math.toRadians(180));
 
     //Paths
@@ -121,6 +122,7 @@ public class BlueClose extends OpMode {
         Intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setBrakingStrength(intakeBreak)
                 .build();
         Intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p1, intake2p2))
@@ -134,6 +136,7 @@ public class BlueClose extends OpMode {
         Intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setBrakingStrength(intakeBreak)
                 .build();
         Intake32 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p1, intake3p2))
