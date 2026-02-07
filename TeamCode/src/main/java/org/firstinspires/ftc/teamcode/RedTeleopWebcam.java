@@ -344,7 +344,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         }else{
             flapPos = 0.24;
             feedPower = 0.67;
-            hOffset = 2.5; // SIDE 2.5/0.5
+            hOffset = 2.5; // SIDE 2.5/-0.5
         }
 
         flap.setPosition(flapPos);
