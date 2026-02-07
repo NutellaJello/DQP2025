@@ -42,6 +42,7 @@ public class RedFar extends OpMode {
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private boolean gainSet = false;
     private Follower follower;
     private Timer actionTimer, opmodeTimer;
     private boolean moving = false;
@@ -92,13 +93,16 @@ public class RedFar extends OpMode {
     private final Pose outtake = new Pose(90, 10, Math.toRadians(0));  // general position to shoot after getting preload
 
     private final Pose preintake1 = new Pose(120, 5, Math.toRadians(0));// need to align because doesnt curve
-    // test bezier curve later.
 
     private final Pose intake1 = new Pose(136, 0, Math.toRadians(0)); // intaking the batch @ loading
 
-//    private final Pose intake2p1 = new Pose(90, 52, Math.toRadians(0)); // moving to get the second batch
+    // this is to intake the overflow
+//    private final Pose preintake2 = new Pose(120, 5, Math.toRadians(0));// need to align because doesnt curve
+//    private final Pose intake2 = new Pose(136, 0, Math.toRadians(0)); // intaking the batch @ loading
+
+    //    private final Pose intake2p1 = new Pose(90, 52, Math.toRadians(0)); // moving to get the second batch
 //    private final Pose intake2p2 = new Pose(120, 57, Math.toRadians(0)); // actually moving inward to get batch
-    private final Pose end = new Pose(100, 8, Math.toRadians(0));
+    private final Pose end = new Pose(108, 6, Math.toRadians(0));
 
     //paths
     private PathChain Preload;
@@ -190,13 +194,6 @@ public class RedFar extends OpMode {
         opmodeTimer.resetTimer();
         setPathState(pathState);
         actionTimer.resetTimer();
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
     }
 
     public void statePathUpdate() {
@@ -239,7 +236,9 @@ public class RedFar extends OpMode {
 //                break;
             case END:
                 move(End, PathState.STOP);
-                turret.setTargetPosition(0);
+                if(visionPortal != null){
+                    visionPortal.close();
+                }
                 break;
         }
     }
@@ -252,6 +251,9 @@ public class RedFar extends OpMode {
         heading = follower.getPose().getHeading();
         turretPos = turret.getCurrentPosition();
         statePathUpdate();
+        if (opmodeTimer.getElapsedTime() > 3000 && !gainSet) {
+            cameraControls();
+        }
     }
 
     public void move(PathChain path, PathState nextPath){
@@ -317,9 +319,7 @@ public class RedFar extends OpMode {
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
-                if(!gamepad1.x){
-                    goalPos.update(xPos, yPos, bearing, camRange);
-                }
+                goalPos.update(xPos, yPos, bearing, camRange);
                 break;
             }
         }
@@ -328,9 +328,9 @@ public class RedFar extends OpMode {
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
-        if (turretTarget > 200) { //wrap angle
+        if (turretTarget > 360 + 30) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < -200) {
+        } else if (turretTarget < 0 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
@@ -370,8 +370,7 @@ public class RedFar extends OpMode {
         visionPortal = builder.build();
 
     }
-    public void cameraControls() throws InterruptedException {
-        Thread.sleep(3000);
+    public void cameraControls(){
         if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             // exposure and gain
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
@@ -380,6 +379,7 @@ public class RedFar extends OpMode {
             exposureControl.setMode(ExposureControl.Mode.Manual);
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
+            gainSet = true;
         }
     }
 
