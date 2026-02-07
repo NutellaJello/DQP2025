@@ -42,6 +42,7 @@ public class BlueFar extends OpMode {
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private boolean gainSet = false;
     private Follower follower;
     private Timer actionTimer, opmodeTimer;
     private boolean moving = false;
@@ -53,8 +54,8 @@ public class BlueFar extends OpMode {
     private final double startingAngle = 0; // angle from straight forward (counterclockwise)
     private final double lowLimit = 0;
     private final double highLimit = 1865;
-     double targetV = 0;
-     double fwv = 1885;
+    double targetV = 0;
+    double fwv = 1885;
     private double flapPos = 0.2;
     double turretPos = 0;
     double camRange = 0;
@@ -88,18 +89,18 @@ public class BlueFar extends OpMode {
 
     private PathState pathState;
     //positions
-    private final Pose start = new Pose(56, 0, Math.toRadians(90)); // staring postition
-    private final Pose outtakePre = new Pose(56, 10, Math.toRadians(90)); // moving out to shoot preload
-    private final Pose outtake = new Pose(56, 10, Math.toRadians(90));  // general position to shoot after getting preload
+    private final Pose start = new Pose(56, 0, Math.toRadians(180)); // staring postition
+    private final Pose outtakePre = new Pose(56, 10, Math.toRadians(180)); // moving out to shoot preload
+    private final Pose outtake = new Pose(56, 10, Math.toRadians(180));  // general position to shoot after getting preload
 
-    private final Pose preintake1 = new Pose(26, 7, Math.toRadians(180));// need to align because doesnt curve
+    private final Pose preintake1 = new Pose(26, 0, Math.toRadians(180));// need to align because doesnt curve
     // test bezier curve later.
 
-    private final Pose intake1 = new Pose(15, 7, Math.toRadians(180)); // intaking the batch @ loading
+    private final Pose intake1 = new Pose(10, 0, Math.toRadians(180)); // intaking the batch @ loading
 
     //    private final Pose intake2p1 = new Pose(90, 52, Math.toRadians(0)); // moving to get the second batch
 //    private final Pose intake2p2 = new Pose(120, 57, Math.toRadians(0)); // actually moving inward to get batch
-    private final Pose end = new Pose(56, 8, Math.toRadians(90));
+    private final Pose end = new Pose(40, 7, Math.toRadians(180));
 
     //paths
     private PathChain Preload;
@@ -114,11 +115,11 @@ public class BlueFar extends OpMode {
     public void buildPaths() {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
-                .setConstantHeadingInterpolation(Math.toRadians(90))
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
         AlignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1)) // test bezier curve later
-                .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
@@ -126,7 +127,7 @@ public class BlueFar extends OpMode {
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
-                .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(90))
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
 //        Intake21 = follower.pathBuilder()
 //                .addPath(new BezierLine(outtake, intake2p1))
@@ -142,7 +143,7 @@ public class BlueFar extends OpMode {
 //                .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
-                .setConstantHeadingInterpolation(Math.toRadians(90))
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
     }
 
@@ -191,13 +192,6 @@ public class BlueFar extends OpMode {
         opmodeTimer.resetTimer();
         setPathState(pathState);
         actionTimer.resetTimer();
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
     }
 
     public void statePathUpdate() {
@@ -240,7 +234,9 @@ public class BlueFar extends OpMode {
 //                break;
             case END:
                 move(End, PathState.STOP);
-                turret.setTargetPosition(0);
+                if(visionPortal != null){
+                    visionPortal.close();
+                }
                 break;
         }
     }
@@ -253,6 +249,9 @@ public class BlueFar extends OpMode {
         heading = follower.getPose().getHeading();
         turretPos = turret.getCurrentPosition();
         statePathUpdate();
+        if (opmodeTimer.getElapsedTime() > 3000 && !gainSet) {
+            cameraControls();
+        }
     }
 
     public void move(PathChain path, PathState nextPath){
@@ -269,7 +268,7 @@ public class BlueFar extends OpMode {
 
     public void moveIntake(PathChain path, PathState nextPath){
         if (!moving) {
-            follower.followPath(path,0.35, true);
+            follower.followPath(path,0.25, true);
             intake.setPower(1); // change this to 1 from 0.8
             moving = true;
         }
@@ -338,13 +337,11 @@ public class BlueFar extends OpMode {
             if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5/range)); // SIDE DEPENDENT
+                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(-0.6/range)); // SIDE DEPENDENT
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
-                if(!gamepad1.x){
-                    goalPos.update(xPos, yPos, bearing, camRange);
-                }
+                goalPos.update(xPos, yPos, bearing, camRange);
                 break;
             }
         }
@@ -353,9 +350,9 @@ public class BlueFar extends OpMode {
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
-        if (turretTarget > 200) { //wrap angle
+        if (turretTarget > 360 + 30) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < -200) {
+        } else if (turretTarget < 0 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
@@ -395,8 +392,7 @@ public class BlueFar extends OpMode {
         visionPortal = builder.build();
 
     }
-    public void cameraControls() throws InterruptedException {
-        Thread.sleep(3000);
+    public void cameraControls(){
         if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             // exposure and gain
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
@@ -405,6 +401,7 @@ public class BlueFar extends OpMode {
             exposureControl.setMode(ExposureControl.Mode.Manual);
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
+            gainSet = true;
         }
     }
     // this was shooting over when I tested, changing constant from 1162 -> 1025
