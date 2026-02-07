@@ -99,7 +99,7 @@ public class BlueFar extends OpMode {
 
     //    private final Pose intake2p1 = new Pose(90, 52, Math.toRadians(0)); // moving to get the second batch
 //    private final Pose intake2p2 = new Pose(120, 57, Math.toRadians(0)); // actually moving inward to get batch
-    private final Pose end = new Pose(56, 8, Math.toRadians(90));
+    private final Pose end = new Pose(44, 7, Math.toRadians(90));
 
     //paths
     private PathChain Preload;
