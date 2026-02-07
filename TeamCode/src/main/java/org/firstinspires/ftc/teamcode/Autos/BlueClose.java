@@ -85,7 +85,7 @@ public class BlueClose extends OpMode {
     private final Pose start = new Pose(14, 142, Math.toRadians(139));
     private final Pose outtakePre = new Pose(40, 105, Math.toRadians(135));
     private final Pose outtake = new Pose(40, 105, Math.toRadians(135));
-    private final Pose intake1 = new Pose(2, 105, Math.toRadians(180));
+    private final Pose intake1 = new Pose(4, 105, Math.toRadians(180));
     private final Pose intake2p1 = new Pose(40, 77, Math.toRadians(180));
     private final Pose intake2p2 = new Pose(1, 77 - 2, Math.toRadians(180));
     private final Pose intake3p1 = new Pose(40, 58, Math.toRadians(180));
