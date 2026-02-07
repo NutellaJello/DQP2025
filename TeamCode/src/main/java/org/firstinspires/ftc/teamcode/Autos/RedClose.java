@@ -38,6 +38,7 @@ public class RedClose extends OpMode {
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private boolean gainSet = false;
     private Follower follower;
     private Timer actionTimer, opmodeTimer;
     private boolean moving = false;
@@ -60,7 +61,7 @@ public class RedClose extends OpMode {
     double i = 0;
     double f = 13.5;
     PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
-    private final double outtakeBrake = 0.7;
+    private final double braking = 0.9;
     private enum PathState {
         PRELOAD,
         SHOOTPRE,
@@ -107,7 +108,7 @@ public class RedClose extends OpMode {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
-                .setBrakingStrength(outtakeBrake)
+                .setBrakingStrength(braking)
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
@@ -116,7 +117,7 @@ public class RedClose extends OpMode {
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setConstantHeadingInterpolation(0)
-                .setBrakingStrength(outtakeBrake)
+                .setBrakingStrength(braking)
                 .build();
         Intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
@@ -129,7 +130,7 @@ public class RedClose extends OpMode {
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
                 .setConstantHeadingInterpolation(0)
-                .setBrakingStrength(outtakeBrake)
+                .setBrakingStrength(braking)
                 .build();
         Intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
@@ -142,7 +143,7 @@ public class RedClose extends OpMode {
         Outtake3 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p2, outtake))
                 .setConstantHeadingInterpolation(0)
-                .setBrakingStrength(outtakeBrake)
+                .setBrakingStrength(braking)
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
@@ -194,13 +195,6 @@ public class RedClose extends OpMode {
         opmodeTimer.resetTimer();
         setPathState(pathState);
         actionTimer.resetTimer();
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
     }
 
     public void statePathUpdate() {
@@ -258,6 +252,9 @@ public class RedClose extends OpMode {
                 break;
             case END:
                 move(End, PathState.STOP);
+                if(visionPortal != null){
+                    visionPortal.close();
+                }
                 break;
         }
     }
@@ -270,6 +267,9 @@ public class RedClose extends OpMode {
         heading = follower.getPose().getHeading();
         turretPos = turret.getCurrentPosition();
         statePathUpdate();
+        if (opmodeTimer.getElapsedTime() > 3000 && !gainSet) {
+            cameraControls();
+        }
     }
 
     public void move(PathChain path, PathState nextPath){
@@ -302,7 +302,7 @@ public class RedClose extends OpMode {
         double targetV = toFWV(range);
         range = goalPos.findRange(xPos, yPos);
         flyWheel1.setVelocity(targetV);
-        if (range<40) {
+        if (range < 40) {
             flapPos = 0;
         }else if (range < 95){
             flapPos = 0.2;
@@ -315,7 +315,7 @@ public class RedClose extends OpMode {
             stopper.setPosition(0.973);
             intake.setPower(1);
         }
-        if (actionTimer.getElapsedTime() > 3000) {
+        if (actionTimer.getElapsedTime() > 2800) {
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
@@ -333,9 +333,7 @@ public class RedClose extends OpMode {
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
-                if(!gamepad1.x){
-                    goalPos.update(xPos, yPos, bearing, camRange);
-                }
+                goalPos.update(xPos, yPos, bearing, camRange);
                 break;
             }
         }
@@ -344,9 +342,9 @@ public class RedClose extends OpMode {
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
-        if (turretTarget > 200) { //wrap angle
+        if (turretTarget > 360 + 30) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < -200) {
+        } else if (turretTarget < 0 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
@@ -386,8 +384,7 @@ public class RedClose extends OpMode {
         visionPortal = builder.build();
 
     }
-    public void cameraControls() throws InterruptedException {
-        Thread.sleep(3000);
+    public void cameraControls(){
         if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             // exposure and gain
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
@@ -396,6 +393,7 @@ public class RedClose extends OpMode {
             exposureControl.setMode(ExposureControl.Mode.Manual);
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
+            gainSet = true;
         }
     }
 

@@ -34,9 +34,9 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
-@TeleOp(name = "Blue Teleop", group = "TeleOp") // SIDE Red/Blue
+@TeleOp(name = "Blue Teleop", group = "TeleOp") // SIDE RED/BLUE
 
-public class BlueTeleopWebcam extends LinearOpMode {// SIDE Red/Blue
+public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
@@ -46,11 +46,9 @@ public class BlueTeleopWebcam extends LinearOpMode {// SIDE Red/Blue
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
-    private boolean gainSet = false;
-    private ElapsedTime camControls = new ElapsedTime();
     boolean fieldCentric = true;
 
-    double hOffset = 0;//inches LEFT of goal
+    double hOffset = 0.25;
     double feedPower = 1;
 
     boolean useWebcam = true;
@@ -65,7 +63,7 @@ public class BlueTeleopWebcam extends LinearOpMode {// SIDE Red/Blue
     double lastRange;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goalPos = new GoalPos(30,-50); // SIDE Red:50/Blue:-50
+    GoalPos goalPos = new GoalPos(30,-50); // SIDE 50/-50
 
     private Follower follower;
     private boolean holding = false;
@@ -123,12 +121,16 @@ public class BlueTeleopWebcam extends LinearOpMode {// SIDE Red/Blue
 
         initWebcam();
         waitForStart();
-        camControls.reset();
+
+        new Thread(() -> {
+            try {
+                cameraControls();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
 
         while (opModeIsActive()) {
-            if(camControls.seconds() > 3 && !gainSet){
-                cameraControls();
-            }
             follower.update();
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
@@ -213,7 +215,8 @@ public class BlueTeleopWebcam extends LinearOpMode {// SIDE Red/Blue
 
 
 
-    public void cameraControls(){
+    public void cameraControls() throws InterruptedException {
+        Thread.sleep(3000);
         if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             // exposure and gain
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
@@ -222,7 +225,6 @@ public class BlueTeleopWebcam extends LinearOpMode {// SIDE Red/Blue
             exposureControl.setMode(ExposureControl.Mode.Manual);
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
-            gainSet = true;
         }
     }
 
@@ -256,9 +258,9 @@ public class BlueTeleopWebcam extends LinearOpMode {// SIDE Red/Blue
 
     public void aiming(List<AprilTagDetection> detectedTags){
         for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 20) { // SIDE Red:24/Blue:20
+            if (detection.metadata != null && detection.id == 20) { // SIDE 24/20
                 camRange = detection.ftcPose.range + camOffsetX;
-                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(hOffset/range)); // SIDE Red:+/Blue:-
+                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(hOffset/range)); // SIDE +/-
 //                bearing = Math.toRadians(detection.ftcPose.bearing);
 //                double xCam = camRange * Math.cos(bearing); //cartesian coordinates in cam frame of reference
 //                double yCam = camRange * Math.sin(bearing) - camOffset;
@@ -331,36 +333,31 @@ public class BlueTeleopWebcam extends LinearOpMode {// SIDE Red/Blue
 
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
-        if (range<90) { //45
-            flapPos = 0.00571429 * range - 0.182857;//0.195
-            flapPos = Range.clip(flapPos, 0, 1);
+        if (range<45) {
+            flapPos = 0;
             feedPower = 1;
-            hOffset = -3;
-        }
-        //else if (range < 90){
-//            flapPos = 0.0032222222 * range - 0.095;;//0.195
-//            flapPos = Range.clip(flapPos, 0.05, 0.195);
-//            feedPower = 1;
-//            hOffset = -2;
-        //}
-        else{
+            hOffset = -3.5; // SIDE -1.5/-3.5
+        }else if (range < 95){
+            flapPos = 0.195;
+            feedPower = 1;
+            hOffset = -3.5; // SIDE -1.5/-3.5
+        }else{
             flapPos = 0.24;
             feedPower = 0.67;
-            hOffset = 2.7;
+            hOffset = -0.5; // SIDE 2.5/-0.5
         }
 
         flap.setPosition(flapPos);
+
+
         if (gamepad1.x) {
 
             //setting target velocity
-            if(range > 95){
-                FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);
-            } else {
-                FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);
+            FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
+
+            if (range< 45){
+                FW1Target-=100;
             }
-//            if (range< 45){
-//                FW1Target-=100;
-//            }
 
             if(FWV1 >= FW1Target){
                 stopperPos = 0.973; // open
