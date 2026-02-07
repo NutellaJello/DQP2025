@@ -38,13 +38,14 @@ public class BlueClose extends OpMode {
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private boolean gainSet = false;
     private Follower follower;
     private Timer actionTimer, opmodeTimer;
     private boolean moving = false;
     GoalPos goalPos = new GoalPos(0,144);
     private double xPos = 0, yPos = 0, heading = 0;
     private double range;
-    private final double startingAngle = 0;
+    private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = 0;
     private final double highLimit = 1865;
     private double camRange;
@@ -60,8 +61,7 @@ public class BlueClose extends OpMode {
     double i = 0;
     double f = 13.5;
     PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
-    private final double outtakeBrake = 0.7;
-    private final double intakeBreak = 0.7;
+    private final double braking = 0.9;
     private enum PathState {
         PRELOAD,
         SHOOTPRE,
@@ -84,10 +84,10 @@ public class BlueClose extends OpMode {
     //positions
     private final Pose start = new Pose(14, 142, Math.toRadians(139));
     private final Pose outtakePre = new Pose(40, 105, Math.toRadians(135));
-    private final Pose outtake = new Pose(40, 105, Math.toRadians(135));
-    private final Pose intake1 = new Pose(2, 105, Math.toRadians(180));
+    private final Pose outtake = new Pose(40, 105, Math.toRadians(180));
+    private final Pose intake1 = new Pose(6, 105, Math.toRadians(180));
     private final Pose intake2p1 = new Pose(40, 77, Math.toRadians(180));
-    private final Pose intake2p2 = new Pose(1, 77 - 2, Math.toRadians(180));
+    private final Pose intake2p2 = new Pose(4, 77 - 2, Math.toRadians(180));
     private final Pose intake3p1 = new Pose(40, 58, Math.toRadians(180));
     private final Pose intake3p2 = new Pose(1, 54-2, Math.toRadians(180));
     private final Pose end = new Pose(20, 77, Math.toRadians(180));
@@ -108,7 +108,7 @@ public class BlueClose extends OpMode {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
-                .setBrakingStrength(outtakeBrake)
+                .setBrakingStrength(braking)
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
@@ -116,13 +116,13 @@ public class BlueClose extends OpMode {
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
-                .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(135))
-                .setBrakingStrength(outtakeBrake)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setBrakingStrength(braking)
                 .build();
         Intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
-                .setBrakingStrength(intakeBreak)
+                .setBrakingStrength(braking)
                 .build();
         Intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p1, intake2p2))
@@ -130,13 +130,13 @@ public class BlueClose extends OpMode {
                 .build();
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
-                .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(135))
-                .setBrakingStrength(outtakeBrake)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setBrakingStrength(braking)
                 .build();
         Intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
-                .setBrakingStrength(intakeBreak)
+                .setBrakingStrength(braking)
                 .build();
         Intake32 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p1, intake3p2))
@@ -144,8 +144,8 @@ public class BlueClose extends OpMode {
                 .build();
         Outtake3 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p2, outtake))
-                .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(135))
-                .setBrakingStrength(outtakeBrake)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setBrakingStrength(braking)
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
@@ -197,13 +197,6 @@ public class BlueClose extends OpMode {
         opmodeTimer.resetTimer();
         setPathState(pathState);
         actionTimer.resetTimer();
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
     }
 
     public void statePathUpdate() {
@@ -261,6 +254,9 @@ public class BlueClose extends OpMode {
                 break;
             case END:
                 move(End, PathState.STOP);
+                if(visionPortal != null){
+                    visionPortal.close();
+                }
                 break;
         }
     }
@@ -273,6 +269,9 @@ public class BlueClose extends OpMode {
         heading = follower.getPose().getHeading();
         turretPos = turret.getCurrentPosition();
         statePathUpdate();
+        if (opmodeTimer.getElapsedTime() > 3000 && !gainSet) {
+            cameraControls();
+        }
     }
 
     public void move(PathChain path, PathState nextPath){
@@ -289,7 +288,7 @@ public class BlueClose extends OpMode {
 
     public void moveIntake(PathChain path, PathState nextPath){
         if (!moving) {
-            follower.followPath(path,0.45, true); // 0.35 -> 0.45
+            follower.followPath(path,0.35, true);
             intake.setPower(1);
             moving = true;
         }
@@ -305,7 +304,7 @@ public class BlueClose extends OpMode {
         double targetV = toFWV(range);
         range = goalPos.findRange(xPos, yPos);
         flyWheel1.setVelocity(targetV);
-        if (range<40) {
+        if (range < 40) {
             flapPos = 0;
         }else if (range < 95){
             flapPos = 0.2;
@@ -318,7 +317,7 @@ public class BlueClose extends OpMode {
             stopper.setPosition(0.973);
             intake.setPower(1);
         }
-        if (actionTimer.getElapsedTime() > 3000) {
+        if (actionTimer.getElapsedTime() > 2800) {
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
@@ -332,13 +331,11 @@ public class BlueClose extends OpMode {
             if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5/range)); // SIDE DEPENDENT
+                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(2.5/range)); // SIDE DEPENDENT
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
-                if(!gamepad1.x){
-                    goalPos.update(xPos, yPos, bearing, camRange);
-                }
+                goalPos.update(xPos, yPos, bearing, camRange);
                 break;
             }
         }
@@ -346,10 +343,10 @@ public class BlueClose extends OpMode {
         //required turret angle
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
-                - Math.toDegrees(heading); // SIDE DEPENDENT\
-        if (turretTarget > 200) { //wrap angle
+                - Math.toDegrees(heading); // SIDE DEPENDENT
+        if (turretTarget > 360 + 30) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < -200) {
+        } else if (turretTarget < 0 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
@@ -389,8 +386,7 @@ public class BlueClose extends OpMode {
         visionPortal = builder.build();
 
     }
-    public void cameraControls() throws InterruptedException {
-        Thread.sleep(3000);
+    public void cameraControls(){
         if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             // exposure and gain
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
@@ -399,6 +395,7 @@ public class BlueClose extends OpMode {
             exposureControl.setMode(ExposureControl.Mode.Manual);
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
+            gainSet = true;
         }
     }
 
