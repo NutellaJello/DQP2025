@@ -53,8 +53,8 @@ public class BlueFar extends OpMode {
     private final double startingAngle = 0; // angle from straight forward (counterclockwise)
     private final double lowLimit = 0;
     private final double highLimit = 1865;
-     double targetV = 0;
-     double fwv = 1885;
+    double targetV = 0;
+    double fwv = 1885;
     private double flapPos = 0.2;
     double turretPos = 0;
     double camRange = 0;
@@ -99,7 +99,7 @@ public class BlueFar extends OpMode {
 
     //    private final Pose intake2p1 = new Pose(90, 52, Math.toRadians(0)); // moving to get the second batch
 //    private final Pose intake2p2 = new Pose(120, 57, Math.toRadians(0)); // actually moving inward to get batch
-    private final Pose end = new Pose(44, 7, Math.toRadians(90));
+    private final Pose end = new Pose(44, 7, Math.toRadians(180));
 
     //paths
     private PathChain Preload;
@@ -142,7 +142,7 @@ public class BlueFar extends OpMode {
 //                .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
-                .setConstantHeadingInterpolation(Math.toRadians(90))
+                .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
                 .build();
     }
 
