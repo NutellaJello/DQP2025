@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.Autos; // make sure this aligns with clas
 import android.util.Size;
 
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
@@ -25,10 +26,11 @@ import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@Autonomous(name = "Blue Close Gate", group = "Autos")
+@Autonomous(name = "Blue Close", group = "Autos")
 public class BlueCloseGate extends OpMode {
     private DcMotorEx intake;
     private DcMotorEx turret;
@@ -85,14 +87,15 @@ public class BlueCloseGate extends OpMode {
     //positions
     private final Pose start = new Pose(14, 142, Math.toRadians(139));
     private final Pose outtakePre = new Pose(40, 105, Math.toRadians(135));
-    private final Pose outtake = new Pose(40, 105, Math.toRadians(180));
-    private final Pose intake1 = new Pose(6, 105, Math.toRadians(180));
-    private final Pose gate = new Pose(1, 93, Math.toRadians(90));
-    private final Pose intake2p1 = new Pose(40, 77, Math.toRadians(180));
-    private final Pose intake2p2 = new Pose(4, 77 - 2, Math.toRadians(180));
-    private final Pose intake3p1 = new Pose(40, 58, Math.toRadians(180));
-    private final Pose intake3p2 = new Pose(1, 54-2, Math.toRadians(180));
-    private final Pose end = new Pose(20, 77, Math.toRadians(180));
+    private final Pose outtake = new Pose(38, 105, Math.toRadians(180));
+    private final Pose intake1 = new Pose(11, 99, Math.toRadians(180));
+    private final Pose gatePoint = new Pose(10,93,Math.toRadians(180));
+    private final Pose gate = new Pose(4.5, 93, Math.toRadians(180));
+    private final Pose intake2p1 = new Pose(38, 77, Math.toRadians(180));
+    private final Pose intake2p2 = new Pose(10, 77 - 2, Math.toRadians(180));
+    private final Pose intake3p1 = new Pose(38, 58, Math.toRadians(180));
+    private final Pose intake3p2 = new Pose(10, 54-2, Math.toRadians(180));
+    private final Pose end = new Pose(25, 87, Math.toRadians(180));
 
     //Paths
     private PathChain Preload;
@@ -118,8 +121,8 @@ public class BlueCloseGate extends OpMode {
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
         Opengate = follower.pathBuilder()
-                .addPath(new BezierLine(intake1, gate)) // might change
-                .setLinearHeadingInterpolation(intake1.getHeading(),gate.getHeading())
+                .addPath(new BezierCurve(Arrays.asList(intake1, gatePoint, gate)))
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
                 .build();
         Outtake1 = follower.pathBuilder()
@@ -206,6 +209,13 @@ public class BlueCloseGate extends OpMode {
         setPathState(pathState);
         actionTimer.resetTimer();
     }
+    @Override
+    public void stop(){
+        if(visionPortal != null){
+            visionPortal.close();
+            visionPortal = null;
+        }
+    }
 
     public void statePathUpdate() {
 //        telemetry.addData("step", pathState);
@@ -214,8 +224,8 @@ public class BlueCloseGate extends OpMode {
 //        telemetry.addData("velocity", follower.getVelocity());
 //        telemetry.addData("turretPos", turret.getCurrentPosition());
         telemetry.update();
-        List<AprilTagDetection> detectedTags = aprilTag.getDetections();
-        if(pathState != PathState.END && pathState != PathState.STOP && opmodeTimer.getElapsedTimeSeconds() < 29.5){
+        if(pathState != PathState.END && pathState != PathState.STOP && opmodeTimer.getElapsedTimeSeconds() < 29.3){
+            List<AprilTagDetection> detectedTags = aprilTag.getDetections();
             aiming(detectedTags);
         }else{
             turret.setTargetPosition(0);
@@ -265,9 +275,6 @@ public class BlueCloseGate extends OpMode {
                 break;
             case END:
                 move(End, PathState.STOP);
-                if(visionPortal != null){
-                    visionPortal.close();
-                }
                 break;
         }
     }
@@ -280,7 +287,7 @@ public class BlueCloseGate extends OpMode {
         heading = follower.getPose().getHeading();
         turretPos = turret.getCurrentPosition();
         statePathUpdate();
-        if (opmodeTimer.getElapsedTime() > 3000 && !gainSet) {
+        if (opmodeTimer.getElapsedTime() > 500 && !gainSet) {
             cameraControls();
         }
     }
@@ -299,7 +306,7 @@ public class BlueCloseGate extends OpMode {
 
     public void moveIntake(PathChain path, PathState nextPath){
         if (!moving) {
-            follower.followPath(path,0.35, true);
+            follower.followPath(path,0.37, true);
             intake.setPower(1);
             moving = true;
         }
@@ -312,8 +319,8 @@ public class BlueCloseGate extends OpMode {
     }
 
     public void shoot(PathState nextPath){
-        double targetV = toFWV(range);
         range = goalPos.findRange(xPos, yPos);
+        double targetV = toFWV(range);
         flyWheel1.setVelocity(targetV);
         if (range < 40) {
             flapPos = 0;
@@ -338,16 +345,18 @@ public class BlueCloseGate extends OpMode {
     }
 
     public void aiming(List<AprilTagDetection> detectedTags){
-        for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
-                camRange = detection.ftcPose.range + camOffsetX;
+        if(gainSet){
+            for (AprilTagDetection detection : detectedTags) {
+                if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
+                    camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(2.5/range)); // SIDE DEPENDENT
-                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
-                bearing = Math.toRadians(bearing);
+                    bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(2.5/range)); // SIDE DEPENDENT
+                    bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
+                    bearing = Math.toRadians(bearing);
 
-                goalPos.update(xPos, yPos, bearing, camRange);
-                break;
+                    goalPos.update(xPos, yPos, bearing, camRange);
+                    break;
+                }
             }
         }
 

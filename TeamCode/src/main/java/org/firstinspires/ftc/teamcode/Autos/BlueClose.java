@@ -7,6 +7,7 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -27,7 +28,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-
+@Disabled
 @Autonomous(name = "Blue Close", group = "Autos")
 public class BlueClose extends OpMode {
     private DcMotorEx intake;
@@ -90,7 +91,7 @@ public class BlueClose extends OpMode {
     private final Pose intake2p2 = new Pose(4, 77 - 2, Math.toRadians(180));
     private final Pose intake3p1 = new Pose(40, 58, Math.toRadians(180));
     private final Pose intake3p2 = new Pose(1, 54-2, Math.toRadians(180));
-    private final Pose end = new Pose(20, 77, Math.toRadians(180));
+    private final Pose end = new Pose(25, 85, Math.toRadians(180));
 
     //Paths
     private PathChain Preload;

@@ -40,6 +40,7 @@ public class BlueFarGate extends OpMode {
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private boolean gainSet = false;
     private Follower follower;
     private Timer actionTimer, opmodeTimer;
     private boolean moving = false;
@@ -57,6 +58,7 @@ public class BlueFarGate extends OpMode {
     double turretPos = 0;
     double camRange = 0;
     double bearing = 0;
+    double braking = 0.5;
 
     double p = 380;
     double d = 0;
@@ -73,6 +75,7 @@ public class BlueFarGate extends OpMode {
         INTAKE1,
         OUTTAKE1,
         SHOOT1,
+        ALIGNINTAKE2,
         TOGATE,
         WAIT,
         OUTTAKE2,
@@ -88,17 +91,19 @@ public class BlueFarGate extends OpMode {
     private final Pose outtake = new Pose(56, 10, Math.toRadians(90));  // general position to shoot after getting preload
 
     private final Pose preintake1 = new Pose(26, 7, Math.toRadians(180));// need to align because doesnt curve
-    // test bezier curve later.
 
     private final Pose intake1 = new Pose(15, 7, Math.toRadians(180)); // intaking the batch @ loading
-    private final Pose togate = new Pose(15,9, Math.toRadians(90));
-    private final Pose end = new Pose(44, 7, Math.toRadians(180));
+
+    private final Pose preintake2 = new Pose(26, 7, Math.toRadians(180));// need to align because doesnt curve
+    private final Pose togate = new Pose(15,7, Math.toRadians(180)); // repeat intake1
+    private final Pose end = new Pose(42, 7, Math.toRadians(180));
 
     //paths
     private PathChain Preload;
     private PathChain AlignIntake;
     private PathChain Intake1;
     private PathChain Outtake1;
+    private PathChain AlignIntake2;
     private PathChain Togate;
     private PathChain Outtake2;
     private PathChain End;
@@ -107,6 +112,7 @@ public class BlueFarGate extends OpMode {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setConstantHeadingInterpolation(Math.toRadians(90))
+                .setBrakingStrength(0.5)
                 .build();
         AlignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1)) // test bezier curve later
@@ -120,13 +126,18 @@ public class BlueFarGate extends OpMode {
                 .addPath(new BezierLine(intake1, outtake))
                 .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(90))
                 .build();
+        AlignIntake2 = follower.pathBuilder()
+                .addPath(new BezierLine(outtake, preintake2)) // test bezier curve later
+                .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+                .build();
         Togate = follower.pathBuilder()
-                .addPath(new BezierLine(outtake, togate))
-                .setConstantHeadingInterpolation(Math.toRadians(90))
+                .addPath(new BezierLine(preintake2, togate))
+                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setBrakingStrength(0.5)
                 .build();
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(togate, outtake))
-                .setConstantHeadingInterpolation(Math.toRadians(90))
+                .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(90))
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
@@ -179,13 +190,6 @@ public class BlueFarGate extends OpMode {
         opmodeTimer.resetTimer();
         setPathState(pathState);
         actionTimer.resetTimer();
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
     }
 
     public void statePathUpdate() {
@@ -212,26 +216,27 @@ public class BlueFarGate extends OpMode {
                 move(Outtake1, PathState.SHOOT1);
                 break;
             case SHOOT1:
-                fixedshoot(PathState.WAIT);
+                fixedshoot(PathState.ALIGNINTAKE2);
+                break;
+            case ALIGNINTAKE2:
+                move(AlignIntake2, PathState.TOGATE);
                 break;
             case TOGATE:
-                if(actionTimer.getElapsedTimeSeconds() > 3){
-                    move(Togate, PathState.OUTTAKE2);
-                }
+                moveIntake(Togate, PathState.OUTTAKE2);
                 break;
-            case WAIT:
-                intake.setPower(1);
-                if(actionTimer.getElapsedTimeSeconds() > 2){
-                    intake.setPower(0);
-                    pathState = PathState.OUTTAKE2;
-                    actionTimer.resetTimer();
 
-                }
-                break;
+
+//            case WAIT:
+//                intake.setPower(1);
+//                if(actionTimer.getElapsedTimeSeconds() > 2){
+//                    intake.setPower(0);
+//                    pathState = PathState.OUTTAKE2;
+//                    actionTimer.resetTimer();
+//
+//                }
+//                break;
             case OUTTAKE2:
-                if(actionTimer.getElapsedTimeSeconds() > 2){
-                    move(Outtake2, PathState.SHOOT2);
-                }
+                move(Outtake2, PathState.SHOOT2);
                 break;
             case SHOOT2:
                 fixedshoot(PathState.END);
@@ -251,6 +256,9 @@ public class BlueFarGate extends OpMode {
         heading = follower.getPose().getHeading();
         turretPos = turret.getCurrentPosition();
         statePathUpdate();
+        if (opmodeTimer.getElapsedTime() > 500 && !gainSet) {
+            cameraControls();
+        }
     }
 
     public void move(PathChain path, PathState nextPath){
@@ -336,7 +344,7 @@ public class BlueFarGate extends OpMode {
             if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5/range)); // SIDE DEPENDENT
+                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.6/range)); // SIDE DEPENDENT
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
@@ -393,8 +401,7 @@ public class BlueFarGate extends OpMode {
         visionPortal = builder.build();
 
     }
-    public void cameraControls() throws InterruptedException {
-        Thread.sleep(3000);
+    public void cameraControls(){
         if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             // exposure and gain
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
@@ -403,6 +410,7 @@ public class BlueFarGate extends OpMode {
             exposureControl.setMode(ExposureControl.Mode.Manual);
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
+            gainSet = true;
         }
     }
     // this was shooting over when I tested, changing constant from 1162 -> 1025

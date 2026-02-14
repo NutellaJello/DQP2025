@@ -46,7 +46,9 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private boolean gainSet = false;
     boolean fieldCentric = true;
+    private ElapsedTime opModeTimer = new ElapsedTime();
 
     double hOffset = 0.25;
     double feedPower = 1;
@@ -121,14 +123,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
         initWebcam();
         waitForStart();
-
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
+        opModeTimer.reset();
 
         while (opModeIsActive()) {
             follower.update();
@@ -136,8 +131,10 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
 
+            if(!gainSet && opModeTimer.seconds() > 0.5){
+                cameraControls();
+            }
             List<AprilTagDetection> detectedTags = aprilTag.getDetections();
-
             // all the movement controls.
             if(!holding){
                 drivetrain.Teleop(gamepad1, heading, telemetry, fieldCentric);
@@ -163,7 +160,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
             intake.setPower(intakePower);
 
-            botTelemetry();
+           // botTelemetry();
 
         }
         visionPortal.close();
@@ -215,8 +212,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
 
 
-    public void cameraControls() throws InterruptedException {
-        Thread.sleep(3000);
+    public void cameraControls(){
         if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             // exposure and gain
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
@@ -225,6 +221,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             exposureControl.setMode(ExposureControl.Mode.Manual);
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
+            gainSet = true;
         }
     }
 
@@ -307,11 +304,11 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             }else{
                 turretPower = 0;
             }
-            if ((turretPower > 0 && turretPos < highLimit) || (turretPower < 0 && turretPos > lowLimit)) { //left, right limits
-                turret.setPower(turretPower);
-            } else {
-                turret.setPower(0);   // stop at limits
+            if(gamepad2.y){
+                turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             }
+            turret.setPower(turretPower);
             if(hasEst){
                 goalPos.setX(xEst);
                 goalPos.setY(yEst);
