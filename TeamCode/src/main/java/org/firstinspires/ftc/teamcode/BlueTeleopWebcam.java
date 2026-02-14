@@ -15,6 +15,7 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.RobotLog;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -31,12 +32,14 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 import java.util.List;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 
 @TeleOp(name = "Blue Teleop", group = "TeleOp") // SIDE RED/BLUE
 
 public class BlueTeleopWebcam extends LinearOpMode { // SIDE
+    private static final String LOG_TAG = "BlueTeleopWebcam";
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
@@ -47,6 +50,12 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
     private boolean gainSet = false;
+    private boolean visionHealthy = true;
+    private double nextVisionRetrySec = 0;
+    private double visionRetryBackoffSec = 1;
+    private final double maxVisionRetryBackoffSec = 5;
+    private int visionFaultCount = 0;
+    private VisionPortal.CameraState lastCameraState = null;
     boolean fieldCentric = true;
     private ElapsedTime opModeTimer = new ElapsedTime();
 
@@ -91,9 +100,10 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     @Override
     public void runOpMode() {
         if (visionPortal != null) {
-            visionPortal.close();
+            safeCloseVisionPortal("pre-init cleanup");
             sleep(250);
         }
+        RobotLog.ii(LOG_TAG, "runOpMode init start");
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap);
         follower = Constants.createTeleopFollower(hardwareMap);
@@ -122,6 +132,10 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
 
         initWebcam();
+        if(!visionHealthy){
+            nextVisionRetrySec = 0;
+            visionRetryBackoffSec = 1;
+        }
         waitForStart();
         opModeTimer.reset();
 
@@ -131,10 +145,14 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
 
-            if(!gainSet && opModeTimer.seconds() > 0.5){
+            if(!visionHealthy){
+                attemptVisionRecovery();
+            }
+            maybeLogCameraState();
+            if(visionHealthy && !gainSet && opModeTimer.seconds() > 0.5){
                 cameraControls();
             }
-            List<AprilTagDetection> detectedTags = aprilTag.getDetections();
+            List<AprilTagDetection> detectedTags = getDetectionsSafe();
             // all the movement controls.
             if(!holding){
                 drivetrain.Teleop(gamepad1, heading, telemetry, fieldCentric);
@@ -163,7 +181,8 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
            // botTelemetry();
 
         }
-        visionPortal.close();
+        safeCloseVisionPortal("runOpMode end");
+        RobotLog.ii(LOG_TAG, "runOpMode exit");
 
     }
 
@@ -173,55 +192,68 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
 
     private void initWebcam() {
+        try {
+            // Create the AprilTag processor.
+            aprilTag = new AprilTagProcessor.Builder()
+                    .setDrawAxes(true)
+                    .setDrawCubeProjection(true)
+                    .setDrawTagOutline(true)
+                    .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
+                    .build();
+            // Decimation = 1 ..  Detect 2" Tag from 10 feet away at 10 Frames per second
+            // Decimation = 2 ..  Detect 2" Tag from 6  feet away at 22 Frames per second
+            // Decimation = 3 ..  Detect 2" Tag from 4  feet away at 30 Frames Per Second (default)
+            // Decimation = 3 ..  Detect 5" Tag from 10 feet away at 30 Frames Per Second (default)
+            // Note: Decimation can be changed on-the-fly to adapt during a match.
+            aprilTag.setDecimation(3);
 
-        // Create the AprilTag processor.
-        aprilTag = new AprilTagProcessor.Builder()
-                .setDrawAxes(true)
-                .setDrawCubeProjection(true)
-                .setDrawTagOutline(true)
-                .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
-                .build();
-        // Decimation = 1 ..  Detect 2" Tag from 10 feet away at 10 Frames per second
-        // Decimation = 2 ..  Detect 2" Tag from 6  feet away at 22 Frames per second
-        // Decimation = 3 ..  Detect 2" Tag from 4  feet away at 30 Frames Per Second (default)
-        // Decimation = 3 ..  Detect 5" Tag from 10 feet away at 30 Frames Per Second (default)
-        // Note: Decimation can be changed on-the-fly to adapt during a match.
-        aprilTag.setDecimation(3);
+            // Create the vision portal by using a builder.
+            VisionPortal.Builder builder = new VisionPortal.Builder();
 
-        // Create the vision portal by using a builder.
-        VisionPortal.Builder builder = new VisionPortal.Builder();
+            // Set the camera (webcam vs. built-in RC phone camera).
+            if (useWebcam) {
+                builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
+            } else {
+                builder.setCamera(BuiltinCameraDirection.BACK);
+            }
 
-        // Set the camera (webcam vs. built-in RC phone camera).
-        if (useWebcam) {
-            builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
-        } else {
-            builder.setCamera(BuiltinCameraDirection.BACK);
+
+            builder.setCameraResolution(new Size(640, 480)); //640 480
+
+            builder.enableLiveView(false);
+            builder.addProcessor(aprilTag);
+
+            // Build the Vision Portal, using the above settings.
+            visionPortal = builder.build();
+            visionHealthy = true;
+            lastCameraState = null;
+            RobotLog.ii(LOG_TAG, "Vision portal initialized");
+        } catch (Exception e){
+            disableVisionOnFault("initWebcam", e);
         }
-
-
-        builder.setCameraResolution(new Size(640, 480)); //640 480
-
-        builder.enableLiveView(false);
-        builder.addProcessor(aprilTag);
-
-        // Build the Vision Portal, using the above settings.
-        visionPortal = builder.build();
-
     }
 
 
 
 
     public void cameraControls(){
-        if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
-            // exposure and gain
-            ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
-            GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
+        if(!visionHealthy || visionPortal == null){
+            return;
+        }
+        try {
+            if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
+                // exposure and gain
+                ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
+                GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
 
-            exposureControl.setMode(ExposureControl.Mode.Manual);
-            exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
-            gainControl.setGain(100);
-            gainSet = true;
+                exposureControl.setMode(ExposureControl.Mode.Manual);
+                exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
+                gainControl.setGain(100);
+                gainSet = true;
+                RobotLog.ii(LOG_TAG, "Camera controls applied");
+            }
+        } catch (Exception e){
+            disableVisionOnFault("cameraControls", e);
         }
     }
 
@@ -246,6 +278,8 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             intakePower = 1;
         } else if(gamepad1.a){
             intakePower = -0.5;
+        } else {
+            intakePower = 0;
         }
     }
 
@@ -254,10 +288,11 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
 
     public void aiming(List<AprilTagDetection> detectedTags){
+        double aimRange = Math.max(1.0, goalPos.findRange(xPos, yPos));
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 20) { // SIDE 24/20
                 camRange = detection.ftcPose.range + camOffsetX;
-                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(hOffset/range)); // SIDE +/-
+                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(hOffset/aimRange)); // SIDE +/-
 //                bearing = Math.toRadians(detection.ftcPose.bearing);
 //                double xCam = camRange * Math.cos(bearing); //cartesian coordinates in cam frame of reference
 //                double yCam = camRange * Math.sin(bearing) - camOffset;
@@ -348,6 +383,8 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
 
         if (gamepad1.x) {
+            stopperPos = 0.9; // closed until target speed reached
+            intakePower = 0;
 
             //setting target velocity
             FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
@@ -367,6 +404,85 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
         }
         flyWheel1.setVelocity(FW1Target);
         stopper.setPosition(stopperPos);
+    }
+
+
+    private List<AprilTagDetection> getDetectionsSafe(){
+        if(!visionHealthy || visionPortal == null || aprilTag == null){
+            return Collections.emptyList();
+        }
+        try {
+            if(visionPortal.getCameraState() != VisionPortal.CameraState.STREAMING){
+                return Collections.emptyList();
+            }
+            return aprilTag.getDetections();
+        } catch (Exception e){
+            disableVisionOnFault("getDetections", e);
+            return Collections.emptyList();
+        }
+    }
+
+    private void maybeLogCameraState(){
+        if(!visionHealthy || visionPortal == null){
+            return;
+        }
+        try {
+            VisionPortal.CameraState state = visionPortal.getCameraState();
+            if(state != lastCameraState){
+                RobotLog.ii(LOG_TAG, "CameraState=%s", state);
+                lastCameraState = state;
+            }
+        } catch (Exception e){
+            disableVisionOnFault("cameraState", e);
+        }
+    }
+
+    private void attemptVisionRecovery(){
+        if(visionHealthy){
+            return;
+        }
+        if(opModeTimer.seconds() < nextVisionRetrySec){
+            return;
+        }
+        RobotLog.ii(LOG_TAG, "Attempting vision recovery");
+        initWebcam();
+        if(visionHealthy){
+            visionRetryBackoffSec = 1;
+            nextVisionRetrySec = 0;
+            gainSet = false;
+            RobotLog.ii(LOG_TAG, "Vision recovery succeeded");
+        } else {
+            nextVisionRetrySec = opModeTimer.seconds() + visionRetryBackoffSec;
+            visionRetryBackoffSec = Math.min(maxVisionRetryBackoffSec, visionRetryBackoffSec * 2);
+            RobotLog.ww(LOG_TAG, "Vision recovery failed, next retry in %.1fs", visionRetryBackoffSec);
+        }
+    }
+
+    private void disableVisionOnFault(String source, Exception e){
+        if(visionHealthy){
+            visionFaultCount++;
+            RobotLog.ee(LOG_TAG, e, "Vision fault at %s (count=%d)", source, visionFaultCount);
+        } else {
+            RobotLog.ee(LOG_TAG, e, "Vision fault persists at %s", source);
+        }
+        visionHealthy = false;
+        gainSet = false;
+        safeCloseVisionPortal("vision fault");
+        aprilTag = null;
+        nextVisionRetrySec = opModeTimer.seconds() + visionRetryBackoffSec;
+    }
+
+    private void safeCloseVisionPortal(String reason){
+        if(visionPortal != null){
+            try {
+                visionPortal.close();
+                RobotLog.ii(LOG_TAG, "Vision portal closed (%s)", reason);
+            } catch (Exception e){
+                RobotLog.ee(LOG_TAG, e, "Vision portal close failed (%s)", reason);
+            } finally {
+                visionPortal = null;
+            }
+        }
     }
 
 
