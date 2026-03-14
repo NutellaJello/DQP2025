@@ -35,6 +35,7 @@ public class RedCloseGate extends OpMode {
     private DcMotorEx intake;
     private DcMotorEx turret;
     private DcMotorEx flyWheel1;
+    private DcMotorEx flyWheel2;
     private Servo stopper;
     private Servo flap;
 
@@ -48,8 +49,8 @@ public class RedCloseGate extends OpMode {
     private double xPos = 0, yPos = 0, heading = 0;
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = 0;
-    private final double highLimit = 1865;
+    private final double lowLimit = -990;
+    private final double highLimit = 800;
     private double camRange;
     private double bearing;
     private double xEst;
@@ -85,15 +86,15 @@ public class RedCloseGate extends OpMode {
 
     private PathState pathState;
     //positions
-    private final Pose start = new Pose(130, 142, Math.toRadians(-139));
+    private final Pose start = new Pose(120, 133, Math.toRadians(0));
     private final Pose outtakePre = new Pose(93, 90, Math.toRadians(0));
     private final Pose outtake = new Pose(100, 90, Math.toRadians(0));
     private final Pose intake1 = new Pose(126, 88, Math.toRadians(0));
     private final Pose gatePoint = new Pose(122,78, Math.toRadians(0));
     private final Pose gate = new Pose (129, 80, Math.toRadians(0));
-    private final Pose intake2p1 = new Pose(100, 67, Math.toRadians(0));
+    private final Pose intake2p1 = new Pose(105, 67, Math.toRadians(0));
     private final Pose intake2p2 = new Pose(127, 67 - 2, Math.toRadians(0));
-    private final Pose intake3p1 = new Pose(100, 41, Math.toRadians(0));
+    private final Pose intake3p1 = new Pose(105, 41, Math.toRadians(0));
     private final Pose intake3p2 = new Pose(128.5, 41, Math.toRadians(0));
     private final Pose end = new Pose(108, 77, Math.toRadians(0));
 
@@ -182,7 +183,13 @@ public class RedCloseGate extends OpMode {
 
         flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
         flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
-        flyWheel1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, fwPID);
+        flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        flyWheel1.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
+
+        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
+        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        flyWheel2.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
@@ -258,20 +265,20 @@ public class RedCloseGate extends OpMode {
                 move(Outtake2, PathState.SHOOT2);
                 break;
             case SHOOT2:
+                shoot(PathState.INTAKE31);
+                break;
+            case INTAKE31:
+                move(Intake31, PathState.INTAKE32);
+                break;
+            case INTAKE32:
+                moveIntake(Intake32, PathState.OUTTAKE3);
+                break;
+            case OUTTAKE3:
+                move(Outtake3, PathState.SHOOT3);
+                break;
+            case SHOOT3:
                 shoot(PathState.END);
                 break;
-//            case INTAKE31:
-//                move(Intake31, PathState.INTAKE32);
-//                break;
-//            case INTAKE32:
-//                moveIntake(Intake32, PathState.OUTTAKE3);
-//                break;
-//            case OUTTAKE3:
-//                move(Outtake3, PathState.SHOOT3);
-//                break;
-//            case SHOOT3:
-//                shoot(PathState.END);
-//                break;
             case END:
                 move(End, PathState.STOP);
                 break;
@@ -293,7 +300,7 @@ public class RedCloseGate extends OpMode {
 
     public void move(PathChain path, PathState nextPath){
         if (!moving) {
-            follower.followPath(path, true);
+            follower.followPath(path, false);
             moving = true;
         }
         if (!follower.isBusy() && actionTimer.getElapsedTime() > 50) {
@@ -305,7 +312,7 @@ public class RedCloseGate extends OpMode {
 
     public void moveIntake(PathChain path, PathState nextPath){
         if (!moving) {
-            follower.followPath(path,0.37, true);
+            follower.followPath(path,0.5, false);
             intake.setPower(1);
             moving = true;
         }
@@ -318,9 +325,9 @@ public class RedCloseGate extends OpMode {
     }
 
     public void shoot(PathState nextPath){
-        range = goalPos.findRange(xPos, yPos);
         double targetV = toFWV(range);
         flyWheel1.setVelocity(targetV);
+        flyWheel2.setVelocity(targetV);
         if (range < 40) {
             flapPos = 0;
         }else if (range < 95){
@@ -338,12 +345,14 @@ public class RedCloseGate extends OpMode {
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
+            flyWheel2.setVelocity(0);
             pathState = nextPath;
             actionTimer.resetTimer();
         }
     }
 
     public void aiming(List<AprilTagDetection> detectedTags){
+        range = goalPos.findRange(xPos, yPos);
         if(gainSet){
             for (AprilTagDetection detection : detectedTags) {
                 if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
@@ -363,9 +372,9 @@ public class RedCloseGate extends OpMode {
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
-        if (turretTarget > 360 + 30) { //wrap angle
+        if (turretTarget > 180 + 30) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < 0 - 30) {
+        } else if (turretTarget < -180 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
