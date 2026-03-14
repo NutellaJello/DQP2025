@@ -14,6 +14,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.BuiltinCameraDirection;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -21,6 +22,7 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.Exposur
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
@@ -45,7 +47,9 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private boolean gainSet = false;
     boolean fieldCentric = true;
+    private ElapsedTime opModeTimer = new ElapsedTime();
 
     double hOffset = 0.25;
     double feedPower = 1;
@@ -88,10 +92,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     @Override
     public void runOpMode() {
-        if (visionPortal != null) {
-            visionPortal.close();
-            sleep(250);
-        }
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap);
         follower = Constants.createTeleopFollower(hardwareMap);
@@ -126,21 +126,16 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
         initWebcam();
         waitForStart();
-
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
+        opModeTimer.reset();
 
         while (opModeIsActive()) {
             follower.update();
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
-
+            if(!gainSet && opModeTimer.seconds() > 0.5){
+                cameraControls();
+            }
             List<AprilTagDetection> detectedTags = aprilTag.getDetections();
 
             // all the movement controls.
@@ -151,7 +146,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             turretPos = turret.getCurrentPosition();
 
             FWV1 = flyWheel1.getVelocity();
-            FWV2 = flyWheel1.getVelocity();
+            FWV2 = flyWheel2.getVelocity();
             setIdlePower();
 
             if(!gamepad1.x){
@@ -169,11 +164,9 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
             intake.setPower(intakePower);
 
-            botTelemetry();
+            //   botTelemetry();
 
         }
-        visionPortal.close();
-
     }
 
 
@@ -221,8 +214,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
 
 
-    public void cameraControls() throws InterruptedException {
-        Thread.sleep(3000);
+    public void cameraControls(){
         if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
             // exposure and gain
             ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
@@ -231,6 +223,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             exposureControl.setMode(ExposureControl.Mode.Manual);
             exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
             gainControl.setGain(100);
+            gainSet = true;
         }
     }
 
@@ -263,6 +256,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
 
     public void aiming(List<AprilTagDetection> detectedTags){
+        range = goalPos.findRange(xPos, yPos);
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // SIDE 24/20
                 camRange = detection.ftcPose.range + camOffsetX;
@@ -313,11 +307,11 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             }else{
                 turretPower = 0;
             }
-            if ((turretPower > 0 && turretPos < highLimit) || (turretPower < 0 && turretPos > lowLimit)) { //left, right limits
-                turret.setPower(turretPower);
-            } else {
-                turret.setPower(0);   // stop at limits
+            if(gamepad2.y){
+                turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             }
+            turret.setPower(turretPower);
             if(hasEst){
                 goalPos.setX(xEst);
                 goalPos.setY(yEst);
@@ -334,9 +328,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
 
     public void firing(){
-
-        range = goalPos.findRange(xPos, yPos);
-
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
         if (range<45) {
@@ -362,7 +353,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             FWTarget = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
 
             if (range< 45){
-                FWTarget -=100;
+                FWTarget-=100;
             }
 
             if(FWV1 >= FWTarget){
@@ -400,12 +391,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     public void botTelemetry(){
         //telemetry.addData("goal est", goalPos);
-       // telemetry.addData("pidValues", flyWheel1.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER));
-        //telemetry.addData("flap", flapPos);
-        telemetry.addData("targetVel", FWTarget);
-        telemetry.addData("currVel 1", flyWheel1.getVelocity());
-        telemetry.addData("currVel 2", flyWheel2.getVelocity());
-      //  telemetry.addData("cam range", camRange);
 //        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
 //                follower.getPose().getX(), follower.getPose().getY()
 //        ) - Math.toDegrees(follower.getPose().getHeading())));
