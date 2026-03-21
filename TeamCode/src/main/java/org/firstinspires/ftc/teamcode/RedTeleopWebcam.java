@@ -82,7 +82,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = -990; //495/90
     private final double highLimit = 800;
-    double p = 350;
+    double p = 400;
     double d = 0;
     double i = 0;
     double f = 13.5;
@@ -340,7 +340,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             hOffset = -1.5; // SIDE -1.5/-3.5
         }else{
             flapPos = 0.24;
-            feedPower = 0.67;
+            feedPower = 0.8;
             hOffset = 2.5; // SIDE 2.5/-0.5
         }
 
