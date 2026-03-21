@@ -50,7 +50,7 @@ public class RedCloseGate extends OpMode {
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = -990;
-    private final double highLimit = 800;
+    private final double highLimit = 850;
     private double camRange;
     private double bearing;
     private double xEst;
@@ -59,7 +59,7 @@ public class RedCloseGate extends OpMode {
     private double turretPos;
     private double flapPos = 0.2;
     private boolean hasEst = false;
-    double p = 380;
+    double p = 400;
     double d = 0;
     double i = 0;
     double f = 13.5;
