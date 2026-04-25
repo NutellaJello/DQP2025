@@ -41,6 +41,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     private DcMotorEx intake;
     private DcMotorEx turret;
     private DcMotorEx flyWheel1;
+    private DcMotorEx flyWheel2;
     private Servo stopper;
     private Servo flap;
 
@@ -55,17 +56,18 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
     boolean useWebcam = true;
     double intakePower = 0;
-    double FW1Target = 0;
+    double FWTarget = 0;
     double flapPos = 0.2;
     double stopperPos = 0.9;
     double turretPos;
     double FWV1;
+    double FWV2;
     double idlePower = 0;
     double camRange = 0;
     double lastRange;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goalPos = new GoalPos(30,-50); // SIDE 50/-50
+    GoalPos goalPos = new GoalPos(30,-50, 15.5); // SIDE 50/-50
 
     private Follower follower;
     private boolean holding = false;
@@ -74,13 +76,14 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     private double xEst;
     private double yEst;
     private double range;
+    private double height;
     private double xPos = 0, yPos = 0, heading = 0;
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = 0; //495/90
-    private final double highLimit = 1865;
-    double p = 350;
+    private final double lowLimit = -990; //495/90
+    private final double highLimit = 840                                        ;
+    double p = 400;
     double d = 0;
     double i = 0;
     double f = 13.5;
@@ -90,13 +93,9 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
     @Override
     public void runOpMode() {
-        if (visionPortal != null) {
-            visionPortal.close();
-            sleep(250);
-        }
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap);
-        follower = Constants.createTeleopFollower(hardwareMap);
+        follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose(0,0,Math.toRadians(0)));
 
         intake = hardwareMap.get(DcMotorEx.class, "intake");
@@ -106,6 +105,11 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
         flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
         flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel1.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
+
+        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
+        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        flyWheel2.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
@@ -130,11 +134,17 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
-
+            range = goalPos.findRange(xPos, yPos);
+            height = goalPos.getZ() + 14;
             if(!gainSet && opModeTimer.seconds() > 0.5){
                 cameraControls();
             }
-            List<AprilTagDetection> detectedTags = aprilTag.getDetections();
+
+            if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
+                List<AprilTagDetection> detectedTags = aprilTag.getDetections();
+                aiming(detectedTags);
+            }
+
             // all the movement controls.
             if(!holding){
                 drivetrain.Teleop(gamepad1, heading, telemetry, fieldCentric);
@@ -143,13 +153,14 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             turretPos = turret.getCurrentPosition();
 
             FWV1 = flyWheel1.getVelocity();
+            FWV2 = flyWheel2.getVelocity();
             setIdlePower();
 
             if(!gamepad1.x){
                 setIntakePower();
             }
 
-            aiming(detectedTags);
+
 
             if(!(gamepad1.left_trigger > 0.1 || gamepad1.a)){
                 firing();
@@ -159,12 +170,13 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             brake();
 
             intake.setPower(intakePower);
+            flyWheel1.setVelocity(FWTarget);
+            flyWheel2.setVelocity(FWTarget);
+            stopper.setPosition(stopperPos);
 
-           // botTelemetry();
+            botTelemetry();
 
         }
-        visionPortal.close();
-
     }
 
 
@@ -201,7 +213,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
         builder.setCameraResolution(new Size(640, 480)); //640 480
 
-        builder.enableLiveView(false);
+        builder.enableLiveView(true);
         builder.addProcessor(aprilTag);
 
         // Build the Vision Portal, using the above settings.
@@ -243,6 +255,8 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
     public void setIntakePower(){
         if (gamepad1.left_trigger > 0.1) {
+            FWTarget = 0;
+            stopperPos = 0.9;
             intakePower = 1;
         } else if(gamepad1.a){
             intakePower = -0.5;
@@ -258,20 +272,14 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             if (detection.metadata != null && detection.id == 20) { // SIDE 24/20
                 camRange = detection.ftcPose.range + camOffsetX;
                 bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(hOffset/range)); // SIDE +/-
-//                bearing = Math.toRadians(detection.ftcPose.bearing);
-//                double xCam = camRange * Math.cos(bearing); //cartesian coordinates in cam frame of reference
-//                double yCam = camRange * Math.sin(bearing) - camOffset;
-//                range = Math.hypot(xCam, yCam); // corrected range
-//                bearing = Math.toDegrees(Math.atan2(yCam, xCam)); // corrected bearing
+                elevation = detection.ftcPose.elevation;
 
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
-                goalPos.update(xPos, yPos, bearing, camRange);
-                xEst = xPos + camRange * Math.cos(bearing);
-                yEst = yPos + camRange * Math.sin(bearing);
+                elevation = Math.toRadians(elevation);
+                goalPos.update(0.08, xPos, yPos, bearing, elevation, camRange);
                 if(!hasEst){
-                    goalPos.setX(xEst);
-                    goalPos.setY(yEst);
+                    goalPos.update(1, xPos, yPos, bearing, elevation, camRange);
                 }
                 hasEst = true;
                 break;
@@ -282,9 +290,9 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading);
-        if (turretTarget > 360 + 30) { //wrap angle
+        if (turretTarget > 180 + 30) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < 0 - 30) {
+        } else if (turretTarget < -180 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
@@ -325,9 +333,6 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
 
     public void firing(){
-
-        range = goalPos.findRange(xPos, yPos);
-
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
         if (range<45) {
@@ -340,33 +345,31 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             hOffset = -3.5; // SIDE -1.5/-3.5
         }else{
             flapPos = 0.24;
-            feedPower = 0.67;
+            feedPower = 0.8;
             hOffset = -0.5; // SIDE 2.5/-0.5
         }
-
         flap.setPosition(flapPos);
 
 
         if (gamepad1.x) {
 
             //setting target velocity
-            FW1Target = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
+            FWTarget = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
 
             if (range< 45){
-                FW1Target-=100;
+                FWTarget-=100;
             }
 
-            if(FWV1 >= FW1Target){
+
+            if(FWV1 >= FWTarget){
                 stopperPos = 0.973; // open
                 intakePower = feedPower;
             }
         } else {
             intakePower = 0;
             stopperPos = 0.9; // closed
-            FW1Target = idlePower;
+            FWTarget = idlePower;
         }
-        flyWheel1.setVelocity(FW1Target);
-        stopper.setPosition(stopperPos);
     }
 
 
@@ -389,17 +392,10 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     }
 
     public void botTelemetry(){
-        //telemetry.addData("goal est", goalPos);
-        telemetry.addData("pidValues", flyWheel1.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER));
-        telemetry.addData("flap", flapPos);
-        telemetry.addData("targetVel", FW1Target);
-        telemetry.addData("currVel", flyWheel1.getVelocity());
-        telemetry.addData("range", range);
-//        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
-//                follower.getPose().getX(), follower.getPose().getY()
-//        ) - Math.toDegrees(follower.getPose().getHeading())));
-//        telemetry.addData("target bearing", (goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())));
+        telemetry.addData("goal est", goalPos);
+        telemetry.addData("target bearing", (goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())));
         telemetry.update();
+
 
     }
 
