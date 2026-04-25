@@ -67,7 +67,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     double lastRange;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goalPos = new GoalPos(30,50); // SIDE 50/-50
+    GoalPos goalPos = new GoalPos(30,50, 15.5); // SIDE 50/-50
 
     private Follower follower;
     private boolean holding = false;
@@ -76,12 +76,13 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private double xEst;
     private double yEst;
     private double range;
+    private double height;
     private double xPos = 0, yPos = 0, heading = 0;
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = -990; //495/90
-    private final double highLimit = 800;
+    private final double highLimit = 840                                        ;
     double p = 400;
     double d = 0;
     double i = 0;
@@ -94,7 +95,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     public void runOpMode() {
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap);
-        follower = Constants.createTeleopFollower(hardwareMap);
+        follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose(0,0,Math.toRadians(0)));
 
         intake = hardwareMap.get(DcMotorEx.class, "intake");
@@ -133,10 +134,16 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
+            range = goalPos.findRange(xPos, yPos);
+            height = goalPos.getZ() + 14;
             if(!gainSet && opModeTimer.seconds() > 0.5){
                 cameraControls();
             }
-            List<AprilTagDetection> detectedTags = aprilTag.getDetections();
+
+            if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
+                List<AprilTagDetection> detectedTags = aprilTag.getDetections();
+                aiming(detectedTags);
+            }
 
             // all the movement controls.
             if(!holding){
@@ -153,7 +160,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
                 setIntakePower();
             }
 
-            aiming(detectedTags);
+
 
             if(!(gamepad1.left_trigger > 0.1 || gamepad1.a)){
                 firing();
@@ -163,8 +170,11 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             brake();
 
             intake.setPower(intakePower);
+            flyWheel1.setVelocity(FWTarget);
+            flyWheel2.setVelocity(FWTarget);
+            stopper.setPosition(stopperPos);
 
-            //   botTelemetry();
+            botTelemetry();
 
         }
     }
@@ -203,7 +213,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
         builder.setCameraResolution(new Size(640, 480)); //640 480
 
-        builder.enableLiveView(false);
+        builder.enableLiveView(true);
         builder.addProcessor(aprilTag);
 
         // Build the Vision Portal, using the above settings.
@@ -245,6 +255,8 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     public void setIntakePower(){
         if (gamepad1.left_trigger > 0.1) {
+            FWTarget = 0;
+            stopperPos = 0.9;
             intakePower = 1;
         } else if(gamepad1.a){
             intakePower = -0.5;
@@ -256,25 +268,18 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
 
     public void aiming(List<AprilTagDetection> detectedTags){
-        range = goalPos.findRange(xPos, yPos);
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // SIDE 24/20
                 camRange = detection.ftcPose.range + camOffsetX;
                 bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(hOffset/range)); // SIDE +/-
-//                bearing = Math.toRadians(detection.ftcPose.bearing);
-//                double xCam = camRange * Math.cos(bearing); //cartesian coordinates in cam frame of reference
-//                double yCam = camRange * Math.sin(bearing) - camOffset;
-//                range = Math.hypot(xCam, yCam); // corrected range
-//                bearing = Math.toDegrees(Math.atan2(yCam, xCam)); // corrected bearing
+                elevation = detection.ftcPose.elevation;
 
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
-                goalPos.update(xPos, yPos, bearing, camRange);
-                xEst = xPos + camRange * Math.cos(bearing);
-                yEst = yPos + camRange * Math.sin(bearing);
+                elevation = Math.toRadians(elevation);
+                goalPos.update(0.08, xPos, yPos, bearing, elevation, camRange);
                 if(!hasEst){
-                    goalPos.setX(xEst);
-                    goalPos.setY(yEst);
+                    goalPos.update(1, xPos, yPos, bearing, elevation, camRange);
                 }
                 hasEst = true;
                 break;
@@ -343,7 +348,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             feedPower = 0.8;
             hOffset = 2.5; // SIDE 2.5/-0.5
         }
-
         flap.setPosition(flapPos);
 
 
@@ -356,6 +360,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
                 FWTarget-=100;
             }
 
+
             if(FWV1 >= FWTarget){
                 stopperPos = 0.973; // open
                 intakePower = feedPower;
@@ -365,9 +370,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             stopperPos = 0.9; // closed
             FWTarget = idlePower;
         }
-        flyWheel1.setVelocity(FWTarget);
-        flyWheel2.setVelocity(FWTarget);
-        stopper.setPosition(stopperPos);
     }
 
 
@@ -390,12 +392,10 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     }
 
     public void botTelemetry(){
-        //telemetry.addData("goal est", goalPos);
-//        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
-//                follower.getPose().getX(), follower.getPose().getY()
-//        ) - Math.toDegrees(follower.getPose().getHeading())));
-//        telemetry.addData("target bearing", (goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())));
+        telemetry.addData("goal est", goalPos);
+        telemetry.addData("target bearing", (goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())));
         telemetry.update();
+
 
     }
 
