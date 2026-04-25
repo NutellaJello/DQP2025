@@ -58,7 +58,7 @@ public class FlywheelTesting extends LinearOpMode {
     double shotFreq = 0;
     double feedPower = 1;
 
-    double p = 380;
+    double p = 200;
     double d = 0;
     double i = 0;
     double f = 13.5;
@@ -69,13 +69,13 @@ public class FlywheelTesting extends LinearOpMode {
 
     double turretPos;
     double FWV1;
-    //double FWV2;
+    double FWV2;
     double idlePower = 0;
     double camRange = 0;
     double lastRange;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goalPos = new GoalPos(20,50);
+    GoalPos goalPos = new GoalPos(20,50, 29.5);
     ElapsedTime clickTimer1 = new ElapsedTime();
     ElapsedTime clickTimer2 = new ElapsedTime();
     ElapsedTime shootDelay = new ElapsedTime();
@@ -103,7 +103,7 @@ public class FlywheelTesting extends LinearOpMode {
         }
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap);
-        follower = Constants.createTeleopFollower(hardwareMap);
+        follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose(0,0,Math.toRadians(0)));
 
         intake = hardwareMap.get(DcMotorEx.class, "intake");
@@ -269,6 +269,7 @@ public class FlywheelTesting extends LinearOpMode {
             if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
                 bearing = detection.ftcPose.bearing + Math.atan(1/range);
+                elevation = detection.ftcPose.elevation;
 //                bearing = Math.toRadians(detection.ftcPose.bearing);
 //                double xCam = camRange * Math.cos(bearing); //cartesian coordinates in cam frame of reference
 //                double yCam = camRange * Math.sin(bearing) - camOffset;
@@ -278,7 +279,7 @@ public class FlywheelTesting extends LinearOpMode {
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
                 if(!gamepad1.x){
-                    goalPos.update(xPos, yPos, bearing, camRange);
+                    goalPos.update(15, xPos, yPos, bearing, elevation, camRange);
                 }
                 xEst = xPos + camRange * Math.cos(bearing);
                 yEst = yPos + camRange * Math.sin(bearing);
@@ -341,15 +342,13 @@ public class FlywheelTesting extends LinearOpMode {
         range = goalPos.findRange(xPos, yPos);
         flapPos = range/600;
         flap.setPosition(flapPos);
-        if(gamepad2.dpadUpWasPressed()){
-            //FW1Target += 50;
+        if(gamepad2.dpad_up && clickTimer1.seconds() > 0.05){
+            FW1Target += 50;
             clickTimer1.reset();
-        } else if (gamepad2.dpadDownWasPressed() ) {
-            //FW1Target -= 50;
+        } else if (gamepad2.dpad_down && clickTimer1.seconds() > 0.05) {
+            FW1Target -= 50;
             clickTimer1.reset();
         }
-
-        FW1Target = (0.0335 * range * range) + (3.18 * range) +  (1156.69 );
 
         if (gamepad1.x) {
             flyWheel1.setVelocity(FW1Target);
