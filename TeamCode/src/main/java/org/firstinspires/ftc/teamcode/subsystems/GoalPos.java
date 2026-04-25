@@ -2,15 +2,18 @@ package org.firstinspires.ftc.teamcode.subsystems;
 
 import androidx.annotation.NonNull;
 
+import com.qualcomm.robotcore.util.Range;
+
 public class GoalPos {
-    static  final double weight = 15; // lower weight -> faster estimate update
     private double a;
     private double b;
+    private double c;
+    private double camAngle = 20; //degrees
 
-
-    public GoalPos(double X, double Y) {
+    public GoalPos(double X, double Y, double Z) {
         a = X;
         b = Y;
+        c = Z;
     }
 
     public void setX(double n) {
@@ -21,6 +24,10 @@ public class GoalPos {
         b = n;
     }
 
+    public void setZ(double n) {
+        c = n;
+    }
+
     public double getX() {
         return a;
     }
@@ -29,21 +36,33 @@ public class GoalPos {
         return b;
     }
 
-    public void update(double x, double y, double heading) {
-        double cos = Math.cos(heading);
-        double sin = Math.sin(heading);
-        double dot = (a - x) * cos + (b - y) * sin;
-        double a2 = dot * cos + x;
-        double b2 = dot * sin + y;
-        a = (a * weight + a2) / (weight + 1);
-        b = (b * weight + b2) / (weight + 1);
+    public double getZ(){
+        return c;
     }
 
-    public void update(double x, double y, double heading, double dist){
-        double a2 = x + dist * Math.cos(heading);
-        double b2 = y + dist * Math.sin(heading);
-        a = (a * weight + a2) / (weight + 1);
-        b = (b * weight + b2) / (weight + 1);
+//    public void update(double weight, double x, double y, double heading, double elevation) {
+//        double cos = Math.cos(heading);
+//        double sin = Math.sin(heading);
+//        double dot = (a - x) * cos + (b - y) * sin;
+//        double a2 = dot * cos + x;
+//        double b2 = dot * sin + y;
+//        a = (a * weight + a2) / (weight + 1);
+//        b = (b * weight + b2) / (weight + 1);
+//    }
+
+    public void update(double alpha, double x, double y, double heading, double elevation, double dist){
+        elevation += Math.toRadians(camAngle);
+        double phi = Math.PI/2 - elevation;
+        phi = Range.clip(phi, 0, Math.PI);
+        double a2 = x + dist * Math.cos(heading) * Math.sin(phi);
+        double b2 = y + dist * Math.sin(heading) * Math.sin(phi);
+        double c2 = dist * Math.cos(phi);
+        a = a * (1 - alpha) + a2 * alpha;
+        b = b * (1 - alpha) + b2 * alpha;
+        c = c * (1 - alpha) + c2 * alpha;
+        if (c < 18){
+            c = 18;
+        }
     }
 
     public double findRange(double x, double y){
@@ -57,6 +76,6 @@ public class GoalPos {
 
     @NonNull
     public String toString() {
-        return "(" + a + "," + b + ")";
+        return "(" + Math.round(a * 100)/100.0 + "," + Math.round(b * 100)/100.0 + "," + Math.round(c * 100)/100.0 + ")";
     }
 }
