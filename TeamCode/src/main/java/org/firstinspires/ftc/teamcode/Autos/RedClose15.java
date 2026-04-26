@@ -292,7 +292,7 @@ public class RedClose15 extends OpMode {
                 moveIntake(Intake32, PathState.OUTTAKE3);
                 break;
             case OUTTAKE3:
-                move(Outtake3, PathState.SHOOT3);
+                move(Outtake3, PathState.SHOOT3, true);
                 break;
             case SHOOT3:
                 shoot(PathState.END);
