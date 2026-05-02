@@ -691,6 +691,7 @@ These are not bugs that affect competition immediately, but they make the codeba
 
 ### 22. Every autonomous OpMode is a copy-paste of the same code
 **Files:** All 9 auto OpModes
+> **Addressed** — `BaseAuto.java` abstract class created; all 9 auto files now extend it. Shared `initWebcam`, `cameraControls`, `move`, `moveIntake`, `wait`, `toFWV`, and hardware `init` live once in `BaseAuto`. Each subclass retains only its unique `PathState` enum, poses, `buildPaths`, `shoot`, `aiming`, and four config overrides (`getPIDFP`, `createGoalPos`, `getStartPose`, `getFWVConstant`).
 
 #### The problem
 Every single autonomous file contains identical copies of:
@@ -737,6 +738,7 @@ public class RedClose15 extends BaseAuto {
 
 ### 23. `DecodeDriveTrain` subsystem is not used in any autonomous mode
 **Files:** `DecodeDriveTrain.java`, all auto OpModes
+> **Addressed** — Added a class-level comment to `DecodeDriveTrain.java` noting it is teleop-only and that motor names must match `Constants.java`. Unifying the two sources of motor configuration is a larger refactor deferred to post-season.
 
 #### What is happening
 `DecodeDriveTrain.java` was created to be a reusable **subsystem** — a class that encapsulates all the drivetrain code so that every OpMode doesn't have to duplicate it. This is a good software engineering pattern.
@@ -753,6 +755,7 @@ If the robot's wiring changes (for example, a motor is swapped or re-plugged int
 
 ### 24. `DecodeDriveTrain` will crash if telemetry is requested
 **File:** `DecodeDriveTrain.java:163`
+> **Addressed** — Added `&& pose2D != null` guard to the `showTelemetry` block so calling `Teleop(true)` no longer throws a NullPointerException.
 
 #### What is happening
 `DecodeDriveTrain` has a field declared but never initialized:
@@ -772,6 +775,7 @@ Currently no caller passes `showTelemetry = true`, so this crash never happens. 
 
 ### 25. Flywheel PIDF values differ between files with no explanation
 **Files:** All autos
+> **Addressed** — Added comment to `BlueCloseGate.java` (`p = 380; // tuned lower than Red (400) — verify both sides use this intentionally`) so the intentional difference is visible at the declaration site.
 
 | File | P value | Notes |
 |------|---------|-------|
@@ -788,6 +792,7 @@ The `P` value in a PIDF controller determines how aggressively the motor respond
 
 ### 26. Outdated files still active in the Driver Station menu
 **Files:** `BlueTeleopWebcam.java`, `RedTeleopWebcam.java`, `centerstageTeleOp.java`, `TestAuto.java`
+> **Addressed** — `@Disabled` added to `BlueTeleopWebcam.java` and `RedTeleopWebcam.java`. (`centerstageTeleOp.java` and `TestAuto.java` were already `@Disabled`.)
 
 These are older versions of OpModes from previous seasons or development phases. Because they are not marked `@Disabled`, they appear in the Driver Station menu alongside current competition modes. In a timed match, accidentally selecting the wrong OpMode is a real risk.
 
