@@ -62,7 +62,7 @@ public class BlueCloseGate extends OpMode {
     private boolean shooting = false;
     private double minFWVSinceOpen = Double.MAX_VALUE;
     private long stopperOpenTime = 0;
-    double p = 380;
+    double p = 380; // tuned lower than Red (400) — verify both sides use this intentionally
     double d = 0;
     double i = 0;
     double f = 13.5;

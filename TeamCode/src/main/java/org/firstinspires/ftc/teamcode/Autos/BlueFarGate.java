@@ -435,6 +435,6 @@ public class BlueFarGate extends OpMode {
     }
     // this was shooting over when I tested, changing constant from 1162 -> 1025
     public double toFWV(double r){ // this was shooting over when I tested, changing constant from
-        return (0.00673 * range * range) + (5.54 * range) +  (1025);
+        return (0.00673 * r * r) + (5.54 * r) +  (1025);
     }
 }

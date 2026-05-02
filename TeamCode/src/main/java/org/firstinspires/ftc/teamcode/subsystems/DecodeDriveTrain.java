@@ -17,6 +17,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
+// Used only in teleop. Autos use Pedro Pathing via Constants.java — motor names must match.
 public class DecodeDriveTrain {
     // Instantiate the drivetrain motor variables
     private DcMotorEx FL; //Front left motor of drivetrain
@@ -159,7 +160,7 @@ public class DecodeDriveTrain {
             FR.setPower(PowerFR);
             BR.setPower(PowerBR);
         }
-        if(showTelemetry) {
+        if(showTelemetry && pose2D != null) {
             telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
             telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
             telemetry.addData("Heading angle (DEG)", pose2D.getHeading(AngleUnit.DEGREES));

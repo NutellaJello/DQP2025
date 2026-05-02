@@ -392,6 +392,6 @@ public class RedFar extends OpMode {
     }
 
     public double toFWV(double r){
-        return (0.00673 * range * range) + (5.54 * range) +  (1162);
+        return (0.00673 * r * r) + (5.54 * r) +  (1162);
     }
 }
