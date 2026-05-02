@@ -49,7 +49,7 @@ public class BlueFar extends OpMode {
     private boolean atFWV = false;
     GoalPos goalPos = new GoalPos(0,144,15.5);
     private double xPos = 0, yPos = 0, heading = 0;
-    private final double camOffsetX = 2; //inches (not really inches) forward of center
+    private final double camOffsetX = 2; // inches: camera forward of turret rotation axis — re-measure if camera remounted
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise)
     private final double lowLimit = 0;
@@ -344,12 +344,14 @@ public class BlueFar extends OpMode {
             if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5/range)); // SIDE DEPENDENT
+                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5/range)); // 2.5 in: camera is left of turret axis — re-measure if remounted
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
                 if(!gamepad1.x){
-                    goalPos.update(0.08, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
+                    double alpha = hasEst ? 0.08 : 1.0;
+                    goalPos.update(alpha, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
+                    hasEst = true;
                 }
                 break;
             }
@@ -373,9 +375,9 @@ public class BlueFar extends OpMode {
 
         // Create the AprilTag processor.
         aprilTag = new AprilTagProcessor.Builder()
-                .setDrawAxes(true)
-                .setDrawCubeProjection(true)
-                .setDrawTagOutline(true)
+                .setDrawAxes(false)
+                .setDrawCubeProjection(false)
+                .setDrawTagOutline(false)
                 .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
                 .build();
         // Decimation = 1 ..  Detect 2" Tag from 10 feet away at 10 Frames per second
@@ -470,7 +472,7 @@ public class BlueFar extends OpMode {
     private boolean atFWV = false;
     GoalPos goalPos = new GoalPos(0,144,15.5);
     private double xPos = 0, yPos = 0, heading = 0;
-    private final double camOffsetX = 2; //inches (not really inches) forward of center
+    private final double camOffsetX = 2; // inches: camera forward of turret rotation axis — re-measure if camera remounted
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise)
     private final double lowLimit = 0;
@@ -763,11 +765,13 @@ public class BlueFar extends OpMode {
             if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(-0.6/range)); // SIDE DEPENDENT
+                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(-0.6/range)); // -0.6 in: camera is right of turret axis — re-measure if remounted
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
-                goalPos.update(0.08, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
+                double alpha = hasEst ? 0.08 : 1.0;
+                goalPos.update(alpha, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
+                hasEst = true;
                 break;
             }
         }
@@ -790,9 +794,9 @@ public class BlueFar extends OpMode {
 
         // Create the AprilTag processor.
         aprilTag = new AprilTagProcessor.Builder()
-                .setDrawAxes(true)
-                .setDrawCubeProjection(true)
-                .setDrawTagOutline(true)
+                .setDrawAxes(false)
+                .setDrawCubeProjection(false)
+                .setDrawTagOutline(false)
                 .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
                 .build();
         // Decimation = 1 ..  Detect 2" Tag from 10 feet away at 10 Frames per second

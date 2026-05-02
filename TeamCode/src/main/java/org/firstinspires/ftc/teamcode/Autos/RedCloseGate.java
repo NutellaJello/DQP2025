@@ -55,7 +55,7 @@ public class RedCloseGate extends OpMode {
     private double bearing;
     private double xEst;
     private double yEst;
-    private final double camOffsetX = 2;
+    private final double camOffsetX = 2; // inches: camera forward of turret rotation axis — re-measure if camera remounted
     private double turretPos;
     private double flapPos = 0.2;
     private boolean hasEst = false;
@@ -387,11 +387,13 @@ public class RedCloseGate extends OpMode {
                 if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
                     camRange = detection.ftcPose.range + camOffsetX;
 
-                    bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5/range)); // SIDE DEPENDENT
+                    bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5/range)); // 2.5 in: camera is left of turret axis — re-measure if remounted
                     bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                     bearing = Math.toRadians(bearing);
 
-                    goalPos.update(0.08, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
+                    double alpha = hasEst ? 0.08 : 1.0;
+                    goalPos.update(alpha, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
+                    hasEst = true;
                     break;
                 }
             }
@@ -415,9 +417,9 @@ public class RedCloseGate extends OpMode {
 
         // Create the AprilTag processor.
         aprilTag = new AprilTagProcessor.Builder()
-                .setDrawAxes(true)
-                .setDrawCubeProjection(true)
-                .setDrawTagOutline(true)
+                .setDrawAxes(false)
+                .setDrawCubeProjection(false)
+                .setDrawTagOutline(false)
                 .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
                 .build();
         // Decimation = 1 ..  Detect 2" Tag from 10 feet away at 10 Frames per second
@@ -457,6 +459,6 @@ public class RedCloseGate extends OpMode {
     }
 
     public double toFWV(double r){
-        return (0.00673 * range * range) + (5.54 * range) +  (1162);
+        return (0.00673 * r * r) + (5.54 * r) + (1162);
     }
 }

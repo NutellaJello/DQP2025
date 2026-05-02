@@ -57,7 +57,7 @@ public class RedClose15 extends OpMode {
     private double elevation;
     private double xEst;
     private double yEst;
-    private final double camOffsetX = 2;
+    private final double camOffsetX = 2; // inches: camera forward of turret rotation axis — re-measure if camera remounted
     private double turretPos;
     private double flapPos = 0.2;
     private boolean hasEst = false;
@@ -423,13 +423,15 @@ public class RedClose15 extends OpMode {
             for (AprilTagDetection detection : detectedTags) {
                 if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
                     camRange = detection.ftcPose.range + camOffsetX;
-                    bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(3.2/range)); // SIDE +/-
+                    bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(3.2/range)); // 3.2 in: camera is left of turret axis — re-measure if remounted
                     elevation = detection.ftcPose.elevation;
 
                     bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                     bearing = Math.toRadians(bearing);
                     elevation = Math.toRadians(elevation);
-                    goalPos.update(0.08, xPos, yPos, bearing, elevation, camRange);
+                    double alpha = hasEst ? 0.08 : 1.0;
+                    goalPos.update(alpha, xPos, yPos, bearing, elevation, camRange);
+                    hasEst = true;
                     break;
                 }
             }
@@ -453,9 +455,9 @@ public class RedClose15 extends OpMode {
 
         // Create the AprilTag processor.
         aprilTag = new AprilTagProcessor.Builder()
-                .setDrawAxes(true)
-                .setDrawCubeProjection(true)
-                .setDrawTagOutline(true)
+                .setDrawAxes(false)
+                .setDrawCubeProjection(false)
+                .setDrawTagOutline(false)
                 .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
                 .build();
         // Decimation = 1 ..  Detect 2" Tag from 10 feet away at 10 Frames per second
