@@ -118,34 +118,42 @@ public class RedFarGate extends OpMode {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
+                .setGlobalDeceleration(0.9)
                 .build();
         AlignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1)) // test bezier curve later
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, preintake2))
                 .setLinearHeadingInterpolation(Math.toRadians(0),Math.toRadians(90))
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(preintake2, intake2))
                 .setConstantHeadingInterpolation(Math.toRadians(90))
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2, outtake))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
     }
 

@@ -116,18 +116,22 @@ public class BlueFar extends OpMode {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setConstantHeadingInterpolation(Math.toRadians(90))
+                .setGlobalDeceleration(0.9)
                 .build();
         AlignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1)) // test bezier curve later
                 .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(90))
+                .setGlobalDeceleration(0.9)
                 .build();
 //        Intake21 = follower.pathBuilder()
 //                .addPath(new BezierLine(outtake, intake2p1))
@@ -144,6 +148,7 @@ public class BlueFar extends OpMode {
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
     }
 
@@ -532,18 +537,22 @@ public class BlueFar extends OpMode {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
         AlignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1)) // test bezier curve later
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
 //        Intake21 = follower.pathBuilder()
 //                .addPath(new BezierLine(outtake, intake2p1))
@@ -560,6 +569,7 @@ public class BlueFar extends OpMode {
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
     }
 

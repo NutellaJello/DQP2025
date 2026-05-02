@@ -119,18 +119,22 @@ public class RedFar extends OpMode {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
+                .setGlobalDeceleration(0.9)
                 .build();
         AlignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1)) // test bezier curve later
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
 //        Intake21 = follower.pathBuilder()
 //                .addPath(new BezierLine(outtake, intake2p1))
@@ -147,6 +151,7 @@ public class RedFar extends OpMode {
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
     }
 

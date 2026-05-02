@@ -61,6 +61,8 @@ public class RedClose15 extends OpMode {
     private double turretPos;
     private double flapPos = 0.2;
     private boolean hasEst = false;
+    private boolean shooting = false;
+    private double minFWVSinceOpen = Double.MAX_VALUE;
     double p = 400;
     double d = 0;
     double i = 0;
@@ -125,55 +127,68 @@ public class RedClose15 extends OpMode {
         Preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake11 = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1p1))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake12 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1p1, intake1p2))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierCurve(Arrays.asList(intake1p2, outtake1Point, outtake)))
                 .setConstantHeadingInterpolation(outtake.getHeading())
+                .setGlobalDeceleration(0.9)
                 .build();
         Opengate = follower.pathBuilder()
                 .addPath(new BezierCurve(Arrays.asList(outtake, gatePoint, gate)))
                 .setLinearHeadingInterpolation(outtake.getHeading(), gate.getHeading())
                 .setBrakingStrength(0.08)
+                .setGlobalDeceleration(0.9)
                 .build();
         BigBack = follower.pathBuilder()
                 .addPath(new BezierLine(gate, bigBack))
                 .setLinearHeadingInterpolation(gate.getHeading(), bigBack.getHeading())
+                .setGlobalDeceleration(0.9)
                 .build();
         OuttakeB = follower.pathBuilder()
                 .addPath(new BezierCurve(bigBack, outtakeBPoint, outtake))
                 .setLinearHeadingInterpolation(gate.getHeading(), outtake.getHeading())
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake2 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2, outtake))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake32 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p1, intake3p2))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake3 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p2, outtake))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setConstantHeadingInterpolation(0)
+                .setGlobalDeceleration(0.9)
                 .build();
     }
 
@@ -280,7 +295,7 @@ public class RedClose15 extends OpMode {
                 moveIntake(Intake2, PathState.OUTTAKE2);
                 break;
             case OUTTAKE2:
-                move(Outtake2, PathState.SHOOT2);
+                move(Outtake2, PathState.SHOOT2, true);
                 break;
             case SHOOT2:
                 shoot(PathState.INTAKE31);
@@ -373,11 +388,21 @@ public class RedClose15 extends OpMode {
         }
         flap.setPosition(flapPos);
         double FWV = flyWheel1.getVelocity();
-        if(FWV >= targetV){
+        if (FWV >= targetV && !shooting) {
             stopper.setPosition(0.973);
             intake.setPower(1);
+            shooting = true;
         }
-        if (actionTimer.getElapsedTime() > 1600) {
+        if (shooting) {
+            minFWVSinceOpen = Math.min(minFWVSinceOpen, FWV);
+        }
+        boolean ballPassed = shooting
+                && minFWVSinceOpen < targetV * 0.90
+                && FWV > targetV * 0.97
+                && actionTimer.getElapsedTime() > 300;
+        if (ballPassed || actionTimer.getElapsedTime() > 1600) {
+            shooting = false;
+            minFWVSinceOpen = Double.MAX_VALUE;
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);

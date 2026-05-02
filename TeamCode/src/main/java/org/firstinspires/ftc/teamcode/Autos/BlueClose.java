@@ -110,47 +110,57 @@ public class BlueClose extends OpMode {
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
                 .setBrakingStrength(braking)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake1 = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p1, intake2p2))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
+                .setGlobalDeceleration(0.9)
                 .build();
         Intake32 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p1, intake3p2))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
         Outtake3 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p2, outtake))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
+                .setGlobalDeceleration(0.9)
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setGlobalDeceleration(0.9)
                 .build();
     }
 
