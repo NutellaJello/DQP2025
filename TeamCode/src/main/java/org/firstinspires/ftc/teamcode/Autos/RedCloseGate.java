@@ -216,7 +216,8 @@ public class RedCloseGate extends OpMode {
 
         flap = hardwareMap.get(Servo.class, "flap");
         flap.setDirection(Servo.Direction.FORWARD);
-
+        stopper.setPosition(0.9);
+        flap.setPosition(0.2);
 
         buildPaths();
         initWebcam();
@@ -230,6 +231,7 @@ public class RedCloseGate extends OpMode {
     }
     @Override
     public void stop(){
+        stopper.setPosition(0.9);
         if(visionPortal != null){
             visionPortal.close();
             visionPortal = null;
@@ -247,6 +249,7 @@ public class RedCloseGate extends OpMode {
             List<AprilTagDetection> detectedTags = aprilTag.getDetections();
             aiming(detectedTags);
         }else{
+            intake.setPower(0);
             turret.setTargetPosition(0);
         }
         switch (pathState) {
@@ -254,6 +257,7 @@ public class RedCloseGate extends OpMode {
                 move(Preload, PathState.SHOOTPRE);
                 break;
             case SHOOTPRE:
+                if (!gainSet && opmodeTimer.getElapsedTimeSeconds() < 3.0) { break; }
                 shoot(PathState.INTAKE1);
                 break;
             case INTAKE1:
@@ -395,14 +399,14 @@ public class RedCloseGate extends OpMode {
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
+        // Red turret homes at 0 ticks = forward center; range is ±180° → limits [-990, 850] ticks
         if (turretTarget > 180 + 30) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < -180 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
-        // hardware limit
-        turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
+        turretTarget = Range.clip(turretTarget, lowLimit, highLimit);
         turret.setTargetPosition((int) turretTarget);
     }
     private void initWebcam() {

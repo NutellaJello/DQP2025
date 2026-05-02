@@ -231,7 +231,8 @@ public class RedClose15 extends OpMode {
 
         flap = hardwareMap.get(Servo.class, "flap");
         flap.setDirection(Servo.Direction.FORWARD);
-
+        stopper.setPosition(0.9);
+        flap.setPosition(0.2);
 
         buildPaths();
         initWebcam();
@@ -245,6 +246,7 @@ public class RedClose15 extends OpMode {
     }
     @Override
     public void stop(){
+        stopper.setPosition(0.9);
         if(visionPortal != null){
             visionPortal.close();
             visionPortal = null;
@@ -265,6 +267,7 @@ public class RedClose15 extends OpMode {
                 move(Preload, PathState.SHOOTPRE, true);
                 break;
             case SHOOTPRE:
+                if (!gainSet && opmodeTimer.getElapsedTimeSeconds() < 3.0) { break; }
                 shoot(PathState.INTAKE11);
                 break;
             case INTAKE11:
@@ -434,13 +437,13 @@ public class RedClose15 extends OpMode {
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
+        // Red turret homes at 0 ticks = forward center; range is ±180° → limits [-990, 850] ticks
         if (turretTarget > 180 + 30) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < -180 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
-        // hardware limit
         turretTarget = Range.clip(turretTarget, lowLimit, highLimit);
         turret.setTargetPosition((int) turretTarget);
     }

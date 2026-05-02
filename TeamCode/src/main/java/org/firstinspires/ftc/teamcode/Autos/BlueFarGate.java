@@ -187,7 +187,8 @@ public class BlueFarGate extends OpMode {
 
         flap = hardwareMap.get(Servo.class, "flap");
         flap.setDirection(Servo.Direction.FORWARD);
-
+        stopper.setPosition(0.9);
+        flap.setPosition(0.2);
 
         buildPaths();
         initWebcam();
@@ -198,6 +199,15 @@ public class BlueFarGate extends OpMode {
         opmodeTimer.resetTimer();
         setPathState(pathState);
         actionTimer.resetTimer();
+    }
+
+    @Override
+    public void stop() {
+        stopper.setPosition(0.9);
+        if (visionPortal != null) {
+            visionPortal.close();
+            visionPortal = null;
+        }
     }
 
     public void statePathUpdate() {
@@ -212,6 +222,7 @@ public class BlueFarGate extends OpMode {
                 move(Preload, PathState.SHOOTPRE);
                 break;
             case SHOOTPRE:
+                if (!gainSet && opmodeTimer.getElapsedTimeSeconds() < 3.0) { break; }
                 shoot(PathState.ALIGNINTAKE1);
                 break;
             case ALIGNINTAKE1:

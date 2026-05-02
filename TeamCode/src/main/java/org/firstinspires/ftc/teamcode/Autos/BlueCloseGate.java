@@ -210,7 +210,8 @@ public class BlueCloseGate extends OpMode {
 
         flap = hardwareMap.get(Servo.class, "flap");
         flap.setDirection(Servo.Direction.FORWARD);
-
+        stopper.setPosition(0.9);
+        flap.setPosition(0.2);
 
         buildPaths();
         initWebcam();
@@ -224,6 +225,7 @@ public class BlueCloseGate extends OpMode {
     }
     @Override
     public void stop(){
+        stopper.setPosition(0.9);
         if(visionPortal != null){
             visionPortal.close();
             visionPortal = null;
@@ -241,6 +243,7 @@ public class BlueCloseGate extends OpMode {
             List<AprilTagDetection> detectedTags = aprilTag.getDetections();
             aiming(detectedTags);
         }else{
+            intake.setPower(0);
             turret.setTargetPosition(0);
         }
         switch (pathState) {
@@ -248,6 +251,7 @@ public class BlueCloseGate extends OpMode {
                 move(Preload, PathState.SHOOTPRE);
                 break;
             case SHOOTPRE:
+                if (!gainSet && opmodeTimer.getElapsedTimeSeconds() < 3.0) { break; }
                 shoot(PathState.INTAKE1);
                 break;
             case INTAKE1:
@@ -368,6 +372,7 @@ public class BlueCloseGate extends OpMode {
     }
 
     public void aiming(List<AprilTagDetection> detectedTags){
+        range = goalPos.findRange(xPos, yPos);
         if(gainSet){
             for (AprilTagDetection detection : detectedTags) {
                 if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
@@ -387,14 +392,14 @@ public class BlueCloseGate extends OpMode {
         double turretTarget = goalPos.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
+        // Blue turret homes at 0 ticks = one side of range; wraps 0-360° → limits [0, 1865] ticks
         if (turretTarget > 360 + 30) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < 0 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
-        // hardware limit
-        turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
+        turretTarget = Range.clip(turretTarget, lowLimit, highLimit);
         turret.setTargetPosition((int) turretTarget);
     }
     private void initWebcam() {
