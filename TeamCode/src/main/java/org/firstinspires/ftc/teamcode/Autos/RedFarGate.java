@@ -47,7 +47,7 @@ public class RedFarGate extends OpMode {
     private Timer actionTimer, opmodeTimer;
     private boolean moving = false;
     private boolean atFWV = false;
-    GoalPos goalPos = new GoalPos(147,144);
+    GoalPos goalPos = new GoalPos(147,144,15.5);
     private double xPos = 0, yPos = 0, heading = 0;
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private double range;
@@ -327,7 +327,7 @@ public class RedFarGate extends OpMode {
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
-                goalPos.update(xPos, yPos, bearing, camRange);
+                goalPos.update(0.08, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
                 break;
             }
         }

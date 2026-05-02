@@ -43,7 +43,7 @@ public class BlueClose extends OpMode {
     private Follower follower;
     private Timer actionTimer, opmodeTimer;
     private boolean moving = false;
-    GoalPos goalPos = new GoalPos(0,144);
+    GoalPos goalPos = new GoalPos(0,144,15.5);
     private double xPos = 0, yPos = 0, heading = 0;
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
@@ -336,7 +336,7 @@ public class BlueClose extends OpMode {
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
-                goalPos.update(xPos, yPos, bearing, camRange);
+                goalPos.update(0.08, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
                 break;
             }
         }

@@ -75,6 +75,9 @@ public class Constants {
                 .pinpointLocalizer(localizerConstants)
                 .build();
     }
+    public static Follower createFollower(HardwareMap hardwareMap) {
+        return createAutoFollower(hardwareMap);
+    }
     public static Follower createTeleopFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerTeleopConstants, hardwareMap)
                 .pathConstraints(pathConstraints)
