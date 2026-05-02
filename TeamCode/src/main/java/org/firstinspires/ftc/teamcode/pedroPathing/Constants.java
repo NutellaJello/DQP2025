@@ -66,7 +66,9 @@ public class Constants {
             .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD)
             .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED) // these are fine
             .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 2.0, 1.0, 0.1);
+    // heading threshold 0.3 rad (17°) — tight enough to ensure robot is settled, with margin for
+    // heading overshoot on curves; loosen toward 0.5 if paths hang waiting for heading to settle
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 2.0, 1.0, 0.3);
 
     public static Follower createAutoFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerAutoConstants, hardwareMap)

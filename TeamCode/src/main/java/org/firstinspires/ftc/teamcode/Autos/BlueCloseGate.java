@@ -35,6 +35,7 @@ public class BlueCloseGate extends OpMode {
     private DcMotorEx intake;
     private DcMotorEx turret;
     private DcMotorEx flyWheel1;
+    private DcMotorEx flyWheel2;
     private Servo stopper;
     private Servo flap;
 
@@ -60,6 +61,7 @@ public class BlueCloseGate extends OpMode {
     private boolean hasEst = false;
     private boolean shooting = false;
     private double minFWVSinceOpen = Double.MAX_VALUE;
+    private long stopperOpenTime = 0;
     double p = 380;
     double d = 0;
     double i = 0;
@@ -196,7 +198,13 @@ public class BlueCloseGate extends OpMode {
 
         flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
         flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
+        flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, fwPID);
+
+        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
+        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        flyWheel2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, fwPID);
 
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
@@ -336,9 +344,11 @@ public class BlueCloseGate extends OpMode {
     }
 
     public void shoot(PathState nextPath){
+        // range also updated in aiming(); kept here as fallback when aiming() is skipped (t > 29.3 s)
         range = goalPos.findRange(xPos, yPos);
         double targetV = toFWV(range);
         flyWheel1.setVelocity(targetV);
+        flyWheel2.setVelocity(targetV);
         if (range < 40) {
             flapPos = 0;
         }else if (range < 95){
@@ -347,11 +357,12 @@ public class BlueCloseGate extends OpMode {
             flapPos = 0.24;
         }
         flap.setPosition(flapPos);
-        double FWV = flyWheel1.getVelocity();
+        double FWV = Math.min(flyWheel1.getVelocity(), flyWheel2.getVelocity());
         if (FWV >= targetV && !shooting) {
             stopper.setPosition(0.973);
             intake.setPower(1);
             shooting = true;
+            stopperOpenTime = System.currentTimeMillis();
         }
         if (shooting) {
             minFWVSinceOpen = Math.min(minFWVSinceOpen, FWV);
@@ -359,13 +370,14 @@ public class BlueCloseGate extends OpMode {
         boolean ballPassed = shooting
                 && minFWVSinceOpen < targetV * 0.90
                 && FWV > targetV * 0.97
-                && actionTimer.getElapsedTime() > 300;
+                && System.currentTimeMillis() - stopperOpenTime > 300;
         if (ballPassed || actionTimer.getElapsedTime() > 2800) {
             shooting = false;
             minFWVSinceOpen = Double.MAX_VALUE;
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
+            flyWheel2.setVelocity(0);
             pathState = nextPath;
             actionTimer.resetTimer();
         }

@@ -63,6 +63,7 @@ public class RedClose15 extends OpMode {
     private boolean hasEst = false;
     private boolean shooting = false;
     private double minFWVSinceOpen = Double.MAX_VALUE;
+    private long stopperOpenTime = 0;
     double p = 400;
     double d = 0;
     double i = 0;
@@ -395,6 +396,7 @@ public class RedClose15 extends OpMode {
             stopper.setPosition(0.973);
             intake.setPower(1);
             shooting = true;
+            stopperOpenTime = System.currentTimeMillis();
         }
         if (shooting) {
             minFWVSinceOpen = Math.min(minFWVSinceOpen, FWV);
@@ -402,7 +404,7 @@ public class RedClose15 extends OpMode {
         boolean ballPassed = shooting
                 && minFWVSinceOpen < targetV * 0.90
                 && FWV > targetV * 0.97
-                && actionTimer.getElapsedTime() > 300;
+                && System.currentTimeMillis() - stopperOpenTime > 300;
         if (ballPassed || actionTimer.getElapsedTime() > 1600) {
             shooting = false;
             minFWVSinceOpen = Double.MAX_VALUE;

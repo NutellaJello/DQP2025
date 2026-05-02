@@ -367,9 +367,7 @@ public class BlueFarGate extends OpMode {
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
-                if(!gamepad1.x){
-                    goalPos.update(0.08, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
-                }
+                goalPos.update(0.08, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
                 break;
             }
         }
