@@ -308,6 +308,15 @@ Intake3 = follower.pathBuilder()
 ```
 Also remove the `INTAKE31` state and rename `INTAKE32` to `INTAKE3` in the enum and switch statement.
 
+#### Open question — speed control across merged segments
+
+The current two-step design also controls speed per leg: `Intake31` runs at full speed (approach), `Intake32` runs at 0.35 max power (slow crawl while collecting). If these are merged into one `PathChain`, `follower.followPath()` takes a single max-power argument that applies to the entire chain. Two options:
+
+- **Full-speed merge:** Run merged path at full speed; intake turns on at path start (slightly earlier than now). `setGlobalDeceleration(0.9)` already ensures the robot decelerates before the final waypoint. Likely fine but should be verified on robot — intake runs during the approach leg too.
+- **Slow-speed merge:** Run merged path at 0.35. Approach is now slower than current. Saves state-machine overhead but costs approach time.
+
+Decide which trade-off is acceptable after testing on the robot before implementing.
+
 ---
 
 ### 10. `setGlobalDeceleration()` is never used
