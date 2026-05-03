@@ -89,37 +89,37 @@ Location: `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/`
 
 ### Hardware map
 
-All hardware devices are referenced by name strings that must match the configuration on the Control Hub. The canonical names are defined in `config/HardwareNames.java` (a planned addition — currently scattered as string literals throughout the codebase; see `docs/superpowers/specs/2026-05-03-java-refactor-design.md`):
+All hardware devices are referenced by name strings that must match the configuration on the Control Hub. These string literals are currently scattered throughout the codebase:
 
-| Device | `HardwareNames` constant | String value | Type |
-|--------|--------------------------|--------------|------|
-| Front-left motor | `FRONT_LEFT` | `"FL"` | DcMotorEx |
-| Front-right motor | `FRONT_RIGHT` | `"FR"` | DcMotorEx |
-| Back-left motor | `BACK_LEFT` | `"BL"` | DcMotorEx |
-| Back-right motor | `BACK_RIGHT` | `"BR"` | DcMotorEx |
-| Intake motor | `INTAKE` | `"intake"` | DcMotorEx |
-| Flywheel 1 | `FLYWHEEL_1` | `"FW1"` | DcMotorEx |
-| Flywheel 2 | `FLYWHEEL_2` | `"FW2"` | DcMotorEx |
-| Turret motor | `TURRET` | `"turret"` | DcMotorEx |
-| Stopper servo | `STOPPER` | `"stopper"` | Servo |
-| Flap servo | `FLAP` | `"flap"` | Servo |
-| GoBilda Pinpoint | `PINPOINT` | `"pinpoint"` | GoBildaPinpointDriver |
-| Webcam | `WEBCAM` | `"Webcam 1"` | WebcamName |
+| Device | String literal | Type |
+|--------|----------------|------|
+| Front-left motor | `"FL"` | DcMotorEx |
+| Front-right motor | `"FR"` | DcMotorEx |
+| Back-left motor | `"BL"` | DcMotorEx |
+| Back-right motor | `"BR"` | DcMotorEx |
+| Intake motor | `"intake"` | DcMotorEx |
+| Flywheel 1 | `"FW1"` | DcMotorEx |
+| Flywheel 2 | `"FW2"` | DcMotorEx |
+| Turret motor | `"turret"` | DcMotorEx |
+| Stopper servo | `"stopper"` | Servo |
+| Flap servo | `"flap"` | Servo |
+| GoBilda Pinpoint | `"pinpoint"` | GoBildaPinpointDriver |
+| Webcam | `"Webcam 1"` | WebcamName |
 
 > **Important:** If hardware names in the Control Hub configuration don't match these strings exactly, the robot will crash on init with a `NullPointerException` from `hardwareMap.get(...)`.
 
-### `DecodeDriveTrain` → pending rename to `MecanumDrive`
+### `DecodeDriveTrain`
 
 The drivetrain subsystem wraps the four mecanum motors. It is used directly by TeleOp op-modes for driver-controlled movement.
 
 Key responsibilities:
 - Motor direction configuration (FL reversed; BL, FR, BR forward — standard mecanum layout for this wiring)
-- `drive(gamepad1)` — field-centric mecanum drive using the gamepad's left stick (translate) and right stick (rotate) (currently named `Teleop()` — rename pending)
+- `Teleop(gamepad1)` — field-centric mecanum drive using the gamepad's left stick (translate) and right stick (rotate)
 - `configurePinpoint()` — sets up the GoBilda Pinpoint odometry device (currently **commented out in TeleOp** — TeleOp does not use odometry for localization; only Auto does via Pedro Pathing)
 
 > **Note for future members:** The `configurePinpoint()` call being commented out in TeleOp is intentional for the current season. Auto uses Pinpoint through Pedro Pathing's `PinpointLocalizer`. If you add odometry-assisted TeleOp in future, uncomment and integrate this.
 
-### `GoalPos` → pending rename to `TargetTracker`
+### `GoalPos`
 
 A 3D goal-position estimator used for flywheel aiming. It tracks where the scoring goal is in field coordinates relative to the robot.
 
@@ -389,8 +389,117 @@ The project uses the standard FTC debug keystore at `libs/ftc.debug.keystore` fo
 
 ---
 
-## Appendix: Structural Anomaly — `DecodeTeleop.java`
+## Appendix A: Structural Anomaly — `DecodeTeleop.java`
 
 One file, `FtcRobotController/DecodeTeleop.java`, is placed at the root of the `FtcRobotController` module rather than in `TeamCode`. The knowledge graph detected this as its own isolated community (`ftcrobotcontroller-decodeteleop`) with only 2 nodes and the lowest cohesion score (0.0833) in the project.
 
 This file almost certainly belongs at `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/DecodeTeleop.java`. Moving it would consolidate all team code in one module and eliminate the anomaly. It is currently not annotated as active (`@TeleOp`/`@Autonomous`), so moving it carries no runtime risk.
+
+---
+
+## Appendix B: Planned Refactor
+
+Full spec: [`docs/superpowers/specs/2026-05-03-java-refactor-design.md`](superpowers/specs/2026-05-03-java-refactor-design.md)
+
+### Phase 1 — Constants extraction
+
+New files to create:
+
+| New file | What it centralises |
+|---|---|
+| `config/HardwareNames.java` | All `hardwareMap.get(...)` name strings |
+| `config/RobotConstants.java` | Magic numbers: PIDF gains, servo positions, timeouts, AprilTag IDs, FWV formula coefficients |
+
+Representative before → after:
+
+| Before (scattered literal) | After (constant) | File(s) affected |
+|---|---|---|
+| `"FL"`, `"FR"`, `"BL"`, `"BR"` | `HardwareNames.FRONT_LEFT` etc. | BaseAuto, DecodeDriveTrain, Constants.java, all autos |
+| `"FW1"`, `"FW2"` | `HardwareNames.FLYWHEEL_1/2` | BaseAuto, BlueCloseGate, RedClose15, RedCloseGate |
+| `"FW"` | `HardwareNames.FLYWHEEL_LEGACY` | Gen-1 legacy autos |
+| `"intake"`, `"turret"`, `"stopper"`, `"flap"` | `HardwareNames.*` | BaseAuto, TeleOp files |
+| `"Webcam 1"`, `"pinpoint"` | `HardwareNames.WEBCAM/PINPOINT` | BaseAuto, FlywheelTesting |
+| `0.9` (stopper closed) | `RobotConstants.STOPPER_CLOSED` | BaseAuto, BlueCloseGate, RedClose15, RedCloseGate, TeleOps |
+| `0.973` (stopper open) | `RobotConstants.STOPPER_OPEN` | same |
+| `976` (turret ticks/180°) | `RobotConstants.TURRET_TICKS_PER_180_DEG` | all autos |
+| `1600` (shoot timeout, RedClose15) | `RobotConstants.SHOOT_TIMEOUT_FAST_MS` | RedClose15 only |
+| `2800` (shoot timeout, others) | `RobotConstants.SHOOT_TIMEOUT_MS` | BlueCloseGate, RedCloseGate |
+| `detection.id == 20` | `RobotConstants.APRILTAG_ID_BLUE` | Blue autos |
+| `detection.id == 24` | `RobotConstants.APRILTAG_ID_RED` | Red autos, FlywheelTesting |
+
+---
+
+### Phase 2 — Naming cleanup
+
+**Method renames:**
+
+| Before | After | Class | Callsites |
+|---|---|---|---|
+| `Teleop(gamepad1)` | `drive(gamepad1)` | `DecodeDriveTrain` | `BlueTeleopWebcam`, `RedTeleopWebcam`, `centerstageTeleOp`, `DecodeTeleop` |
+| `baseInit()` | `initHardware()` | `BaseAuto` | all 5 active autos + 4 disabled non-gate autos |
+| `findAngle(x, y)` | `findBearing(x, y)` | `GoalPos` | all 5 active autos, `BlueTeleopWebcam`, `RedTeleopWebcam`, `FlywheelTesting` |
+
+**Field renames:**
+
+| Before | After | Class |
+|---|---|---|
+| `a, b, c` | `goalX, goalY, goalZ` | `GoalPos` |
+| `camAngle` | `camElevationAngleDeg` | `GoalPos` |
+| `p, d, i, f` | `pidP, pidD, pidI, pidF` | `BaseAuto`, `BlueTeleopWebcam`, `RedTeleopWebcam`, `FlywheelTesting` |
+| `FL, FR, BL, BR` | `frontLeft, frontRight, backLeft, backRight` | `DecodeDriveTrain` |
+| `FWTarget` | `flywheelTarget` | `BaseAuto` |
+| `FW1Target` | `flywheelTarget` | `FlywheelTesting` |
+| `FWV1, FWV2` | `flywheelVelocity1, flywheelVelocity2` | `BlueTeleopWebcam`, `RedTeleopWebcam` |
+| `PowerFL/FR/BL/BR` (locals) | `powerFl/Fr/Bl/Br` | `DecodeDriveTrain` |
+
+**Path variable renames (PascalCase → camelCase, per auto):**
+
+| Before | After |
+|---|---|
+| `Preload` | `preload` |
+| `Opengate` / `Togate` | `openGate` / `toGate` |
+| `BigBack` | `bigBack` |
+| `OuttakeB` | `outtakeB` |
+| `AlignIntake` | `alignIntake` |
+| `End` | `end` |
+| *(all other path vars)* | *(matching camelCase)* |
+
+---
+
+### Phase 3 — Package and class reorganisation
+
+**Class renames:**
+
+| Before | After | Notes |
+|---|---|---|
+| `DecodeDriveTrain` | `MecanumDrive` | reflects actual mechanism |
+| `GoalPos` | `TargetTracker` | reflects role (tracker, not a position type) |
+| `BlueTeleopWebcam` | `BlueTeleop` | remove hardware detail from class name |
+| `RedTeleopWebcam` | `RedTeleop` | same |
+| `pedroPathing/Constants` | `FollowerConfig` | avoids conflict with Java's `Constants` convention |
+| `centerstageTeleOp` | `CenterStageTeleOp` | fix PascalCase |
+| `RedClose15` | `RedCloseExtended` | *pending team confirmation of what "15" means* |
+
+**Package renames:**
+
+| Before | After |
+|---|---|
+| `Autos/` | `autos/` |
+| `TeleOp/` | `teleop/` |
+
+**File moves:**
+
+| File | From | To |
+|---|---|---|
+| `BlueTeleopWebcam` | `TeleOp/` | `teleop/` |
+| `RedTeleopWebcam` | `TeleOp/` | `teleop/` |
+| `TestAuto` | `Autos/` | `testcode/` |
+| `centerstageTeleOp` | root teamcode | `testcode/` |
+| `DecodeTeleop.java` | `FtcRobotController/` | `TeamCode/.../teamcode/` |
+
+**Deletions:**
+
+| File | Reason |
+|---|---|
+| `OfficialBlueTeleop.java` | Completely empty — no class body |
+| `OfficialRedTeleop.java` | Completely empty — no class body |
