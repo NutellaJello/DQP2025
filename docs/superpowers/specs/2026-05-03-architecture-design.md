@@ -70,7 +70,7 @@ All op-modes must be registered with the SDK. The `@TeleOp` and `@Autonomous` an
 - **name** — what appears on the Driver Station menu
 - **group** — visual grouping on the menu
 
-`FtcOpModeRegister.register()` in the `internal` package is where the SDK collects registered op-modes at runtime.
+`FtcOpModeRegister.register(OpModeManager)` in the `internal` package is a callback *invoked by the SDK* at startup to collect registered op-modes. The team does not call this method — the SDK does.
 
 ### Key SDK files
 
@@ -113,7 +113,7 @@ All hardware devices are referenced by name strings that must match the configur
 The drivetrain subsystem wraps the four mecanum motors. It is used directly by TeleOp op-modes for driver-controlled movement.
 
 Key responsibilities:
-- Motor direction configuration (FL/BL reversed for correct mecanum behaviour)
+- Motor direction configuration (FL reversed; BL, FR, BR forward — standard mecanum layout for this wiring)
 - `Teleop(gamepad1)` — field-centric mecanum drive using the gamepad's left stick (translate) and right stick (rotate)
 - `configurePinpoint()` — sets up the GoBilda Pinpoint odometry device (currently **commented out in TeleOp** — TeleOp does not use odometry for localization; only Auto does via Pedro Pathing)
 
@@ -125,7 +125,7 @@ A 3D goal-position estimator used for flywheel aiming. It tracks where the scori
 
 How it works:
 1. The webcam detects an AprilTag on or near the goal and returns a distance (`dist`) and elevation angle.
-2. `update(alpha, x, y, heading, elevation, dist)` applies an **exponential moving average** (controlled by `alpha`) to filter noisy measurements. It projects the distance+elevation reading into field XY using spherical geometry, accounting for the camera's fixed 20° mount angle on the robot.
+2. `update(alpha, x, y, heading, elevation, dist)` applies an **exponential moving average** (controlled by `alpha`) to filter noisy measurements. It converts the 3D polar measurement (distance + elevation angle) into field XY using a spherical-to-Cartesian projection, using the robot's heading as the azimuth and accounting for the camera's fixed 20° mount angle.
 3. `findRange(x, y)` and `findAngle(x, y)` compute the Euclidean distance and bearing from the robot's current position to the goal — these drive the turret angle and flywheel speed.
 
 Both TeleOp and auto aiming (`cameraControls()` in `BaseAuto`) use `GoalPos`.
@@ -202,8 +202,8 @@ BaseAuto (abstract OpMode)
 
 **Hardware initialized by `baseInit()`** (all subclasses call this):
 - Drivetrain via Pedro Pathing `Follower` (`Constants.createAutoFollower()`)
-- `intake` (DcMotorEx, STOP_AND_RESET_ENCODER)
-- `turret` (DcMotorEx, RUN_TO_POSITION)
+- `intake` (DcMotorEx, direction REVERSE — no encoder mode set in `baseInit()`)
+- `turret` (DcMotorEx, STOP_AND_RESET_ENCODER → RUN_TO_POSITION)
 - `flyWheel1` (DcMotorEx, PIDF-controlled)
 - `stopper` (Servo)
 - `flap` (Servo)
@@ -227,7 +227,7 @@ BaseAuto (abstract OpMode)
 | `statePathUpdate()` | The state machine — checks current state, transitions, issues motor commands |
 
 **Camera initialization guard:**
-`cameraControls()` is called from `loop()` only after `opmodeTimer.milliseconds() > 500`. This prevents the `GoalPos` tracker from being fed corrupted measurements during the first half-second of initialization when the camera pipeline is still warming up.
+`cameraControls()` is gated on both `opmodeTimer.milliseconds() > 500` **and** `!gainSet`. Because `gainSet` is set to `true` on first execution, `cameraControls()` runs **exactly once** — not every loop after 500 ms. This sets camera exposure and gain a single time after the pipeline has warmed up, preventing the `GoalPos` tracker from ingesting corrupted early measurements.
 
 ### State machine pattern
 
@@ -254,7 +254,7 @@ case PRELOAD:
 | `RedCloseGate` | Red | Close | 3 | Start `(120, 133, 0°)`, mirrors BlueCloseGate |
 | `RedFarGate` | Red | Far | 2 | Start `(90, 0, 0°)`, mirrors BlueFarGate |
 
-**Gate vs non-gate:** The `*Gate` suffix means the auto includes an `OPENGATE` state that drives the robot into the field gate obstacle to push it open before the first intake cycle. The older non-gate versions (`BlueClose`, `BlueFar`, `RedClose`, `RedFar`) are `@Disabled`.
+**Gate vs non-gate:** The `*Gate` suffix means the auto includes a gate-interaction maneuver. The close-side variants (`BlueCloseGate`, `RedCloseGate`, `RedClose15`) include an explicit `OPENGATE` path state that drives the robot into the gate obstacle to push it open. The far-side variants (`BlueFarGate`, `RedFarGate`) reach the gate as part of their intake approach path (`TOGATE` / `WAIT` states) rather than a dedicated push sub-routine. The older non-gate versions (`BlueClose`, `BlueFar`, `RedClose`, `RedFar`) are `@Disabled`.
 
 **PIDF flywheel tuning per route:**
 
@@ -278,8 +278,8 @@ The TeleOp situation is **in transition**:
 |---|---|---|
 | `BlueTeleopWebcam` | `@Disabled` | Working code — current competition-ready teleop for Blue |
 | `RedTeleopWebcam` | `@Disabled` | Working code — current competition-ready teleop for Red |
-| `OfficialBlueTeleop` | `@TeleOp` but **empty** | Placeholder for a planned refactor, never implemented |
-| `OfficialRedTeleop` | `@TeleOp` but **empty** | Placeholder for a planned refactor, never implemented |
+| `OfficialBlueTeleop` | **Completely empty** | No class body, no annotations — does not appear on Driver Station |
+| `OfficialRedTeleop` | **Completely empty** | No class body, no annotations — does not appear on Driver Station |
 
 **The working teleop code is in `*TeleopWebcam`.** If you need to modify teleop behaviour, edit those files — not the `Official*` stubs.
 
@@ -329,7 +329,7 @@ These were written before the team adopted Pedro Pathing and the `BaseAuto` fram
 - Extend `OpMode` directly (not `BaseAuto`)
 - Instantiate `DecodeDriveTrain` directly (no Pedro Pathing `Follower`)
 - Use `(144 - x)` coordinate mirroring math — the Blue and Red versions share paths by flipping X around the field center. This works but is error-prone.
-- No flywheel PIDF — motor power set by direct `setPower()` calls
+- Flywheel uses `RUN_USING_ENCODER` + `setVelocity()` but with no custom `PIDFCoefficients` — relies on the SDK's default velocity PID rather than the tuned coefficients used in current autos
 - No webcam / `GoalPos` tracking
 
 **Why superseded:** Pedro Pathing + Pinpoint odometry gives more consistent path following. `BaseAuto` reduces duplication between alliance variants. PIDF flywheel control replaced open-loop power.
