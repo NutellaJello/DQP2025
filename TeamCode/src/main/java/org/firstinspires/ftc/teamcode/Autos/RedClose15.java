@@ -15,7 +15,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import java.util.Arrays;
 import java.util.List;
 
-@Autonomous(name = "Red 15", group = "Autos")
+@Autonomous(name = "Red Close 15", group = "Autos")
 public class RedClose15 extends BaseAuto {
     private DcMotorEx flyWheel2;
     private boolean shooting = false;
