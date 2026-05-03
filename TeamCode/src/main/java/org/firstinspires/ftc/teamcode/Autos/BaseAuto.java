@@ -47,7 +47,6 @@ public abstract class BaseAuto extends OpMode {
     protected double flapPos = 0.2;
     protected double camRange;
     protected double bearing;
-    protected double xEst, yEst;
     protected boolean hasEst = false;
 
     // === Motion state ===

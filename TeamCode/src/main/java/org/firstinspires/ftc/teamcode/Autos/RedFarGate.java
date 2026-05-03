@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.Autos;
 
-import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
@@ -152,11 +151,13 @@ public class RedFarGate extends BaseAuto {
                 shoot(PathState.END);
                 break;
             case END:
-                move(End, () -> setPathState(PathState.STOP));
-                if (visionPortal != null) {
-                    visionPortal.close();
-                    visionPortal = null;
-                }
+                move(End, () -> {
+                    if (visionPortal != null) {
+                        visionPortal.close();
+                        visionPortal = null;
+                    }
+                    setPathState(PathState.STOP);
+                });
                 break;
         }
     }
@@ -181,8 +182,7 @@ public class RedFarGate extends BaseAuto {
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
-            pathState = nextPath;
-            actionTimer.resetTimer();
+            setPathState(nextPath);
         }
     }
 

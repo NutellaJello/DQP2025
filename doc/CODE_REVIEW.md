@@ -691,7 +691,7 @@ These are not bugs that affect competition immediately, but they make the codeba
 
 ### 22. Every autonomous OpMode is a copy-paste of the same code
 **Files:** All 9 auto OpModes
-> **Addressed** — `BaseAuto.java` abstract class created; all 9 auto files now extend it. Shared `initWebcam`, `cameraControls`, `move`, `moveIntake`, `wait`, `toFWV`, and hardware `init` live once in `BaseAuto`. Each subclass retains only its unique `PathState` enum, poses, `buildPaths`, `shoot`, `aiming`, and four config overrides (`getPIDFP`, `createGoalPos`, `getStartPose`, `getFWVConstant`).
+> **Addressed** — `BaseAuto.java` abstract class created; all 9 auto files now extend it. Shared `initWebcam`, `cameraControls`, `move`, `moveIntake`, `waitMs`, `toFWV`, and hardware `init` live once in `BaseAuto`. Each subclass retains only its unique `PathState` enum, poses, `buildPaths`, `shoot`, `aiming`, and four config overrides (`getPIDFP`, `createGoalPos`, `getStartPose`, `getFWVConstant`).
 
 #### The problem
 Every single autonomous file contains identical copies of:
