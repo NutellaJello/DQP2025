@@ -89,22 +89,22 @@ Location: `TeamCode/src/main/java/org/firstinspires/ftc/teamcode/subsystems/`
 
 ### Hardware map
 
-All hardware devices are referenced by name strings that must match the configuration on the Control Hub. The canonical names used throughout the codebase are:
+All hardware devices are referenced by name strings that must match the configuration on the Control Hub. The canonical names are defined in `config/HardwareNames.java` (a planned addition — currently scattered as string literals throughout the codebase; see `docs/superpowers/specs/2026-05-03-java-refactor-design.md`):
 
-| Device | Name string | Type |
-|--------|-------------|------|
-| Front-left motor | `"FL"` | DcMotorEx |
-| Front-right motor | `"FR"` | DcMotorEx |
-| Back-left motor | `"BL"` | DcMotorEx |
-| Back-right motor | `"BR"` | DcMotorEx |
-| Intake motor | `"intake"` | DcMotorEx |
-| Flywheel 1 | `"FW1"` | DcMotorEx |
-| Flywheel 2 | `"FW2"` | DcMotorEx |
-| Turret motor | `"turret"` | DcMotorEx |
-| Stopper servo | `"stopper"` | Servo |
-| Flap servo | `"flap"` | Servo |
-| GoBilda Pinpoint | `"pinpoint"` | GoBildaPinpointDriver |
-| Webcam | `"Webcam 1"` | WebcamName |
+| Device | `HardwareNames` constant | String value | Type |
+|--------|--------------------------|--------------|------|
+| Front-left motor | `FRONT_LEFT` | `"FL"` | DcMotorEx |
+| Front-right motor | `FRONT_RIGHT` | `"FR"` | DcMotorEx |
+| Back-left motor | `BACK_LEFT` | `"BL"` | DcMotorEx |
+| Back-right motor | `BACK_RIGHT` | `"BR"` | DcMotorEx |
+| Intake motor | `INTAKE` | `"intake"` | DcMotorEx |
+| Flywheel 1 | `FLYWHEEL_1` | `"FW1"` | DcMotorEx |
+| Flywheel 2 | `FLYWHEEL_2` | `"FW2"` | DcMotorEx |
+| Turret motor | `TURRET` | `"turret"` | DcMotorEx |
+| Stopper servo | `STOPPER` | `"stopper"` | Servo |
+| Flap servo | `FLAP` | `"flap"` | Servo |
+| GoBilda Pinpoint | `PINPOINT` | `"pinpoint"` | GoBildaPinpointDriver |
+| Webcam | `WEBCAM` | `"Webcam 1"` | WebcamName |
 
 > **Important:** If hardware names in the Control Hub configuration don't match these strings exactly, the robot will crash on init with a `NullPointerException` from `hardwareMap.get(...)`.
 
@@ -114,7 +114,7 @@ The drivetrain subsystem wraps the four mecanum motors. It is used directly by T
 
 Key responsibilities:
 - Motor direction configuration (FL reversed; BL, FR, BR forward — standard mecanum layout for this wiring)
-- `Teleop(gamepad1)` — field-centric mecanum drive using the gamepad's left stick (translate) and right stick (rotate)
+- `drive(gamepad1)` — field-centric mecanum drive using the gamepad's left stick (translate) and right stick (rotate) (named `Teleop()` in current source — rename pending)
 - `configurePinpoint()` — sets up the GoBilda Pinpoint odometry device (currently **commented out in TeleOp** — TeleOp does not use odometry for localization; only Auto does via Pedro Pathing)
 
 > **Note for future members:** The `configurePinpoint()` call being commented out in TeleOp is intentional for the current season. Auto uses Pinpoint through Pedro Pathing's `PinpointLocalizer`. If you add odometry-assisted TeleOp in future, uncomment and integrate this.

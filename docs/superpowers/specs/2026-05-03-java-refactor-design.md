@@ -38,12 +38,13 @@ BACK_LEFT   = "BL"
 BACK_RIGHT  = "BR"
 
 // Mechanisms
-FLYWHEEL_1 = "FW1"
-FLYWHEEL_2 = "FW2"
-INTAKE     = "intake"
-TURRET     = "turret"
-STOPPER    = "stopper"
-FLAP       = "flap"
+FLYWHEEL_1      = "FW1"
+FLYWHEEL_2      = "FW2"
+FLYWHEEL_LEGACY = "FW"   // used in BlueSideClose/Far, RedSideClose/Far, TestAuto (older wiring)
+INTAKE          = "intake"
+TURRET          = "turret"
+STOPPER         = "stopper"
+FLAP            = "flap"
 
 // Sensors
 WEBCAM     = "Webcam 1"
@@ -60,9 +61,10 @@ All magic numbers as `public static final double` (or `int` where appropriate), 
 
 ```java
 // --- Turret ---
-TURRET_TICKS_PER_180_DEG  = 976      // hardware-specific: change if gear ratio changes
-TURRET_STARTING_ANGLE_DEG = 0.0
-TURRET_WRAP_GUARD_DEG     = 30.0
+TURRET_TICKS_PER_180_DEG   = 976      // hardware-specific: change if gear ratio changes
+TURRET_STARTING_ANGLE_DEG  = 0.0
+TURRET_WRAP_GUARD_DEG      = 30.0     // used by close-side autos and teleop
+TURRET_WRAP_GUARD_FAR_DEG  = 200.0    // used by BlueFarGate/RedFarGate (wider wrap window)
 
 // --- PIDF defaults (shared across autos and teleop) ---
 PIDF_F   = 13.5
@@ -101,8 +103,10 @@ APRILTAG_ID_RED  = 24
 
 // --- Timing ---
 AUTO_SHOOT_CUTOFF_SECONDS = 29.3
-SHOOT_TIMEOUT_MS          = 2800
-INTAKE_SETTLE_MS          = 50
+SHOOT_TIMEOUT_MS          = 2800     // BlueCloseGate, RedCloseGate
+SHOOT_TIMEOUT_FAST_MS     = 1600     // RedClose15 only (different route timing)
+INTAKE_SETTLE_MS          = 50       // close-path settle (far paths use 1500 — leave as literal)
+INTAKE_FAR_DWELL_MS       = 1500     // far-path dwell in BlueFarGate/RedFarGate
 
 // --- Misc ---
 POSE_EPSILON = 1e-8         // prevents zero-length path in Pedro Pathing hold
@@ -128,21 +132,22 @@ This replaces:
 | File | What changes |
 |------|-------------|
 | `Autos/BaseAuto.java` | Replace `"FW1"`, `"turret"`, `"stopper"`, `"flap"`, `"Webcam 1"`, `0.9`/`0.2` servo init, `500`ms guard, `2`ms exposure, `100` gain, `13.5`/`0` PIDF defaults; delegate `toFWV()` to `RobotConstants.toFlywheelVelocity()` |
-| `Autos/BlueCloseGate.java` | Replace `"FW2"`, `976`, `0.973`, flap positions, `20` AprilTag ID, `2800`ms timeout, `29.3`s cutoff, `30` wrap guard |
-| `Autos/RedCloseGate.java` | Same as BlueCloseGate |
-| `Autos/RedClose15.java` | Same as BlueCloseGate |
-| `Autos/BlueFarGate.java` | Turret constants, servo positions |
-| `Autos/RedFarGate.java` | Turret constants, servo positions |
+| `Autos/BlueCloseGate.java` | Replace `"FW2"`, `976`, `0.973`, flap positions, `APRILTAG_ID_BLUE` (id==20), `SHOOT_TIMEOUT_MS` (2800ms), `29.3`s cutoff, `TURRET_WRAP_GUARD_DEG` (30°) |
+| `Autos/RedCloseGate.java` | Same as BlueCloseGate but `APRILTAG_ID_RED` (id==24) |
+| `Autos/RedClose15.java` | Same as RedCloseGate but use `SHOOT_TIMEOUT_FAST_MS` (1600ms) not `SHOOT_TIMEOUT_MS` |
+| `Autos/BlueFarGate.java` | Replace `"FW1"` (if present), servo positions, `APRILTAG_ID_BLUE` (id==20), `TURRET_WRAP_GUARD_FAR_DEG` (200°) — **not** `TURRET_WRAP_GUARD_DEG`, `INTAKE_FAR_DWELL_MS` (1500ms) |
+| `Autos/RedFarGate.java` | Same as BlueFarGate but `APRILTAG_ID_RED` (id==24) |
 | `Autos/BlueClose.java` | Servo positions, turret constants (disabled but in scope) |
 | `Autos/RedClose.java` | Same |
 | `Autos/BlueFar.java` | Servo positions, turret constants |
 | `Autos/RedFar.java` | Same |
-| `BlueTeleopWebcam.java` | Replace all literals; replace inline `toFWV` formula with `RobotConstants.toFlywheelVelocity()` |
-| `RedTeleopWebcam.java` | Same |
+| `BlueTeleopWebcam.java` | Replace all literals; replace inline `toFWV` formula with `RobotConstants.toFlywheelVelocity()`; use `APRILTAG_ID_BLUE` (id==20); use `TURRET_WRAP_GUARD_DEG` (±180° wrap — different range than auto, keep separately) |
+| `RedTeleopWebcam.java` | Same as BlueTeleopWebcam but `APRILTAG_ID_RED` (id==24) |
 | `subsystems/DecodeDriveTrain.java` | Replace `"FL"/"FR"/"BL"/"BR"`, `1.2`, `0.8`, damp ratios |
 | `subsystems/GoalPos.java` | Replace `20` cam angle, `18` height floor |
-| `BlueSideClose.java`, `BlueSideFar.java`, `RedSideClose.java`, `RedSideFar.java` | Hardware name strings wherever present |
-| `testcode/FlywheelTesting.java` | Hardware strings, PIDF literals |
+| `BlueSideClose.java`, `BlueSideFar.java`, `RedSideClose.java`, `RedSideFar.java` | Replace `"intake"`, `"turret"`, `"stopper"`, `"flap"`, `"FL"/"FR"/"BL"/"BR"`; use `HardwareNames.FLYWHEEL_LEGACY` for `"FW"` (not FW1/FW2 — these files use a single flywheel with a different device name) |
+| `TestAuto.java` | Replace `"FL"/"FR"/"BL"/"BR"`, `"intake"`, `"Webcam 1"`; use `HardwareNames.FLYWHEEL_LEGACY` for `"FW"` |
+| `testcode/FlywheelTesting.java` | Replace hardware strings (`"FW1"`, `"intake"`, `"turret"`, `"Webcam 1"`), PIDF literals; use `APRILTAG_ID_RED` for id==24 (tuned on red-side field setup) |
 
 ---
 
@@ -150,11 +155,11 @@ This replaces:
 
 ### Method renames
 
-| File | Current name | New name | Reason |
-|------|-------------|---------|--------|
-| `subsystems/DecodeDriveTrain.java` | `Teleop(...)` | `drive(...)` | Method names must start lowercase; `drive` is a clearer verb |
-| `Autos/BaseAuto.java` | `baseInit()` | `initHardware()` | Verb-first; describes what it does, not what class it belongs to |
-| `subsystems/GoalPos.java` | `findAngle()` | `findBearing()` | Distinguishes from elevation angle; `bearing` is the correct navigation term |
+| File | Current name | New name | Reason | Callsites to update |
+|------|-------------|---------|--------|---------------------|
+| `subsystems/DecodeDriveTrain.java` | `Teleop(...)` (both overloads) | `drive(...)` | Method names must start lowercase; `drive` is a clearer verb | `BlueTeleopWebcam.java:152`, `RedTeleopWebcam.java:152`, `testcode/FlywheelTesting.java:151`, and internal overload call inside `DecodeDriveTrain.java:85` |
+| `Autos/BaseAuto.java` | `baseInit()` | `initHardware()` | Verb-first; describes what it does, not what class it belongs to | All 8 auto subclasses call this from `init()`: `BlueCloseGate`, `RedCloseGate`, `RedClose15`, `BlueFarGate`, `RedFarGate`, `BlueClose`, `RedClose`, `BlueFar`, `RedFar` |
+| `subsystems/GoalPos.java` | `findAngle()` | `findBearing()` | Distinguishes from elevation angle; `bearing` is the correct navigation term | `BlueCloseGate`, `RedCloseGate`, `RedClose15`, `BlueFarGate`, `RedFarGate`, `BlueClose`, `RedClose`, `BlueFar`, `RedFar`, `BlueTeleopWebcam`, `RedTeleopWebcam`, `testcode/FlywheelTesting` (12 callsites total) |
 
 ### Field renames
 
@@ -168,6 +173,9 @@ This replaces:
 | `BlueTeleopWebcam.java` | `FWV1`, `FWV2` | `flywheelVelocity1`, `flywheelVelocity2` | Same |
 | `RedTeleopWebcam.java` | Same as above | Same as above | Mirrored file |
 | `subsystems/DecodeDriveTrain.java` | `FL`, `FR`, `BL`, `BR` | `frontLeft`, `frontRight`, `backLeft`, `backRight` | ALL_CAPS reserved for constants |
+| `testcode/FlywheelTesting.java` | `p`, `d`, `i`, `f` | `pidP`, `pidD`, `pidI`, `pidF` | Single letters reserved for loop indices |
+| `testcode/FlywheelTesting.java` | `FW1Target` | `flywheelTarget` | camelCase; removes jargon prefix |
+| `testcode/FlywheelTesting.java` | `FWV1`, `FWV2` | `flywheelVelocity1`, `flywheelVelocity2` | Same |
 
 ### Local variable renames
 
@@ -177,7 +185,9 @@ This replaces:
 
 ### Path variable renames (PascalCase → camelCase)
 
-Affects all active autos in `Autos/` that declare `PathChain` fields with PascalCase names. For example in `BlueCloseGate`:
+`PathState` enum values (`PRELOAD`, `INTAKE1`, etc.) are already correct `UPPER_SNAKE_CASE` and are **not changed**. Only the `PathChain` field declarations are renamed.
+
+**`BlueCloseGate.java` and `RedCloseGate.java`** (same set):
 
 | Current | New |
 |---------|-----|
@@ -185,9 +195,52 @@ Affects all active autos in `Autos/` that declare `PathChain` fields with Pascal
 | `Intake1` | `intake1` |
 | `Opengate` | `openGate` |
 | `Outtake1` | `outtake1` |
+| `Intake21`, `Intake22` | `intake21`, `intake22` |
+| `Outtake2` | `outtake2` |
+| `Intake31`, `Intake32` | `intake31`, `intake32` |
+| `Outtake3` | `outtake3` |
 | `End` | `end` |
 
-The `PathState` enum values (`PRELOAD`, `INTAKE1`, etc.) are already correct `UPPER_SNAKE_CASE` and are **not changed**.
+**`RedClose15.java`:**
+
+| Current | New |
+|---------|-----|
+| `Preload` | `preload` |
+| `Intake11`, `Intake12` | `intake11`, `intake12` |
+| `Outtake1` | `outtake1` |
+| `Opengate` | `openGate` |
+| `BigBack` | `bigBack` |
+| `OuttakeB` | `outtakeB` |
+| `Intake2` | `intake2` |
+| `Outtake2` | `outtake2` |
+| `Intake31`, `Intake32` | `intake31`, `intake32` |
+| `Outtake3` | `outtake3` |
+| `End` | `end` |
+
+**`BlueFarGate.java`:**
+
+| Current | New |
+|---------|-----|
+| `Preload` | `preload` |
+| `AlignIntake` | `alignIntake` |
+| `Intake1` | `intake1` |
+| `Outtake1` | `outtake1` |
+| `AlignIntake2` | `alignIntake2` |
+| `Togate` | `toGate` |
+| `Outtake2` | `outtake2` |
+| `End` | `end` |
+
+**`RedFarGate.java`:**
+
+| Current | New |
+|---------|-----|
+| `Preload` | `preload` |
+| `AlignIntake` | `alignIntake` |
+| `Intake1` | `intake1` |
+| `Outtake1` | `outtake1` |
+| `Intake21`, `Intake22` | `intake21`, `intake22` |
+| `Outtake2` | `outtake2` |
+| `End` | `end` |
 
 ---
 
