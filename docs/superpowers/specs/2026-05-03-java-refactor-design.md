@@ -244,21 +244,91 @@ This replaces:
 
 ---
 
+---
+
+## Phase 3: Package and Class Name Reorganisation
+
+Phase 3 is independent of Phases 1 and 2 and can be executed after either completes. It involves file moves (package changes) and class renames. All `@TeleOp`/`@Autonomous` display names are unaffected — those come from annotation `name=` strings, not class names.
+
+### Package renames (directory moves)
+
+| Current package | New package | Reason |
+|-----------------|-------------|--------|
+| `Autos/` | `autos/` | Java convention: all-lowercase package names |
+| `TeleOp/` | `teleop/` | Same; capital T and O are non-standard |
+| `pedroPathing/` | `config/` | Named after a third-party library; contains only the team's configuration for it |
+
+> **Note:** `pedroPathing/` merges into `config/` alongside `HardwareNames` and `RobotConstants` from Phase 1. The `config/` package becomes the single home for all robot configuration.
+
+### File moves (class placement fixes)
+
+| File | Current location | New location | Reason |
+|------|-----------------|--------------|--------|
+| `BlueTeleopWebcam.java` | root package | `teleop/` | Belongs with teleop code |
+| `RedTeleopWebcam.java` | root package | `teleop/` | Same |
+| `TestAuto.java` | root package | `testcode/` | Is a test/diagnostic op-mode |
+| `centerstageTeleOp.java` | root package | `testcode/` | Legacy diagnostic; not current competition code |
+| `DecodeTeleop.java` | `FtcRobotController/` root | `TeamCode/.../teamcode/` | Misplaced outside TeamCode module entirely |
+
+### Class renames
+
+| Current name | New name | Reason |
+|-------------|---------|--------|
+| `DecodeDriveTrain` | `MecanumDrive` | Team name ("Decode") in a class name is misleading and tells readers nothing about the class's function |
+| `GoalPos` | `TargetTracker` | Reads as a coordinate struct; the class is a stateful EMA-filtered sensor-fusion tracker |
+| `BlueTeleopWebcam` | `BlueTeleop` | "Webcam" describes one of many features; the class is the full competition teleop controller |
+| `RedTeleopWebcam` | `RedTeleop` | Same |
+| `pedroPathing/Constants` | `config/FollowerConfig` | `Constants` is a generic anti-pattern and the class also contains mutable objects and a factory method |
+| `centerstageTeleOp` | `CenterStageTeleOp` | Fixes PascalCase violation |
+| `RedClose15` | `RedCloseExtended` | `15` is an unexplained number that breaks the `{Color}{Distance}{Variant}` naming pattern used by every other auto; `Extended` communicates that this route has more states (BIGBACK, OUTTAKEB) than the standard Gate variant. **Confirm with team before renaming — if `15` refers to a specific scoring target (e.g., 15 elements), use `RedClose15Elem` instead.** |
+
+### Callsites for class renames
+
+Each class rename requires updating:
+1. The class declaration (`public class X`)
+2. The file name (`X.java`)
+3. All `import` statements referencing the class
+4. Any `new X(...)` instantiations
+5. Any variable declarations of type `X`
+
+| Renamed class | Known callers |
+|--------------|---------------|
+| `MecanumDrive` (was `DecodeDriveTrain`) | `BlueTeleopWebcam`/`RedTeleop`, `FlywheelTesting`, all `BlueSide*`/`RedSide*` legacy autos |
+| `TargetTracker` (was `GoalPos`) | `BaseAuto`, `BlueTeleopWebcam`/`RedTeleop`, `FlywheelTesting`, all active `Autos/` subclasses |
+| `FollowerConfig` (was `Constants`) | `BaseAuto` (`createAutoFollower()`), `BlueTeleopWebcam`/`RedTeleop` (`createTeleopFollower()`) |
+
+### Cleanup: `TeleOp/` package after moves
+
+After `BlueTeleop` and `RedTeleop` are moved into `teleop/`, the two empty stub files (`OfficialBlueTeleop.java`, `OfficialRedTeleop.java`) should be deleted — they are placeholder files with no content, annotations, or class bodies.
+
+---
+
 ## What is explicitly out of scope
 
-- **Method decomposition** (`Teleop()`, `runOpMode()`, `statePathUpdate()`) — separate future effort
+- **Method decomposition** (`drive()`, `runOpMode()`, `statePathUpdate()`) — separate future effort
 - **Access modifier fixes** (`public` → `private/protected`) — separate future effort
 - **Structural changes** (new base classes, interface extraction) — not needed
 - **Pedro Pathing `Tuning.java`** — third-party library code; not touched
-- **`centerstageTeleOp.java`** — legacy from a previous game season; skipped to avoid noise
 
 ---
 
 ## Success criteria
 
-1. `./gradlew assembleDebug` passes with zero errors after each phase
+After Phase 1:
+1. `./gradlew assembleDebug` passes with zero errors
 2. All hardware device-name strings appear exactly once in the codebase (in `HardwareNames`)
 3. Magic number `976` (turret ticks) appears nowhere outside `RobotConstants`
-4. No method names starting with an uppercase letter in TeamCode
-5. No single-letter field names (`a`, `b`, `c`, `p`, `i`, `d`, `f`) in TeamCode
-6. The `toFlywheelVelocity` formula exists in exactly one place
+4. The `toFlywheelVelocity` formula exists in exactly one place
+
+After Phase 2:
+5. No method names starting with an uppercase letter in TeamCode
+6. No single-letter field names (`a`, `b`, `c`, `p`, `i`, `d`, `f`) in TeamCode
+7. No PascalCase `PathChain` field declarations in any auto class
+8. `./gradlew assembleDebug` passes with zero errors
+
+After Phase 3:
+9. No package directories with uppercase letters under `teamcode/`
+10. No working competition code in the root `teamcode/` package (only imports/passes through)
+11. `DecodeDriveTrain`, `GoalPos`, `BlueTeleopWebcam`, `RedTeleopWebcam`, `Constants` (pedroPathing) do not appear anywhere in the codebase
+12. `OfficialBlueTeleop.java` and `OfficialRedTeleop.java` deleted
+13. `./gradlew assembleDebug` passes with zero errors

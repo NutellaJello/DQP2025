@@ -15,6 +15,10 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import java.util.Arrays;
 import java.util.List;
 
+// "15" in the name refers to: [EXPLAIN HERE — e.g. "15 elements scored", "15-point route",
+// "15th iteration of the red close auto", etc.]. This naming differs from the Gate/Far
+// suffix pattern used by other autos and should be explained so future members understand
+// when to run this route vs RedCloseGate.
 @Autonomous(name = "Red Close 15", group = "Autos")
 public class RedClose15 extends BaseAuto {
     private DcMotorEx flyWheel2;

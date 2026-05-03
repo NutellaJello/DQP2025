@@ -108,18 +108,18 @@ All hardware devices are referenced by name strings that must match the configur
 
 > **Important:** If hardware names in the Control Hub configuration don't match these strings exactly, the robot will crash on init with a `NullPointerException` from `hardwareMap.get(...)`.
 
-### `DecodeDriveTrain`
+### `DecodeDriveTrain` → pending rename to `MecanumDrive`
 
 The drivetrain subsystem wraps the four mecanum motors. It is used directly by TeleOp op-modes for driver-controlled movement.
 
 Key responsibilities:
 - Motor direction configuration (FL reversed; BL, FR, BR forward — standard mecanum layout for this wiring)
-- `drive(gamepad1)` — field-centric mecanum drive using the gamepad's left stick (translate) and right stick (rotate) (named `Teleop()` in current source — rename pending)
+- `drive(gamepad1)` — field-centric mecanum drive using the gamepad's left stick (translate) and right stick (rotate) (currently named `Teleop()` — rename pending)
 - `configurePinpoint()` — sets up the GoBilda Pinpoint odometry device (currently **commented out in TeleOp** — TeleOp does not use odometry for localization; only Auto does via Pedro Pathing)
 
 > **Note for future members:** The `configurePinpoint()` call being commented out in TeleOp is intentional for the current season. Auto uses Pinpoint through Pedro Pathing's `PinpointLocalizer`. If you add odometry-assisted TeleOp in future, uncomment and integrate this.
 
-### `GoalPos`
+### `GoalPos` → pending rename to `TargetTracker`
 
 A 3D goal-position estimator used for flywheel aiming. It tracks where the scoring goal is in field coordinates relative to the robot.
 
