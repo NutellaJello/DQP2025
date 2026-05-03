@@ -52,7 +52,7 @@ public abstract class BaseAuto extends OpMode {
 
     // === Motion state ===
     protected boolean moving = false;
-    protected boolean gainSet = false;
+    protected volatile boolean gainSet = false;
 
     // === Fixed constants ===
     protected final double camOffsetX = 2.0; // inches: camera forward of turret rotation axis — re-measure if remounted
@@ -174,7 +174,7 @@ public abstract class BaseAuto extends OpMode {
         }
     }
 
-    public void wait(int milliseconds, Runnable onComplete) {
+    public void waitMs(int milliseconds, Runnable onComplete) {
         if (actionTimer.getElapsedTime() > milliseconds) {
             onComplete.run();
         }

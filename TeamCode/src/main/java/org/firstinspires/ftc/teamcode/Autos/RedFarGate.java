@@ -131,10 +131,19 @@ public class RedFarGate extends BaseAuto {
                 move(Intake21, () -> setPathState(PathState.WAIT));
                 break;
             case WAIT:
-                wait(500, () -> setPathState(PathState.INTAKE2));
-                // intentional fall-through: moveIntake starts running before WAIT expires
+                if (!moving) {
+                    follower.followPath(Intake22, 0.35, true);
+                    intake.setPower(1);
+                    moving = true;
+                }
+                waitMs(500, () -> setPathState(PathState.INTAKE2));
+                break;
             case INTAKE2:
-                moveIntake(Intake22, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE2));
+                if (!follower.isBusy() && actionTimer.getElapsedTime() > 1500) {
+                    intake.setPower(0);
+                    moving = false;
+                    setPathState(PathState.OUTTAKE2);
+                }
                 break;
             case OUTTAKE2:
                 move(Outtake2, () -> setPathState(PathState.SHOOT2));
@@ -146,13 +155,13 @@ public class RedFarGate extends BaseAuto {
                 move(End, () -> setPathState(PathState.STOP));
                 if (visionPortal != null) {
                     visionPortal.close();
+                    visionPortal = null;
                 }
                 break;
         }
     }
 
     public void shoot(PathState nextPath) {
-        double targetV = toFWV(range);
         range = goalPos.findRange(xPos, yPos);
         flyWheel1.setVelocity(fwv);
         if (range < 40) {
