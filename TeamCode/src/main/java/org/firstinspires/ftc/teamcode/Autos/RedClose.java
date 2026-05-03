@@ -63,6 +63,9 @@ public class RedClose extends BaseAuto {
         flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
         flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, fwPID);
+        shooting = false;
+        minFWVSinceOpen = Double.MAX_VALUE;
+        stopperOpenTime = 0;
     }
 
     @Override
