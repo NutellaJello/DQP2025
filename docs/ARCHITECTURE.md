@@ -124,11 +124,29 @@ Key responsibilities:
 A 3D goal-position estimator used for flywheel aiming. It tracks where the scoring goal is in field coordinates relative to the robot.
 
 How it works:
-1. The webcam detects an AprilTag on or near the goal and returns a distance (`dist`) and elevation angle.
-2. `update(alpha, x, y, heading, elevation, dist)` applies an **exponential moving average** (controlled by `alpha`) to filter noisy measurements. It converts the 3D polar measurement (distance + elevation angle) into field XY using a spherical-to-Cartesian projection, using the robot's heading as the azimuth and accounting for the camera's fixed 20° mount angle.
-3. `findRange(x, y)` and `findAngle(x, y)` compute the Euclidean distance and bearing from the robot's current position to the goal — these drive the turret angle and flywheel speed.
+1. The webcam detects the alliance-specific AprilTag on the goal: **ID 20 for Blue, ID 24 for Red**. Any other tag is ignored.
+2. `update(alpha, x, y, heading, elevation, dist)` converts the 3D polar measurement (distance + elevation angle) into field XY coordinates using a spherical-to-Cartesian projection, accounting for the camera's fixed 20° mount angle, then blends the result into a running estimate using an **exponential moving average** (α):
+   - **First detection:** α = 1.0 — hard-sets the estimate to the measured position immediately.
+   - **Subsequent detections:** α = 0.08 — small weight per frame, filtering out noisy measurements.
+3. `findRange(x, y)` computes the Euclidean distance from the robot to the stored goal estimate — this drives flywheel speed.
+4. `findAngle(x, y)` computes the bearing to the goal as `atan2(goalY - robotY, goalX - robotX)` — this drives the turret position.
+
+Each `GoalPos` instance is seeded in the subclass via `createGoalPos()` with the known approximate field position of the alliance goal (e.g. Blue close: `(0, 144, 15.5)` inches). This means the turret has a reasonable target even before the first AprilTag detection.
+
+**Turret angle → encoder ticks:** The turret motor operates in `RUN_TO_POSITION` mode. The conversion is **976 ticks per 180°**, so `targetTicks = degrees × 976 / 180`. Hardware limits are clamped per auto to protect the turret from over-rotation.
 
 Both TeleOp and auto aiming (`cameraControls()` in `BaseAuto`) use `GoalPos`.
+
+### Stopper and flap servos
+
+These two servos work together to control the feeding and trajectory of each ball:
+
+| Servo | Positions | Role |
+|---|---|---|
+| `stopper` | 0.9 = closed, 0.973 = open | **Gate** between the intake roller and the flywheels. Held closed during driving and ball collection so balls are stored inside the robot. Opened only when the flywheels are up to speed and the robot is ready to shoot. |
+| `flap` | 0.0 / 0.2 / 0.24 | Adjusts the launch elevation angle at the flywheel exit. Set based on distance to goal: flat (close), mid, or steep (far). |
+
+The stopper being closed during intake is what allows `moveIntake()` to run the intake motor freely without balls accidentally firing.
 
 ---
 
@@ -213,7 +231,9 @@ BaseAuto (abstract OpMode)
 
 **`loop()` each frame:**
 1. `follower.update()` — advances the robot along the current path
-2. `statePathUpdate()` — checks if path is done, transitions state, issues next commands
+2. `statePathUpdate()` — checks if path is done, transitions state, issues motor commands
+   - Inside `statePathUpdate()`, each subclass calls `aiming()` **on every iteration**, including during driving states. This means the turret is continuously tracking the goal throughout the entire match — it is already aimed by the time the robot arrives at any shoot position.
+3. `cameraControls()` — one-time camera setup after 500 ms warmup (see camera guard above)
 
 **Abstract methods subclasses must implement:**
 
@@ -243,6 +263,16 @@ case PRELOAD:
 ```
 
 `setPathState()` records the new state and calls `follower.followPath(nextPath)` to start the next movement.
+
+### Two-segment intake pattern
+
+Intake cycles 2 and 3 use **two path segments** per collection, not one. The first segment (`INTAKE21`) drives at full follower speed to the edge of the ball zone — no intake motor, no point sweeping empty space. The second segment (`INTAKE22`) uses `moveIntake()` which drives at reduced speed (37%) with the intake motor running, physically sweeping balls from the floor as the robot passes through the zone.
+
+`moveIntake()` also takes a `timeoutMs` parameter — a minimum dwell after the path finishes before the state transitions:
+- **50 ms** for close-side autos: the robot is already in position, just a debounce.
+- **1500 ms** for far-side autos: extra dwell to allow balls rolling toward the intake to actually be collected.
+
+The `holonomic` flag passed to `moveIntake()` controls Pedro Pathing's heading correction during the intake drive: `true` for close-side autos (normal mecanum), `false` for `RedCloseGate`/`RedClose15` where the intake path geometry requires non-holonomic correction.
 
 ### The five active autonomous routines
 
@@ -503,3 +533,114 @@ Representative before → after:
 |---|---|
 | `OfficialBlueTeleop.java` | Completely empty — no class body |
 | `OfficialRedTeleop.java` | Completely empty — no class body |
+
+---
+
+## Appendix C: Autonomous Mode — Student Reference
+
+This appendix gives two views of the same 30-second autonomous run, using **BlueCloseGate** as the concrete example. Read these alongside §5 to understand *why* the state machine is structured the way it is.
+
+> **The single most important thing to understand:** `aiming()` runs on **every loop iteration** — including while the robot is driving. The turret continuously tracks the goal throughout the entire match. By the time the robot arrives at any shoot position, the turret is already aimed and the `GoalPos` estimate has had the entire drive to converge.
+
+---
+
+### What each subsystem does per state
+
+| State | Robot movement | Vision & turret | Intake roller | Flywheels | Stopper servo |
+|---|---|---|---|---|---|
+| **PRELOAD** | Fast drive: start → shoot zone (40, 105) | Tracking | Off | Off | Closed (0.9) |
+| **SHOOTPRE** | Stationary — hold position | Converging on estimate | Off | **Spinning up** to target velocity | Closed → **opens (0.973)** when up to speed |
+| **INTAKE1** | **Slow (37%)** drive through ball zone → (11, 99) | Tracking | **On** — sweeps balls from floor | Off | Closed — holds collected balls inside |
+| **OPENGATE** | Drive Bézier curve into gate → (4.5, 93) | Tracking | Off | Off | Closed |
+| **OUTTAKE1** | Fast drive back to shoot zone (38, 105) | Tracking — estimate refining | Off | Off | Closed |
+| **SHOOT1** | Stationary | Locked on | **On** — feeds ball into flywheels | **Spins up → fires → off** | **Opens** → ball passes → **closes** |
+| **INTAKE21** | Fast approach to ball zone edge (38, 77) | Tracking | Off | Off | Closed |
+| **INTAKE22** | **Slow (37%)** sweep through ball zone → (10, 75) | Tracking | **On** — sweeps balls | Off | Closed |
+| **OUTTAKE2** | Fast drive back to shoot zone | Tracking — refining | Off | Off | Closed |
+| **SHOOT2** | Stationary | Locked on | **On** — feeds ball | **Spins up → fires → off** | **Opens → closes** |
+| **INTAKE31/32** | Same pattern as INTAKE21/22, next zone → (10, 54) | Tracking | **On** during slow segment | Off | Closed |
+| **OUTTAKE3** | Fast drive back | Tracking | Off | Off | Closed |
+| **SHOOT3** | Stationary | Locked on | **On** — feeds ball | **Spins up → fires → off** | **Opens → closes** |
+| **END** | Drive to park position (25, 87) | Off — aiming stops at 29.3 s | Off | Off | Closed |
+
+---
+
+### State machine overview
+
+One preload shot, then three collect → return → shoot cycles.
+
+```mermaid
+flowchart TD
+    START([Match start]) --> PRELOAD
+
+    subgraph FIRST["Preload ball"]
+        PRELOAD["PRELOAD<br/>Fast drive to shoot zone<br/>Turret begins tracking"]
+        --> SHOOTPRE["SHOOTPRE<br/>Hold position · Camera warms up<br/>Flywheels spin up · Ball fires"]
+    end
+
+    SHOOTPRE -->|ball confirmed fired| INTAKE1
+
+    subgraph C1["Cycle 1 — includes gate opening"]
+        INTAKE1["INTAKE1<br/>Slow drive · Intake ON · Collect ball"]
+        --> OPENGATE["OPENGATE<br/>Drive Bézier into gate<br/>Robot body pushes gate open physically"]
+        --> OUTTAKE1["OUTTAKE1<br/>Fast drive back · Turret tracking whole way"]
+        --> SHOOT1["SHOOT1<br/>Spin up · Stopper opens · Ball fires"]
+    end
+
+    SHOOT1 -->|ball confirmed fired| INTAKE21
+
+    subgraph C2["Cycle 2"]
+        INTAKE21["INTAKE21<br/>Fast approach to ball zone"]
+        --> INTAKE22["INTAKE22<br/>Slow drive · Intake ON · Collect ball"]
+        --> OUTTAKE2["OUTTAKE2<br/>Fast drive back · Turret tracking"]
+        --> SHOOT2["SHOOT2<br/>Spin up · Stopper opens · Ball fires"]
+    end
+
+    SHOOT2 -->|ball confirmed fired| INTAKE31
+
+    subgraph C3["Cycle 3  (identical pattern to cycle 2)"]
+        INTAKE31["INTAKE31<br/>Fast approach"]
+        --> INTAKE32["INTAKE32<br/>Slow drive · Intake ON · Collect ball"]
+        --> OUTTAKE3["OUTTAKE3<br/>Fast drive back · Turret tracking"]
+        --> SHOOT3["SHOOT3<br/>Spin up · Stopper opens · Ball fires"]
+    end
+
+    SHOOT3 -->|ball confirmed fired| ENDMOVE["END<br/>Drive to park position (25, 87)"]
+    ENDMOVE --> STOP([Match over — 30 s])
+```
+
+---
+
+### How a single shot works
+
+All SHOOT states run the same sequence.
+
+```mermaid
+flowchart TD
+    A["Enter SHOOT state"]
+    --> B["Compute range = distance from robot to GoalPos estimate"]
+    --> C["Set flap angle by range<br/>less than 40 in: flat  ·  40–95 in: mid  ·  over 95 in: steep"]
+    --> D["Set flywheel target speed<br/>targetV = 0.00673 × range² + 5.54 × range + 1162"]
+    --> E{"Both flywheels at targetV?"}
+    E -->|Not yet| E
+    E -->|Yes| F["Open stopper servo to 0.973<br/>Run intake at full power<br/>Ball moves toward flywheels"]
+    --> G{"Ball detected?<br/>FWV dipped below 90% of target<br/>AND recovered above 97%<br/>AND more than 300 ms elapsed"}
+    G -->|Yes — ball confirmed| H
+    G -->|No — but 2800 ms timeout| H
+    G -->|Still waiting| G
+    H["Close stopper to 0.9<br/>Stop intake · Stop flywheels<br/>Transition to next state"]
+```
+
+> **Why the FWV dip?** When the ball hits the spinning flywheel wheels it briefly slows them down. The code detects this velocity dip to confirm the ball has actually passed through — without it, the robot would not know whether the shot succeeded and could get stuck waiting for the full 2800 ms timeout every cycle.
+
+---
+
+### Quick-reference: hardware states
+
+| Component | During movement / intake | During a shot |
+|---|---|---|
+| Stopper servo | 0.9 — closed, balls held inside robot | 0.973 — open, ball feeds into flywheels |
+| Flap servo | 0.2 (initialised) | 0 / 0.2 / 0.24 — set by range at shot time |
+| Intake motor | Off between zones · On (power 1) during slow intake paths | On (power 1) to feed ball into flywheels |
+| FW1 / FW2 | Off | `RUN_USING_ENCODER` at `targetV` ticks/s |
+| Turret motor | `RUN_TO_POSITION` — continuously tracking goal | Same — keeps tracking while firing |
