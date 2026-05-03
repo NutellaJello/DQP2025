@@ -133,10 +133,11 @@ public class BlueClose extends BaseAuto {
     @Override
     public void statePathUpdate() {
         telemetry.update();
-        List<AprilTagDetection> detectedTags = aprilTag.getDetections();
-        if (pathState != PathState.END && pathState != PathState.STOP) {
+        if (pathState != PathState.END && pathState != PathState.STOP && opmodeTimer.getElapsedTimeSeconds() < 29.3) {
+            List<AprilTagDetection> detectedTags = aprilTag.getDetections();
             aiming(detectedTags);
         } else {
+            intake.setPower(0);
             turret.setTargetPosition(0);
         }
         switch (pathState) {
@@ -193,6 +194,7 @@ public class BlueClose extends BaseAuto {
     }
 
     public void shoot(PathState nextPath) {
+        // range also updated in aiming(); kept here as fallback when aiming() is skipped (t > 29.3 s)
         range = goalPos.findRange(xPos, yPos);
         double targetV = toFWV(range);
         flyWheel1.setVelocity(targetV);
@@ -232,18 +234,20 @@ public class BlueClose extends BaseAuto {
 
     public void aiming(List<AprilTagDetection> detectedTags) {
         range = goalPos.findRange(xPos, yPos);
-        for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
-                camRange = detection.ftcPose.range + camOffsetX;
+        if (gainSet) {
+            for (AprilTagDetection detection : detectedTags) {
+                if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
+                    camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is right of turret axis — re-measure if remounted
-                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180 / 976;   // in degrees
-                bearing = Math.toRadians(bearing);
+                    bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is right of turret axis — re-measure if remounted
+                    bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180 / 976;   // in degrees
+                    bearing = Math.toRadians(bearing);
 
-                double alpha = hasEst ? 0.08 : 1.0;
-                goalPos.update(alpha, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
-                hasEst = true;
-                break;
+                    double alpha = hasEst ? 0.08 : 1.0;
+                    goalPos.update(alpha, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
+                    hasEst = true;
+                    break;
+                }
             }
         }
 
