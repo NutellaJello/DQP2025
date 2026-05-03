@@ -5,6 +5,8 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
@@ -15,6 +17,10 @@ import java.util.List;
 @Disabled
 @Autonomous(name = "Red Close", group = "Autos")
 public class RedClose extends BaseAuto {
+    private DcMotorEx flyWheel2;
+    private boolean shooting = false;
+    private double minFWVSinceOpen = Double.MAX_VALUE;
+    private long stopperOpenTime = 0;
     private final double lowLimit = 0;
     private final double highLimit = 1865;
     private final double braking = 0.9;
@@ -44,7 +50,7 @@ public class RedClose extends BaseAuto {
     private PathChain Intake31, Intake32, Outtake3;
     private PathChain End;
 
-    @Override protected double getPIDFP()        { return 380; }
+    @Override protected double getPIDFP()        { return 380; } // tuned lower than RedClose15/RedCloseGate (400) — verify intentional
     @Override protected GoalPos createGoalPos()  { return new GoalPos(147, 144, 15.5); }
     @Override protected Pose getStartPose()       { return start; }
     @Override protected double getFWVConstant()   { return 1162; }
@@ -53,6 +59,10 @@ public class RedClose extends BaseAuto {
     public void init() {
         pathState = PathState.PRELOAD;
         baseInit();
+        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
+        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        flyWheel2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, fwPID);
     }
 
     @Override
@@ -121,10 +131,11 @@ public class RedClose extends BaseAuto {
     @Override
     public void statePathUpdate() {
         telemetry.update();
-        List<AprilTagDetection> detectedTags = aprilTag.getDetections();
-        if (pathState != PathState.END && pathState != PathState.STOP) {
+        if (pathState != PathState.END && pathState != PathState.STOP && opmodeTimer.getElapsedTimeSeconds() < 29.3) {
+            List<AprilTagDetection> detectedTags = aprilTag.getDetections();
             aiming(detectedTags);
         } else {
+            intake.setPower(0);
             turret.setTargetPosition(0);
         }
         switch (pathState) {
@@ -132,6 +143,7 @@ public class RedClose extends BaseAuto {
                 move(Preload, () -> setPathState(PathState.SHOOTPRE));
                 break;
             case SHOOTPRE:
+                if (!gainSet && opmodeTimer.getElapsedTimeSeconds() < 3.0) { break; }
                 shoot(PathState.INTAKE1);
                 break;
             case INTAKE1:
@@ -168,18 +180,23 @@ public class RedClose extends BaseAuto {
                 shoot(PathState.END);
                 break;
             case END:
-                move(End, () -> setPathState(PathState.STOP));
-                if (visionPortal != null) {
-                    visionPortal.close();
-                }
+                move(End, () -> {
+                    if (visionPortal != null) {
+                        visionPortal.close();
+                        visionPortal = null;
+                    }
+                    setPathState(PathState.STOP);
+                });
                 break;
         }
     }
 
     public void shoot(PathState nextPath) {
-        double targetV = toFWV(range);
+        // range also updated in aiming(); kept here as fallback when aiming() is skipped (t > 29.3 s)
         range = goalPos.findRange(xPos, yPos);
+        double targetV = toFWV(range);
         flyWheel1.setVelocity(targetV);
+        flyWheel2.setVelocity(targetV);
         if (range < 40) {
             flapPos = 0;
         } else if (range < 95) {
@@ -188,33 +205,47 @@ public class RedClose extends BaseAuto {
             flapPos = 0.24;
         }
         flap.setPosition(flapPos);
-        double FWV = flyWheel1.getVelocity();
-        if (FWV >= targetV) {
+        double FWV = Math.min(flyWheel1.getVelocity(), flyWheel2.getVelocity());
+        if (FWV >= targetV && !shooting) {
             stopper.setPosition(0.973);
             intake.setPower(1);
+            shooting = true;
+            stopperOpenTime = System.currentTimeMillis();
         }
-        if (actionTimer.getElapsedTime() > 2800) {
+        if (shooting) {
+            minFWVSinceOpen = Math.min(minFWVSinceOpen, FWV);
+        }
+        boolean ballPassed = shooting
+                && minFWVSinceOpen < targetV * 0.90
+                && FWV > targetV * 0.97
+                && System.currentTimeMillis() - stopperOpenTime > 300;
+        if (ballPassed || actionTimer.getElapsedTime() > 2800) {
+            shooting = false;
+            minFWVSinceOpen = Double.MAX_VALUE;
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
-            pathState = nextPath;
-            actionTimer.resetTimer();
+            flyWheel2.setVelocity(0);
+            setPathState(nextPath);
         }
     }
 
     public void aiming(List<AprilTagDetection> detectedTags) {
-        for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
-                camRange = detection.ftcPose.range + camOffsetX;
+        range = goalPos.findRange(xPos, yPos);
+        if (gainSet) {
+            for (AprilTagDetection detection : detectedTags) {
+                if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
+                    camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is left of turret axis — re-measure if remounted
-                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180 / 976;   // in degrees
-                bearing = Math.toRadians(bearing);
+                    bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is left of turret axis — re-measure if remounted
+                    bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180 / 976;   // in degrees
+                    bearing = Math.toRadians(bearing);
 
-                double alpha = hasEst ? 0.08 : 1.0;
-                goalPos.update(alpha, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
-                hasEst = true;
-                break;
+                    double alpha = hasEst ? 0.08 : 1.0;
+                    goalPos.update(alpha, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
+                    hasEst = true;
+                    break;
+                }
             }
         }
 
