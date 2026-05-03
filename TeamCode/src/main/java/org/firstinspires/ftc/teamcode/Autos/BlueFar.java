@@ -220,11 +220,9 @@ public class BlueFar extends BaseAuto {
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180 / 976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
-                if (!gamepad1.x) {
-                    double alpha = hasEst ? 0.08 : 1.0;
-                    goalPos.update(alpha, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
-                    hasEst = true;
-                }
+                double alpha = hasEst ? 0.08 : 1.0;
+                goalPos.update(alpha, xPos, yPos, bearing, Math.toRadians(detection.ftcPose.elevation), camRange);
+                hasEst = true;
                 break;
             }
         }
