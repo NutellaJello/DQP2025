@@ -1,7 +1,128 @@
 # DECODE 2025-26 Rules Reference
-**Sources:** Section 11 Game Rules V15 · Section 12 Robot Construction Rules V6  
-**Format:** Every rule from both sections, verbatim constraint + violation + design note where applicable.  
+**Sources:** Section 10 Scoring · Section 11 Game Rules V15 · Section 12 Robot Construction Rules V6  
+**Format:** Every rule from Sections 10, 11, and 12. Verbatim constraint + violation + design note where applicable.  
 **Tags:** `[DESIGN]` = directly shapes robot hardware/software · `[STRATEGY]` = shapes match play · `[ADMIN]` = event/conduct only
+
+---
+
+## 10 SCORING
+
+### 10.1 Match Periods
+
+A MATCH consists of:
+- **AUTO:** 30 seconds — robots operate without driver input
+- **Transition:** 8 seconds between AUTO and TELEOP (scoring purposes only)
+- **TELEOP:** 2 minutes — drivers remotely operate robots
+
+### 10.5 Scoring Overview
+
+Alliances earn MATCH POINTS and RANKING POINTS (RP) for accomplishments during a match: LEAVING the LAUNCH LINE, scoring CLASSIFIED or OVERFLOW ARTIFACTS, scoring ARTIFACTS in the DEPOT, achieving a PATTERN of ARTIFACTS, returning to BASE, and winning or tying matches.
+
+**Assessment timing rules (Section 10.5):**
+
+| ID | When assessed |
+|----|---------------|
+| A | ARTIFACT scoring (CLASSIFIED/OVERFLOW) — assessed throughout match and until all ARTIFACTS come to rest after match end. ARTIFACTS meeting criteria before TELEOP starts count as AUTO. |
+| B | AUTO PATTERN scoring — when all ARTIFACTS come to rest after AUTO ends or TELEOP starts, whichever is first. |
+| C | TELEOP PATTERN scoring — when all ROBOTS and ARTIFACTS come to rest after MATCH ends. |
+| D | DEPOT scoring — at end of TELEOP when all ROBOTS and ARTIFACTS come to rest. |
+| E | LEAVE scoring — at end of AUTO. |
+| F | BASE scoring — at end of TELEOP. |
+
+Achievements scored before the match starts, during AUTO-to-TELEOP transition, and after match ends at 0:00 are subject to penalties.
+
+### 10.5.1 ARTIFACT Scoring Criteria
+
+To qualify for CLASSIFIED or OVERFLOW points, an ARTIFACT must enter the GOAL through the open top, exit under the archway, and pass through the diverting SQUARE.
+- **CLASSIFIED:** ARTIFACT passes through the SQUARE and transitions directly to the RAMP (does not roll over or bypass ARTIFACTS already on the RAMP).
+- **OVERFLOW:** ARTIFACT passes through the SQUARE but does not meet CLASSIFIED criteria (may roll over one or more ARTIFACTS on the RAMP).
+
+ARTIFACTS that do not enter through the open top, do not exit under the archway, or do not pass through the SQUARE do not score as either CLASSIFIED or OVERFLOW.
+
+**DEPOT scoring:** ARTIFACTS must be over the DEPOT (alliance-specific, adjacent to the GOAL). Assessed after match without regard to which alliance placed them. DEPOTs are not protected — either alliance can remove ARTIFACTS from either DEPOT during the match. An ARTIFACT over a DEPOT that is in CONTROL of a ROBOT still qualifies for DEPOT points.
+
+### 10.5.2 PATTERN Scoring Criteria
+
+At the end of AUTO and TELEOP, ARTIFACTS directly on the RAMP score PATTERN points if: (1) the colour of the ARTIFACT at each index matches the MOTIF colour for that index, and (2) the ARTIFACTS are retained by the GATE.
+
+The OBELISK randomisation before the match selects the MOTIF (a series of 2 purple (P) and 1 green (G) in a unique order: GPP, PGP, or PPG), which is repeated 3 times to define the PATTERN colours for each of the 9 indices on the RAMP. Each matching index scores PATTERN points.
+
+### 10.5.3 ROBOT Scoring Criteria
+
+**LEAVE:** A ROBOT must move such that it is no longer over any LAUNCH LINE at the end of AUTO.
+
+**BASE:**
+- **Fully returned:** ROBOT must be supported only (directly or transitively) by the TILE in the BASE ZONE.
+- **Partially returned:** ROBOT is partially supported by the BASE ZONE TILE and partially by TILES outside the BASE ZONE.
+- Support may be transitive through SCORING ELEMENTS or another ROBOT on the BASE ZONE TILE.
+
+### 10.5.4 Point Values
+
+| Scoring Action | AUTO | TELEOP |
+|----------------|------|--------|
+| LEAVE | 3 | — |
+| ARTIFACT — CLASSIFIED | 3 | 3 |
+| ARTIFACT — OVERFLOW | 1 | 1 |
+| ARTIFACT — DEPOT | — | 1 |
+| PATTERN — ARTIFACT matches MOTIF per index | 2 | 2 |
+| BASE — Partially returned | — | 5 |
+| BASE — Fully returned | — | 10 |
+| BASE — Bonus: 2 ROBOTS fully returned | — | 10 |
+
+| RP | Condition | Value |
+|----|-----------|-------|
+| MOVEMENT RP | Combined LEAVE + BASE points at or above threshold | 1 |
+| GOAL RP | Number of ARTIFACTS scored through the SQUARE at or above threshold | 1 |
+| PATTERN RP | PATTERN points earned at or above threshold | 1 |
+| WIN | Completing match with more MATCH points than opponent | 3 |
+| TIE | Completing match with equal MATCH points | 1 |
+
+### 10.5.5 RP Thresholds (Table 10-3)
+
+| RP Type | FIRST Championship | Regional Championships | All Other Events* |
+|---------|--------------------|------------------------|-------------------|
+| MOVEMENT RP | 21 | 21 | **16** |
+| GOAL RP | 67 | 42 | **36** |
+| PATTERN RP | 22 | 22 | **18** |
+
+*Premier Events may set their own thresholds. Regional Championship and FIRST Championship thresholds will be announced in Team Updates.
+
+### 10.6 Violations — Penalty Definitions (Table 10-4)
+
+| Penalty | Description |
+|---------|-------------|
+| **MINOR FOUL** | A credit of **5 points** towards the opponent's MATCH point total |
+| **MAJOR FOUL** | A credit of **15 points** towards the opponent's MATCH point total |
+| **YELLOW CARD** | A warning issued by the Head REFEREE for egregious ROBOT or team member behaviour. A subsequent YELLOW CARD within the same tournament phase results in a RED CARD. |
+| **RED CARD** | A penalty resulting in team being DISQUALIFIED for the MATCH. |
+| **DISABLED** | REFEREE instructs team to stop ROBOT, deactivating all outputs for the remainder of the MATCH. |
+| **DISQUALIFIED** | Team receives 0 MATCH points and 0 RANKING POINTS in Qualification MATCH; causes ALLIANCE to receive 0 MATCH points in Playoff MATCH. |
+| **VERBAL WARNING** | A warning issued by event staff or the Head REFEREE. |
+| **ALLIANCE ineligible for RP** | ALLIANCE cannot earn the specified RP for that MATCH, overriding any RP from normal match play or other rule violations. |
+
+### 10.6.1 Duration and Action Terminology
+
+- **MOMENTARY** — durations fewer than approximately **3 seconds**
+- **CONTINUOUS** — durations more than approximately **10 seconds**
+- **REPEATED** — actions that happen **more than once within a MATCH**
+
+Unless otherwise noted, all penalties are assessed per instance of a rule violation. A single action may violate multiple rules.
+
+### 10.6.1 YELLOW and RED CARD Rules
+
+YELLOW CARDS are additive: a second YELLOW CARD converts to a RED CARD. A team that receives a YELLOW or RED CARD carries a YELLOW CARD into subsequent matches (except as noted below).
+
+**YELLOW CARD clearing:**
+- All YELLOW CARDS are cleared at the conclusion of Practice, Qualification, and division Playoff MATCHES.
+- VERBAL WARNINGS from the Head REFEREE persist from Qualification through subsequent tournament phases (except when stated otherwise).
+
+**YELLOW/RED CARD application by timing (Table 10-5):**
+- Prior to Qualification: Head REFEREE may perpetuate a VERBAL WARNING or YELLOW CARD from pre-qual to first Qualification MATCH for particularly egregious behaviour.
+- During Qualification: applied to team's current (or just completed) MATCH, unless SURROGATE (applied to previous Qualification MATCH).
+- Between Qualification and Playoff: applied to ALLIANCE's first Playoff MATCH.
+- During Playoff: applied to ALLIANCE's current (or just completed) MATCH.
+
+**During Playoff MATCHES:** YELLOW and RED CARDS are assigned to the violating team's entire ALLIANCE. If an ALLIANCE receives 2 YELLOW CARDS, the entire ALLIANCE receives a RED CARD (DISQUALIFICATION for that MATCH).
 
 ---
 
@@ -16,7 +137,7 @@ Humans may only enter the field during pre-match set-up (per G301, G303, G304) a
 **G102** — Be careful with arena elements `[ADMIN]`  
 Drive team members may not climb on, hang from, manipulate (such that it does not return to its original shape without human intervention), or damage arena elements.  
 Drive team members may brace the field perimeter. Moving it out of position is a violation.  
-*Violation: VERBAL WARNING. YELLOW CARD if subsequent violations.*
+*Violation: VERBAL WARNING. YELLOW CARD if subsequent violations occur during the event.*
 
 ---
 
@@ -24,23 +145,23 @@ Drive team members may brace the field perimeter. Moving it out of position is a
 
 **G201** — Be a good person `[ADMIN]`  
 All teams must be civil toward everyone. Egregious examples: assault, threats, harassment, bullying, insulting, swearing at others, yelling in anger.  
-*Violation: VERBAL WARNING. YELLOW CARD if subsequent.*
+*Violation: VERBAL WARNING. YELLOW CARD if subsequent violations occur during the event.*
 
 **G202** — Drive team interactions `[ADMIN]`  
 Drive team members may not distract or interfere with the opposing alliance (no taunting or disruptive behaviour).  
-*Violation: VERBAL WARNING. YELLOW CARD if subsequent.*
+*Violation: VERBAL WARNING. YELLOW CARD if subsequent violations occur during the event.*
 
 **G203** — No asking other teams to throw a match `[ADMIN]`  
 A team may not encourage an alliance it is not a member of to play beneath its ability.  
-*Violation: VERBAL WARNING. RED CARD if subsequent.*
+*Violation: VERBAL WARNING. RED CARD if subsequent violations occur during the event.*
 
 **G204** — No letting someone coerce you into throwing `[ADMIN]`  
 A team, as a result of encouragement from a non-alliance team, may not play beneath its ability.  
-*Violation: VERBAL WARNING. RED CARD if subsequent.*
+*Violation: VERBAL WARNING. RED CARD if subsequent violations occur during the event.*
 
 **G205** — No intentionally losing `[ADMIN]`  
 A team may not intentionally lose a match or sacrifice ranking points to lower its own ranking or manipulate other rankings.  
-*Violation: VERBAL WARNING. RED CARD if subsequent.*
+*Violation: VERBAL WARNING. RED CARD if subsequent violations occur during the event.*
 
 **G206** — No colluding to violate rules for ranking points `[ADMIN]`  
 A team or alliance may not collude with another team to purposefully violate a rule to influence ranking points.  
@@ -48,7 +169,7 @@ A team or alliance may not collude with another team to purposefully violate a r
 
 **G207** — No abusing arena access `[ADMIN]`  
 Team members with restricted-area access (event media badges etc.) may not assist, coach, or use signalling devices during a match. Exception: inconsequential infractions and safety.  
-*Violation: VERBAL WARNING. YELLOW CARD if subsequent.*
+*Violation: VERBAL WARNING. YELLOW CARD if subsequent violations occur during the event.*
 
 **G208** — Show up to matches `[ADMIN]`  
 If a robot has passed inspection, at least one drive team member must report to the arena and participate in each assigned qualification match.  
@@ -61,7 +182,7 @@ A robot may not intentionally detach or leave a part on the field.
 **G210** — Don't try to make opponents violate rules `[STRATEGY]`  
 Actions clearly aimed at forcing the opponent alliance to violate a rule are not allowed. Rule violations forced in this manner will not result in a penalty to the targeted alliance.  
 Example that IS OK: a red robot attempting to access its gate pushes a blue robot into an artifact on the red ramp.  
-*Violation: MINOR FOUL. MAJOR FOUL if repeated.*
+*Violation: MINOR FOUL. MAJOR FOUL if REPEATED. The ALLIANCE that was forced to break a rule will not be assessed a penalty.*
 
 **G211** — Egregious or exceptional violations `[ADMIN]`  
 Head referee may assign a YELLOW or RED CARD for egregious robot actions or team member behaviour at any time, including: inappropriate behaviour per G201, reaching into field grabbing a robot, a single pin >15 seconds, repeatedly descoring scoring elements strategically.  
@@ -69,7 +190,7 @@ Head referee may assign a YELLOW or RED CARD for egregious robot actions or team
 
 **G212** — All teams can play `[ADMIN]`  
 A team may not encourage another team to exclude its robot or be disqualified from a qualification match for any reason.  
-*Violation: YELLOW CARD. RED CARD if robot does not participate.*
+*Violation: YELLOW CARD. RED CARD if robot does not participate in the match.*
 
 ---
 
@@ -77,25 +198,25 @@ A team may not encourage another team to exclude its robot or be disqualified fr
 
 **G301** — Be prompt `[ADMIN]`  
 A drive team member may not cause significant delays to match start. Significant = expected start time has passed AND team is not match-ready nor making good-faith effort. Match-ready = robot on field in starting configuration and turned on, drive team in starting positions.  
-*Violation (Qual): VERBAL WARNING. MAJOR FOUL for upcoming match. If not match-ready within 2 minutes: DISABLED.*  
-*Violation (Playoff): VERBAL WARNING to ALLIANCE. MAJOR FOUL for upcoming match.*
+*Violation (Qual): VERBAL WARNING. MAJOR FOUL for upcoming match if a subsequent violation occurs within the tournament phase. If not match-ready within 2 minutes: DISABLED.*  
+*Violation (Playoff): VERBAL WARNING to ALLIANCE. MAJOR FOUL for ALLIANCE's upcoming match if subsequent violation within tournament phase. If not match-ready within 2 minutes: offending team's ROBOT is DISABLED.*
 
 **G302** — Limit what you bring to the field `[ADMIN]`  
-Items brought to the field must fit in the alliance area, be worn/held by drive team members, or be an approved accommodation (e.g., step stools, crutches). Items may not: introduce safety hazard, extend >6ft 6in above tiles, communicate with anything outside the arena (except medical equipment), block visibility for field staff/audience, or jam/interfere anything in the arena.  
+Items brought to the field must fit in the alliance area, be worn/held by drive team members, or be an approved accommodation (e.g., step stools, crutches). Items may not: introduce safety hazard, extend >6 ft 6 in above tiles, communicate with anything outside the arena (except medical equipment), block visibility for field staff/audience, or jam/interfere anything in the arena.  
 Alignment devices OK for pre-match setup; must not delay match start.  
 *Violation: Match will not start. YELLOW CARD if used inappropriately during match.*
 
 **G303** — Robots must come ready to play `[ADMIN]`  
 Robot must: not pose hazard, pass inspection, comply with I305 if modified post-inspection, be the only team-provided item left in the field, have correct alliance colour robot signs (R402), be motionless after OpMode initialisation.  
-*Violation: Match will not start (quick remedy). DISABLED if not quick. RED CARD if robot not compliant with inspection B or C.*
+*Violation: Match will not start (quick remedy). DISABLED if not quick remedy. RED CARD if robot not compliant with inspection B or C participates.*
 
 **G304** — Robots must be set up correctly `[DESIGN]`  
 Robot must be: over a launch line, touching own alliance's goal or field perimeter, fully contained on own alliance's side (blue = columns A B C; red = columns D E F), not attached/suspended from field elements, in starting configuration, in contact with ≤ allowed pre-loaded artifacts.  
-*Violation: Match will not start. DISABLED if not quick.*
+*Violation: Match will not start. DISABLED if not quick remedy.*
 
 **G305** — Teams must select an OpMode `[ADMIN]`  
 An OpMode must be selected and initialised on the DRIVER STATION app. If it is an AUTO OpMode, the 30-second AUTO timer must be enabled.  
-*Violation: Match will not start. DISABLED if cannot init.*
+*Violation: Match will not start. DISABLED if cannot init or situation cannot be remedied quickly.*
 
 ---
 
@@ -106,7 +227,7 @@ An OpMode must be selected and initialised on the DRIVER STATION app. If it is a
 **G401** — Let the robot do its thing `[STRATEGY]`  
 From randomisation start until end of AUTO, drive team members may not directly or indirectly interact with a robot or operator console. Exceptions: press ▶ at match start, press ■ stop button, personal/console safety.  
 Strategic violations (launching multiple scoring elements, operating gate, moving robot a substantial preferred distance) are egregious per G211.  
-*Violation: MAJOR FOUL + alliance ineligible for PATTERN points in AUTO if robot LAUNCHES an artifact entering the open top of the GOAL after interaction and before end of AUTO.*
+*Violation: MAJOR FOUL + alliance not eligible for PATTERN points in AUTO if robot LAUNCHES an artifact entering the open top of the GOAL after the interaction and before end of AUTO.*
 
 **G402** — No AUTO opponent interference `[STRATEGY]`  
 During AUTO: columns A/B/C = blue side; columns D/E/F = red side. A robot may not contact an opposing alliance robot completely within the opposing side, or disrupt an artifact from its pre-staged location on the opposing side (directly or by launching into it). Launched artifacts that happen to enter opponent side after being deflected by a field element or robot are not penalised.  
@@ -134,8 +255,8 @@ A robot may not intentionally eject a scoring element from the field (directly o
 
 **G407** — Do not damage scoring elements `[DESIGN]`  
 Neither a robot nor a drive team member may damage a scoring element. Reasonable wear (scratching, marking) is expected. Gouging, tearing off pieces, or routinely marking are violations.  
-**Design note:** Intake roller, flywheel, belt indexer, and funnel must not have sharp surfaces contacting balls. See also R206.  
-*Violation: VERBAL WARNING. MAJOR FOUL if repeated. DISABLED if further damage likely.*
+**Design note:** Intake roller, flywheel, belt indexer, and funnel must not have sharp surfaces contacting balls. See also R206. Corrective action (eliminating sharp edges, removing the damaging mechanism, re-inspection) may be required before the robot may compete in subsequent matches.  
+*Violation: VERBAL WARNING. MAJOR FOUL if REPEATED. DISABLED if further damage likely.*
 
 **G408** — No more than 3 artifacts controlled simultaneously `[DESIGN]`  
 A robot may not simultaneously CONTROL more than 3 ARTIFACTS.  
@@ -148,26 +269,26 @@ Excessive violations: simultaneous control of ≥5 artifacts; or ≥3 separate v
 
 **G409** — Robots must be under control `[DESIGN]`  
 A robot must not pose an undue hazard to a human or arena element by: (A) the robot or anything it controls disrupting anything outside the field or contacting a human outside the field; (B) dangerous robot operation.  
-Robot contact with arena elements outside the field (driver station stand, floor outside field, field wall perimeter outside field) is not a violation.  
-*Violation: DISABLED + VERBAL WARNING. YELLOW CARD if repeated.*
+Robot contact with arena elements outside the field (driver station stand, floor outside field, field wall perimeter outside field) is not a violation. Disrupting the OBELISK is not a violation of this rule.  
+*Violation: DISABLED + VERBAL WARNING. YELLOW CARD if REPEATED or if subsequent violations occur during the event.*
 
 **G410** — Robots must stop when instructed `[ADMIN]`  
 If instructed to DISABLE by a referee per T202, a drive team member must press the ■ stop button.  
-*Violation: MAJOR FOUL if >momentary delay. RED CARD if continuous.*
+*Violation: MAJOR FOUL if greater-than-MOMENTARY delay. RED CARD if CONTINUOUS.*
 
 **G411** — Robots must be identifiable `[ADMIN]`  
-A robot's team number and alliance colour must not become indeterminate. Teams are encouraged to robustly affix robot signs so they cannot fall off.  
-*Violation: VERBAL WARNING. MINOR FOUL if subsequent.*
+A robot's team number and alliance colour must not become indeterminate.  
+*Violation: VERBAL WARNING. MINOR FOUL if subsequent violations occur during the event.*
 
 **G412** — Don't damage the field `[DESIGN]`  
-A robot may not damage field elements. Field damage includes: contaminating with liquid or fine solid, damaging tile, causing the gate to bend or break off. Field damage does NOT include: normal gate interaction resulting in gate sticking open; normal interaction with goal that causes it to lift off tiles.  
-*Violation: VERBAL WARNING. DISABLED if further damage likely. YELLOW CARD for subsequent damage.*
+A robot may not damage field elements. Field damage includes: contaminating with liquid or fine solid, damaging tile, causing the gate to bend or break off. Field damage does NOT include: normal gate interaction resulting in gate sticking open; normal interaction with goal that causes it to lift off tiles. (G407 and G412 do not stack.)  
+*Violation: VERBAL WARNING. DISABLED if further damage likely. YELLOW CARD for any subsequent damage during the event. Corrective action (eliminating sharp edges, removing the damaging mechanism, re-inspection) may be required before the robot may compete in subsequent matches.*
 
 **G413** — Watch arena interaction `[DESIGN]`  
 A robot is prohibited from: grabbing, grasping, attaching to, becoming entangled with, or suspending from arena elements (except scoring elements per G407).  
 Gate operation note: robots are expected to push the gate lever DOWN to open. No closing force (e.g., pulling) may be applied to either gate. A robot bumping a stuck-open gate handle to try to close it is NOT a closing force violation.  
-**Design note:** Gate push arm must be a simple downward push servo/arm. No hooks, grippers, or mechanisms that could attach to the gate.  
-*Violation: MAJOR FOUL + YELLOW CARD if repeated or >momentary. DISABLED if damage likely.*
+**Design note:** Gate push arm must be a simple downward push servo/arm. No hooks, grippers, or mechanisms that could attach to the gate. Corrective action (removing the offending mechanism, re-inspection) may be required before the robot may compete in subsequent matches.  
+*Violation: MAJOR FOUL + YELLOW CARD if REPEATED or >momentary. DISABLED if damage likely.*
 
 **G414** — Horizontal expansion limits `[DESIGN]`  
 Robots must comply with R105.A (18"×18") during the match. Exception: if over-expansion is due to damage and not used for strategic benefit.  
@@ -207,17 +328,17 @@ Intent is for robots to score by launching into the open top of their own goal. 
 
 **G420** — Not combat robotics `[DESIGN]`  
 A robot may not deliberately functionally impair an opponent robot. Damage or functional impairment due to contact with a tipped-over or disabled opponent robot not perceived as deliberate is not a violation.  
-**Design note:** Robot must not have mechanisms intended to damage or impair others. Robust design per R203.K.  
+**Design note:** Robot must not have mechanisms intended to damage or impair others. Robust design per R203.K. "Unable to drive" means the driver can no longer drive to a desired location in a reasonable time.  
 *Violation: MAJOR FOUL + YELLOW CARD. MAJOR FOUL + RED CARD if opponent robot unable to drive.*
 
 **G421** — No tipping or entangling `[DESIGN]`  
 A robot may not deliberately (as perceived by a referee) attach to, tip, or entangle an opponent robot. Tipping as unintended consequence of normal robot-to-robot interaction (single frame hit) is not a violation.  
-**Design note:** Avoid wedge-like chassis profiles or any mechanism that could hook under opponent robots.  
-*Violation: MAJOR FOUL + YELLOW CARD. MAJOR FOUL + RED CARD if continuous or opponent robot unable to drive.*
+**Design note:** Avoid wedge-like chassis profiles or any mechanism that could hook under opponent robots. "Unable to drive" means the driver can no longer drive to a desired location in a reasonable time.  
+*Violation: MAJOR FOUL + YELLOW CARD. MAJOR FOUL + RED CARD if CONTINUOUS or opponent robot unable to drive.*
 
 **G422** — 3-second pin limit `[STRATEGY]`  
 A robot may not PIN an opponent robot for more than 3 seconds. PINNING = preventing movement of opponent by contact (direct or transitive through field element) while opponent is attempting to move.  
-Pin count ends when: (A) robots separated ≥2 ft for >3 seconds; (B) either robot moved ≥2 ft from where pin initiated for >3 seconds; (C) pinning robot gets pinned.  
+Pin count ends when: (A) robots separated ≥2 ft for >3 seconds; (B) either robot moved ≥2 ft from where pin initiated for >3 seconds; (C) pinning robot gets pinned. Pin count pauses when separation/movement criteria are met, and resumes if PINNING ROBOT returns within 2 ft.  
 *Violation: MINOR FOUL + additional MINOR FOUL every 3 seconds the situation is not corrected.*
 
 **G423** — No strategies to shut down major gameplay `[STRATEGY]`  
@@ -239,13 +360,41 @@ A robot may not contact (directly or transitively through a scoring element) an 
 **G427** — Base Zone protection `[STRATEGY]`  
 During the last 20 seconds of the match, a robot may not contact (directly or transitively through a scoring element) an opponent robot while either robot is in the opponent's BASE ZONE, regardless of who initiates contact.  
 **Strategy note:** Robot should be in own BASE ZONE in last 20 seconds to earn BASE points and be protected.  
-*Violation: MAJOR FOUL + opponent robot and any robot fully supported by contacted robot awarded fully returned-to-BASE points.*
+*Violation: MAJOR FOUL + opponent robot and any robot fully supported by contacted robot are awarded fully returned-to-BASE points.*
 
 #### 11.4.6 Human
 
 **G428** — No wandering `[ADMIN]`  
-Drive team members must remain in their designated ALLIANCE AREA. Drive team members may be anywhere within the alliance area during a match. Drive team members may retrieve scoring elements that have left the field if they can do so without violating G428, G430, and G434. Reintroduction must follow G432.  
-*Violation: VERBAL WARNING. MINOR FOUL if subsequent.*
+Drive team members must remain in their designated ALLIANCE AREA. Drive team members may be anywhere within the alliance area during a match. Drive team members must be staged inside their respective ALLIANCE AREA prior to match start. Drive team members may retrieve scoring elements that have left the field if they can do so without violating G428, G430, and G434. Reintroduction must follow G432.  
+*Violation: VERBAL WARNING. MINOR FOUL if subsequent violations occur during the event.*
+
+**G429** — Drive Coaches and other teams: hands off the controls `[ADMIN]`  
+A robot shall be operated only by the DRIVERS of that team; DRIVE COACHES may not handle the gamepads. DRIVE COACHES may assist DRIVERS only by: (A) holding the DRIVER STATION device; (B) troubleshooting the DRIVER STATION device; (C) selecting OpModes on the DRIVER STATION app; (D) pressing the INIT button; (E) pressing the ▶ start button; (F) pressing the ■ stop button.  
+Exceptions may be made before a match for major conflicts (e.g., religious holidays, major testing, transportation issues).  
+*Violation: MAJOR FOUL. YELLOW CARD if greater-than-MOMENTARY.*
+
+**G430** — Drive Coaches, scoring elements are off limits `[ADMIN]`  
+DRIVE COACHES may not contact SCORING ELEMENTS, unless for safety purposes.  
+*Violation: MINOR FOUL.*
+
+**G431** — Drive teams, watch your reach `[ADMIN]`  
+Once a match starts, a DRIVE TEAM member inside the field may not: (A) directly contact a robot; (B) contact a scoring element in contact with a robot; (C) disrupt scoring element scoring; (D) contact a field element.  
+Impacting ARTIFACT scoring includes: contacting an ARTIFACT launched by the opponent within the field; contacting an ARTIFACT in the opponent's GOAL; disrupting the scoring of an ARTIFACT on the opponent's RAMP or by operating the opponent's GATE.  
+Exceptions are granted for actions that are inadvertent, MOMENTARY, and inconsequential, or concerning safety.  
+*Violation: MAJOR FOUL + YELLOW CARD if G431.A. RED CARD and opposing alliance awarded PATTERN RP if G431.C.*
+
+**G432** — Humans may only meddle with artifacts in the Loading Zone `[ADMIN]`  
+DRIVE TEAM members may only introduce ARTIFACTS to, remove ARTIFACTS from, or move ARTIFACTS within the LOADING ZONE. Actions must: (A) occur only during TELEOP; (B) not use a tool; (C) not cause an ARTIFACT to enter the LOADING ZONE from elsewhere on the field; (D) not cause an ARTIFACT to leave the LOADING ZONE and enter the rest of the field unless CONTROLLED by a ROBOT (ARTIFACT CONTROL begins when the ROBOT is in the LOADING ZONE and the ARTIFACT is still CONTROLLED when the ROBOT leaves the LOADING ZONE). DRIVE TEAM members may load SCORING ELEMENTS into a ROBOT that is partially or fully in the LOADING ZONE.  
+*Violation: MINOR FOUL per ARTIFACT. MAJOR FOUL per ARTIFACT that enters the open top of the GOAL.*
+
+**G433** — Humans may only enter scoring elements `[ADMIN]`  
+DRIVE TEAM members may only enter ARTIFACTS (not other items) onto the field.  
+*Violation: MINOR FOUL per non-ARTIFACT item entered onto the field.*
+
+**G434** — The Alliance Area has a storage limit `[STRATEGY]`  
+During TELEOP, each ALLIANCE may not store more than 6 ARTIFACTS out of play. DRIVE TEAM members making a good-faith effort to immediately enter additional ARTIFACTS back into play is an exception. During AUTO and transition, this rule is not enforced. Upon start of TELEOP, DRIVE TEAM members must make good-faith effort to immediately enter ARTIFACTS until compliant.  
+Examples of "out of play": a DRIVE TEAM member holding an ARTIFACT inside or outside the field; DRIVE TEAM member storing an ARTIFACT outside the field.  
+*Violation: MINOR FOUL per ARTIFACT over the limit + additional MINOR FOUL per ARTIFACT over the limit every 3 seconds the situation is not corrected.*
 
 ---
 
@@ -634,6 +783,10 @@ Operator consoles must not use hazardous materials, be unsafe, cause damage, cau
 | G416 | Launch only from launch zone or launch line | Return-to-zone cycle is core of Option B |
 | G417 | No contact with opponent gate directly or through scoring element | Gate arm must only reach own gate |
 | G418 | No contact with artifacts on ramp except via own gate | Intake must not reach ramp artifacts |
+| G427 | During last 20s, no contact with opponent robot while either is in opponent BASE ZONE | Move to own BASE ZONE before end of match |
+| G429 | Drive Coaches cannot touch gamepads — only DRIVERS operate robot | Assign driver roles clearly at events |
+| G432 | Artifact loading into robot only from LOADING ZONE during TELEOP only | Human player position and timing discipline |
+| G434 | Max 6 artifacts stored out of play at any time during TELEOP | Human player must immediately re-enter balls returned by field staff |
 | R101 + R105A | Start in 18 in. cube; ≤ 18 in. × 18 in. horizontal at all times; **mechanical enforcement at inspection** | Funnel wings need physical hinge stops |
 | R206 | Robot surfaces contacting balls must not pose hazard to them | Deburr all polycarbonate edges; use compliant rollers |
 | R207 | Flywheels for ball manipulation are explicitly permitted | Compliant |
@@ -644,4 +797,48 @@ Operator consoles must not use hazardous materials, be unsafe, cause damage, cau
 
 ---
 
-*Document generated 2026-05-09 from Section 11 V15 and Section 12 V6 of the DECODE Competition Manual.*
+## Key Scoring Thresholds — Quick Reference (Non-Championship Events)
+
+| RP | Threshold | How to achieve |
+|----|-----------|----------------|
+| MOVEMENT RP | 16 pts combined LEAVE + BASE | LEAVE (3) + one robot fully BASE (10) = 13 only; need partial BASE on both robots OR LEAVE + full BASE + partial BASE |
+| GOAL RP | 36 ARTIFACTS through the SQUARE | ~4 per robot per match at high cycle rates |
+| PATTERN RP | 18 PATTERN points | 9 artifacts on ramp matching motif = 9×2=18 AUTO or TELEOP |
+| WIN | More match points than opponent | 3 RP |
+
+---
+
+## Key Definitions (Glossary Section 16)
+
+| Term | Definition |
+|------|------------|
+| ALLIANCE AREA | 96 in. wide × 54 in. deep × infinitely tall volume outside the FIELD |
+| ARTIFACT | 5 in. (12.70 cm) nominal Gopher ResisDent polypropylene ball — the only SCORING ELEMENT |
+| BASE ZONE | 18 in. × 18 in. ± 0.125 in. infinitely tall volume bounded by alliance-coloured tape |
+| CLASSIFIED | ARTIFACT that passes through SQUARE and transitions directly to RAMP |
+| CONTINUOUS | Durations more than approximately 10 seconds |
+| CONTROL | ROBOT action where SCORING ELEMENT is fully supported by or stuck in/on/under the ROBOT, or ROBOT intentionally pushes it to desired location/direction |
+| DEPOT | White tape ~30 in. long spanning the entire length of the GOAL front face at the base |
+| GATE | Alliance-specific FIELD element that prevents CLASSIFIED ARTIFACTS from exiting the RAMP |
+| GATE ZONE | 2.75 in. wide × 10 in. long infinitely tall volume adjacent to each GATE |
+| GOAL | 3-sided structure with horizontal triangular shaped opening at top |
+| LAUNCH LINE | White tape bounding 2 triangular LAUNCH ZONES + 2 segments at base of GOAL |
+| LAUNCH ZONE | Infinitely tall triangular volumes bounded by LAUNCH LINES and FIELD perimeter |
+| LEAVE | ROBOT moves such that it is no longer over any LAUNCH LINE at end of AUTO |
+| LOADING ZONE | ~23 in. × 23 in. infinitely tall volume bounded by white tape and FIELD perimeter |
+| MAJOR FOUL | 15 points credited to opponent's MATCH point total |
+| MINOR FOUL | 5 points credited to opponent's MATCH point total |
+| MOMENTARY | Durations fewer than approximately 3 seconds |
+| MOTIF | Series of ARTIFACT colours: 2 purple (P) and 1 green (G) in unique order |
+| OBELISK | Equilateral triangular prism located just outside FIELD perimeter; randomises MOTIF before match |
+| OVERFLOW | ARTIFACT that passes through SQUARE but does not meet CLASSIFIED criteria |
+| PATTERN | Scoring achievement — ARTIFACT colour on RAMP matches MOTIF index colour |
+| PIN/PINNING | ROBOT preventing movement of opponent ROBOT by contact (direct or transitive) |
+| RAMP | Structure that can fit up to 9 CLASSIFIED ARTIFACTS |
+| REPEATED | Actions that happen more than once within a MATCH |
+| SECRET TUNNEL ZONE | ~46.5 in. long × ~6.125 in. wide infinitely tall volume bounded by alliance tape, GOAL assembly, LOADING ZONE, and FIELD perimeter |
+| SQUARE | Location at top of RAMP where ARTIFACT scoring is assessed |
+
+---
+
+*Document updated 2026-05-09 from Section 10, Section 11 V15, and Section 12 V6 of the DECODE Competition Manual (online version). Previous version based on PDF pages of Sections 11 and 12 only.*
