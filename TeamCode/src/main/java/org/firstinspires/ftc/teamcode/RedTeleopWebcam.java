@@ -215,7 +215,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
         builder.setCameraResolution(new Size(640, 480)); //640 480
 
-        builder.enableLiveView(true);
+        builder.enableLiveView(false);
         builder.addProcessor(aprilTag);
 
         // Build the Vision Portal, using the above settings.
