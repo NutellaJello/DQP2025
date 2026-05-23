@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.pedroPathing;
 
 import com.pedropathing.control.FilteredPIDFCoefficients;
 import com.pedropathing.control.PIDFCoefficients;
+import com.pedropathing.control.PredictiveBrakingCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
@@ -16,22 +17,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 public class Constants {
-    public static FollowerConstants followerAutoConstants = new FollowerConstants()
-            .useSecondaryTranslationalPIDF(true)
-            .useSecondaryHeadingPIDF(true)
-            .useSecondaryDrivePIDF(true)
-            .mass(11.52125)
-            .forwardZeroPowerAcceleration(-36.20)
-            .lateralZeroPowerAcceleration(-66.38)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.08, 0.01, 0.01, 0.01))
-            .secondaryTranslationalPIDFCoefficients(new PIDFCoefficients(0.09,0,0.01,0.03))
-            .headingPIDFCoefficients(new PIDFCoefficients(2,0,0.2,0.05))
-            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2,0,0.05,0.03))
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.025,0,0.00001,0.6,0.01))
-            .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0.02,0.01,0.000005,0.6,0.01))
-            .centripetalScaling(0.0005);
-
-    public static FollowerConstants followerTeleopConstants = new FollowerConstants()
+    public static FollowerConstants followerConstants = new FollowerConstants()
             .useSecondaryTranslationalPIDF(true)
             .useSecondaryHeadingPIDF(true)
             .useSecondaryDrivePIDF(true)
@@ -45,6 +31,16 @@ public class Constants {
             .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.025,0,0.00001,0.6,0.01))
             .secondaryDrivePIDFCoefficients(new FilteredPIDFCoefficients(0.02,0.01,0.000005,0.6,0.01))
             .centripetalScaling(0.0005);
+
+    public static FollowerConstants followerAutoConstants = new FollowerConstants()
+            .useSecondaryHeadingPIDF(true)
+            .mass(11.52125)
+            .forwardZeroPowerAcceleration(-36.20)
+            .lateralZeroPowerAcceleration(-66.38)
+            .headingPIDFCoefficients(new PIDFCoefficients(2,0,0.2,0.05))
+            .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(2,0,0.05,0.03))
+            .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0.3, 0.100946869, 0.00128288717))
+            .centripetalScaling(0);
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1)
             .rightFrontMotorName("FR")
@@ -55,20 +51,18 @@ public class Constants {
             .leftRearMotorDirection(DcMotorEx.Direction.FORWARD)
             .rightFrontMotorDirection(DcMotorEx.Direction.FORWARD)
             .rightRearMotorDirection(DcMotorEx.Direction.FORWARD)
-            .xVelocity(85.3)
-            .yVelocity(60.42);
+            .xVelocity(77.041)
+            .yVelocity(62.88);
 
     public static PinpointConstants localizerConstants = new PinpointConstants()
-            .forwardPodY(-2.36) // -4.5
-            .strafePodX(-0.94) // -5
+            .forwardPodY(-2.36)
+            .strafePodX(-0.94)
             .distanceUnit(DistanceUnit.INCH)
             .hardwareMapName("pinpoint")
             .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD)
-            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED) // these are fine
+            .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED)
             .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
-    // heading threshold 0.3 rad (17°) — tight enough to ensure robot is settled, with margin for
-    // heading overshoot on curves; loosen toward 0.5 if paths hang waiting for heading to settle
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 2.0, 1.0, 0.3);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 
     public static Follower createAutoFollower(HardwareMap hardwareMap) {
         return new FollowerBuilder(followerAutoConstants, hardwareMap)
@@ -78,10 +72,7 @@ public class Constants {
                 .build();
     }
     public static Follower createFollower(HardwareMap hardwareMap) {
-        return createAutoFollower(hardwareMap);
-    }
-    public static Follower createTeleopFollower(HardwareMap hardwareMap) {
-        return new FollowerBuilder(followerTeleopConstants, hardwareMap)
+        return new FollowerBuilder(followerConstants, hardwareMap)
                 .pathConstraints(pathConstraints)
                 .mecanumDrivetrain(driveConstants)
                 .pinpointLocalizer(localizerConstants)
