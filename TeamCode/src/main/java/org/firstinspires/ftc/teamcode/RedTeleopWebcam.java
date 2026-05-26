@@ -79,7 +79,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -1523; //495/90
+    private final double lowLimit = -1523; //495/90.0
     private final double highLimit = 410  ;
     double p = 400;
     double d = 0;
@@ -309,9 +309,9 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         double turretTarget = goal.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading);
-        if (turretTarget > highLimit * (90/495) + 30) { //wrap angle
+        if (turretTarget > highLimit * (90.0/495) + 30) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < lowLimit * (90/495) - 30) {
+        } else if (turretTarget < lowLimit * (90.0/495) - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
