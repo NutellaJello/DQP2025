@@ -17,8 +17,8 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 
-// Used only in teleop. Autos use Pedro Pathing via Constants.java — motor names must match.
 public class DecodeDriveTrain {
+
     // Instantiate the drivetrain motor variables
     private DcMotorEx FL; //Front left motor of drivetrain
     private DcMotorEx FR; //Front right motor of drivetrain
@@ -26,16 +26,26 @@ public class DecodeDriveTrain {
     private DcMotorEx BR; //Back right motor of drivetrain
     GoBildaPinpointDriver pinpoint;
     private double dampSpeedRatio = 1;
-    private double dampTurnRatio  = -1;
+    private double dampTurnRatio  = -0.6;
     private Pose2D pose2D;
     private double headingOffset = 0;
+    private Gamepad gamepad;
+    private Telemetry telemetry;
+    private boolean showTelemetry;
+    private boolean fieldCentric;
 
 
-    public DecodeDriveTrain(HardwareMap hardwareMap){                 // Motor Mapping
+
+    public DecodeDriveTrain(HardwareMap hardwareMap, Gamepad gamepad, Telemetry telemetry, boolean showTelemetry, boolean fieldCentric){
+        // Motor Mapping
         FL = hardwareMap.get(DcMotorEx.class, "FL");
         FR = hardwareMap.get(DcMotorEx.class, "FR");
         BL = hardwareMap.get(DcMotorEx.class, "BL");
         BR = hardwareMap.get(DcMotorEx.class, "BR");
+        this.gamepad = gamepad;
+        this.telemetry = telemetry;
+        this.showTelemetry = showTelemetry;
+        this.fieldCentric = fieldCentric;
 
 
         // Set motor direction based on which side of the robot the motors are on
@@ -81,16 +91,13 @@ public class DecodeDriveTrain {
         pinpoint.resetPosAndIMU();
     }
 
-    public void Teleop(Gamepad gamepad, double heading, Telemetry telemetry,  boolean fieldCentric) {
-        Teleop(gamepad, heading, telemetry, false, fieldCentric);
-    }
-
-    public void Teleop(Gamepad gamepad, double heading, Telemetry telemetry, boolean showTelemetry, boolean field){ //Code to be run in Teleop Mode void Loop at top level
+    public void Teleop(double heading){ //Code to be run in Teleop Mode void Loop at top level
         heading = -heading;
-        double PowerFL;
-        double PowerFR;
-        double PowerBL;
-        double PowerBR;
+
+        double PowerFL = 0;
+        double PowerFR = 0;
+        double PowerBL = 0;
+        double PowerBR = 0;
 
         double y = Range.clip(-gamepad.left_stick_y, -1, 1);
         //left stick x value
@@ -98,7 +105,7 @@ public class DecodeDriveTrain {
         //right stick x value
         double rx = Range.clip(-gamepad.right_stick_x, -1, 1);
         if(gamepad.right_bumper){
-            dampSpeedRatio = 1 - 0.65;
+            dampSpeedRatio = 1 - 0.6;
             dampTurnRatio = -0.6 + 0.3;
         }else{
             dampSpeedRatio = 1;
@@ -107,7 +114,7 @@ public class DecodeDriveTrain {
         if(gamepad.dpad_up){
             headingOffset = heading;
         }
-        if (field){
+        if (fieldCentric){
             heading -= headingOffset;
             double max;
             double axial   = y * Math.cos(heading) - x * Math.sin(heading);
@@ -160,7 +167,7 @@ public class DecodeDriveTrain {
             FR.setPower(PowerFR);
             BR.setPower(PowerBR);
         }
-        if(showTelemetry && pose2D != null) {
+        if(showTelemetry) {
             telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
             telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
             telemetry.addData("Heading angle (DEG)", pose2D.getHeading(AngleUnit.DEGREES));
