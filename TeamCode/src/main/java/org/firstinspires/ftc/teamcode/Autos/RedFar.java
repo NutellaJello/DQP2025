@@ -39,7 +39,7 @@ public class RedFar extends BaseAuto {
 //    private final Pose intake2p2  = new Pose(120, 57, Math.toRadians(0));
     private final Pose end        = new Pose(108, 6, Math.toRadians(0));
 
-    private PathChain Preload, AlignIntake, Intake1, Outtake1, End;
+    private PathChain preload, alignIntake, intake1Path, outtake1, endPath;
 //    private PathChain Intake21, Intake22, Outtake2;
 
     @Override protected double getPIDFP()        { return 380; }
@@ -55,39 +55,39 @@ public class RedFar extends BaseAuto {
 
     @Override
     public void buildPaths() {
-        Preload = follower.pathBuilder()
+        preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
                 .setGlobalDeceleration(0.9)
                 .build();
-        AlignIntake = follower.pathBuilder()
+        alignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1))
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake1 = follower.pathBuilder()
+        intake1Path = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Outtake1 = follower.pathBuilder()
+        outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
-//        Intake21 = follower.pathBuilder()
+//        intake21 = follower.pathBuilder()
 //                .addPath(new BezierLine(outtake, intake2p1))
 //                .setConstantHeadingInterpolation(0)
 //                .build();
-//        Intake22 = follower.pathBuilder()
+//        intake22 = follower.pathBuilder()
 //                .addPath(new BezierLine(intake2p1, intake2p2))
 //                .setConstantHeadingInterpolation(0)
 //                .build();
-//        Outtake2 = follower.pathBuilder()
+//        outtake2 = follower.pathBuilder()
 //                .addPath(new BezierLine(intake2p2, outtake))
 //                .setConstantHeadingInterpolation(0)
 //                .build();
-        End = follower.pathBuilder()
+        endPath = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
@@ -109,37 +109,37 @@ public class RedFar extends BaseAuto {
         }
         switch (pathState) {
             case PRELOAD:
-                move(Preload, () -> setPathState(PathState.SHOOTPRE));
+                move(preload, () -> setPathState(PathState.SHOOTPRE));
                 break;
             case SHOOTPRE:
                 shoot(PathState.ALIGNINTAKE1);
                 break;
             case ALIGNINTAKE1:
-                move(AlignIntake, () -> setPathState(PathState.INTAKE1));
+                move(alignIntake, () -> setPathState(PathState.INTAKE1));
                 break;
             case INTAKE1:
-                moveIntake(Intake1, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE1));
+                moveIntake(intake1Path, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE1));
                 break;
             case OUTTAKE1:
-                move(Outtake1, () -> setPathState(PathState.SHOOT1));
+                move(outtake1, () -> setPathState(PathState.SHOOT1));
                 break;
             case SHOOT1:
                 shoot(PathState.END);
                 break;
 //            case INTAKE21:
-//                move(Intake21, () -> setPathState(PathState.INTAKE22));
+//                move(intake21, () -> setPathState(PathState.INTAKE22));
 //                break;
 //            case INTAKE22:
-//                moveIntake(Intake22, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE2));
+//                moveIntake(intake22, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE2));
 //                break;
 //            case OUTTAKE2:
-//                move(Outtake2, () -> setPathState(PathState.SHOOT2));
+//                move(outtake2, () -> setPathState(PathState.SHOOT2));
 //                break;
 //            case SHOOT2:
 //                shoot(PathState.END);
 //                break;
             case END:
-                move(End, () -> setPathState(PathState.STOP));
+                move(endPath, () -> setPathState(PathState.STOP));
                 break;
         }
     }

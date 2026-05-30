@@ -37,8 +37,8 @@ public class BlueFarGate extends BaseAuto {
     private final Pose togate      = new Pose(15, 7,  Math.toRadians(180));
     private final Pose end         = new Pose(42, 7,  Math.toRadians(180));
 
-    private PathChain Preload, AlignIntake, Intake1, Outtake1;
-    private PathChain AlignIntake2, Togate, Outtake2, End;
+    private PathChain preload, alignIntake, intake1Path, outtake1;
+    private PathChain alignIntake2, toGate, outtake2, endPath;
 
     @Override protected double getPIDFP()        { return 380; }
     @Override protected GoalPos createGoalPos()  { return new GoalPos(0, 144, 15.5); }
@@ -53,44 +53,44 @@ public class BlueFarGate extends BaseAuto {
 
     @Override
     public void buildPaths() {
-        Preload = follower.pathBuilder()
+        preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setConstantHeadingInterpolation(Math.toRadians(90))
                 .setBrakingStrength(0.5)
                 .setGlobalDeceleration(0.9)
                 .build();
-        AlignIntake = follower.pathBuilder()
+        alignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1))
                 .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake1 = follower.pathBuilder()
+        intake1Path = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
-        Outtake1 = follower.pathBuilder()
+        outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(90))
                 .setGlobalDeceleration(0.9)
                 .build();
-        AlignIntake2 = follower.pathBuilder()
+        alignIntake2 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, preintake2))
                 .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
-        Togate = follower.pathBuilder()
+        toGate = follower.pathBuilder()
                 .addPath(new BezierLine(preintake2, togate))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(0.5)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Outtake2 = follower.pathBuilder()
+        outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(togate, outtake))
                 .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(90))
                 .setGlobalDeceleration(0.9)
                 .build();
-        End = follower.pathBuilder()
+        endPath = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
@@ -112,38 +112,38 @@ public class BlueFarGate extends BaseAuto {
         }
         switch (pathState) {
             case PRELOAD:
-                move(Preload, () -> setPathState(PathState.SHOOTPRE));
+                move(preload, () -> setPathState(PathState.SHOOTPRE));
                 break;
             case SHOOTPRE:
                 if (!gainSet && opmodeTimer.getElapsedTimeSeconds() < 3.0) { break; }
                 shoot(PathState.ALIGNINTAKE1);
                 break;
             case ALIGNINTAKE1:
-                move(AlignIntake, () -> setPathState(PathState.INTAKE1));
+                move(alignIntake, () -> setPathState(PathState.INTAKE1));
                 break;
             case INTAKE1:
-                moveIntake(Intake1, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE1));
+                moveIntake(intake1Path, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE1));
                 break;
             case OUTTAKE1:
-                move(Outtake1, () -> setPathState(PathState.SHOOT1));
+                move(outtake1, () -> setPathState(PathState.SHOOT1));
                 break;
             case SHOOT1:
                 fixedshoot(PathState.ALIGNINTAKE2);
                 break;
             case ALIGNINTAKE2:
-                move(AlignIntake2, () -> setPathState(PathState.TOGATE));
+                move(alignIntake2, () -> setPathState(PathState.TOGATE));
                 break;
             case TOGATE:
-                moveIntake(Togate, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE2));
+                moveIntake(toGate, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE2));
                 break;
             case OUTTAKE2:
-                move(Outtake2, () -> setPathState(PathState.SHOOT2));
+                move(outtake2, () -> setPathState(PathState.SHOOT2));
                 break;
             case SHOOT2:
                 fixedshoot(PathState.END);
                 break;
             case END:
-                move(End, () -> setPathState(PathState.STOP));
+                move(endPath, () -> setPathState(PathState.STOP));
                 turret.setTargetPosition(0);
                 break;
         }

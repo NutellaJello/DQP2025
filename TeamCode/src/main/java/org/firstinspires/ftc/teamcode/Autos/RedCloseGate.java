@@ -47,10 +47,10 @@ public class RedCloseGate extends BaseAuto {
     private final Pose intake3p2  = new Pose(128.5, 41, Math.toRadians(0));
     private final Pose end        = new Pose(108, 77,   Math.toRadians(0));
 
-    private PathChain Preload, Intake1, Opengate, Outtake1;
-    private PathChain Intake21, Intake22, Outtake2;
-    private PathChain Intake31, Intake32, Outtake3;
-    private PathChain End;
+    private PathChain preload, intake1Path, openGate, outtake1;
+    private PathChain intake21, intake22, outtake2;
+    private PathChain intake31, intake32, outtake3;
+    private PathChain endPath;
 
     @Override protected double getPIDFP()        { return 400; }
     @Override protected GoalPos createGoalPos()  { return new GoalPos(147, 144, 15.5); }
@@ -69,63 +69,63 @@ public class RedCloseGate extends BaseAuto {
 
     @Override
     public void buildPaths() {
-        Preload = follower.pathBuilder()
+        preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake1 = follower.pathBuilder()
+        intake1Path = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Opengate = follower.pathBuilder()
+        openGate = follower.pathBuilder()
                 .addPath(new BezierCurve(Arrays.asList(intake1, gatePoint, gate)))
                 .setConstantHeadingInterpolation(0)
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Outtake1 = follower.pathBuilder()
+        outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(gate, outtake))
                 .setLinearHeadingInterpolation(gate.getHeading(), outtake.getHeading())
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake21 = follower.pathBuilder()
+        intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake22 = follower.pathBuilder()
+        intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p1, intake2p2))
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Outtake2 = follower.pathBuilder()
+        outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
                 .setConstantHeadingInterpolation(0)
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake31 = follower.pathBuilder()
+        intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
                 .setConstantHeadingInterpolation(0)
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake32 = follower.pathBuilder()
+        intake32 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p1, intake3p2))
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Outtake3 = follower.pathBuilder()
+        outtake3 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p2, outtake))
                 .setConstantHeadingInterpolation(0)
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        End = follower.pathBuilder()
+        endPath = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
@@ -149,50 +149,50 @@ public class RedCloseGate extends BaseAuto {
         }
         switch (pathState) {
             case PRELOAD:
-                move(Preload, () -> setPathState(PathState.SHOOTPRE));
+                move(preload, () -> setPathState(PathState.SHOOTPRE));
                 break;
             case SHOOTPRE:
                 if (!gainSet && opmodeTimer.getElapsedTimeSeconds() < 3.0) { break; }
                 shoot(PathState.INTAKE1);
                 break;
             case INTAKE1:
-                moveIntake(Intake1, 0.5, false, 50, () -> setPathState(PathState.OPENGATE));
+                moveIntake(intake1Path, 0.5, false, 50, () -> setPathState(PathState.OPENGATE));
                 break;
             case OPENGATE:
-                move(Opengate, () -> setPathState(PathState.OUTTAKE1));
+                move(openGate, () -> setPathState(PathState.OUTTAKE1));
                 break;
             case OUTTAKE1:
-                move(Outtake1, () -> setPathState(PathState.SHOOT1));
+                move(outtake1, () -> setPathState(PathState.SHOOT1));
                 break;
             case SHOOT1:
                 shoot(PathState.INTAKE21);
                 break;
             case INTAKE21:
-                move(Intake21, () -> setPathState(PathState.INTAKE22));
+                move(intake21, () -> setPathState(PathState.INTAKE22));
                 break;
             case INTAKE22:
-                moveIntake(Intake22, 0.5, false, 50, () -> setPathState(PathState.OUTTAKE2));
+                moveIntake(intake22, 0.5, false, 50, () -> setPathState(PathState.OUTTAKE2));
                 break;
             case OUTTAKE2:
-                move(Outtake2, () -> setPathState(PathState.SHOOT2));
+                move(outtake2, () -> setPathState(PathState.SHOOT2));
                 break;
             case SHOOT2:
                 shoot(PathState.INTAKE31);
                 break;
             case INTAKE31:
-                move(Intake31, () -> setPathState(PathState.INTAKE32));
+                move(intake31, () -> setPathState(PathState.INTAKE32));
                 break;
             case INTAKE32:
-                moveIntake(Intake32, 0.5, false, 50, () -> setPathState(PathState.OUTTAKE3));
+                moveIntake(intake32, 0.5, false, 50, () -> setPathState(PathState.OUTTAKE3));
                 break;
             case OUTTAKE3:
-                move(Outtake3, () -> setPathState(PathState.SHOOT3));
+                move(outtake3, () -> setPathState(PathState.SHOOT3));
                 break;
             case SHOOT3:
                 shoot(PathState.END);
                 break;
             case END:
-                move(End, () -> setPathState(PathState.STOP));
+                move(endPath, () -> setPathState(PathState.STOP));
                 break;
         }
     }
