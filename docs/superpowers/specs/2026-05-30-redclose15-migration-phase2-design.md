@@ -98,7 +98,8 @@ public void move(PathChain path, Runnable onComplete, boolean idle) {
 ### Structural changes
 - `extends OpMode` → `extends BaseAuto`
 - Remove all imports already covered by BaseAuto
-- Remove duplicate field declarations: `intake`, `turret`, `flyWheel1`, `stopper`, `flap`, `aprilTag`, `visionPortal`, `follower`, `actionTimer`, `opmodeTimer`, `xPos`, `yPos`, `heading`, `turretPos`, `range`, `camRange`, `bearing`, `camOffsetX`, `startingAngle`, `flapPos`, `gainSet`, `moving`, `hasEst`, PIDF fields
+- Remove duplicate field declarations: `intake`, `turret`, `flyWheel1`, `stopper`, `flap`, `aprilTag`, `visionPortal`, `follower`, `actionTimer`, `opmodeTimer`, `xPos`, `yPos`, `heading`, `turretPos`, `range`, `camRange`, `bearing`, `camOffsetX`, `startingAngle`, `flapPos`, `gainSet`, `moving`, `hasEst`, PIDF fields, `goal` (becomes `goalPos` from BaseAuto)
+- Remove dead fields: `xEst`, `yEst` (declared but never used)
 - Remove duplicate methods: `initWebcam()`, `cameraControls()`, `loop()`, `start()`, `toFWV()`
 
 ### Remaining unique fields
@@ -152,6 +153,14 @@ Cases that pre-spin flywheels (PRELOAD, OUTTAKE1, OUTTAKEB, OUTTAKE3):
 case OUTTAKE1:
     flyWheel2.setVelocity(1100);
     move(outtake1, () -> setPathState(PathState.SHOOT1), true);
+    break;
+```
+
+OUTTAKE2 also gets `idle=true` — this was missing in the original (code review Finding #7) and is fixed here since we're rewriting every case:
+```java
+case OUTTAKE2:
+    flyWheel2.setVelocity(1100);
+    move(outtake2, () -> setPathState(PathState.SHOOT2), true);
     break;
 ```
 
