@@ -19,7 +19,6 @@ public class RedClose15 extends BaseAuto {
     private DcMotorEx flyWheel2;
     private final double lowLimit = -990;
     private final double highLimit = 850;
-    private double elevation;
 
     private enum PathState {
         PRELOAD, SHOOTPRE,
@@ -147,33 +146,33 @@ public class RedClose15 extends BaseAuto {
         switch (pathState) {
             case PRELOAD:
                 flyWheel2.setVelocity(1100);
-                move(preload, () -> setPathState(PathState.SHOOTPRE), true);
+                move(preload, () -> setPathState(PathState.SHOOTPRE), true, false);
                 break;
             case SHOOTPRE:
                 shoot(PathState.INTAKE11);
                 break;
             case INTAKE11:
-                move(intake11, () -> setPathState(PathState.INTAKE12));
+                move(intake11, () -> setPathState(PathState.INTAKE12), false, false);
                 break;
             case INTAKE12:
                 moveIntake(intake12, 0.7, false, 50, () -> setPathState(PathState.OUTTAKE1));
                 break;
             case OUTTAKE1:
                 flyWheel2.setVelocity(1100);
-                move(outtake1, () -> setPathState(PathState.SHOOT1), true);
+                move(outtake1, () -> setPathState(PathState.SHOOT1), true, false);
                 break;
             case SHOOT1:
                 shoot(PathState.OPENGATE);
                 break;
             case OPENGATE:
-                move(openGate, () -> setPathState(PathState.BIGBACK));
+                move(openGate, () -> setPathState(PathState.BIGBACK), false, false);
                 break;
             case BIGBACK:
                 moveIntake(bigBackPath, 0.65, false, 50, () -> setPathState(PathState.OUTTAKEB));
                 break;
             case OUTTAKEB:
                 flyWheel2.setVelocity(1100);
-                move(outtakeB, () -> setPathState(PathState.SHOOTB), true);
+                move(outtakeB, () -> setPathState(PathState.SHOOTB), true, false);
                 break;
             case SHOOTB:
                 shoot(PathState.INTAKE2);
@@ -183,26 +182,26 @@ public class RedClose15 extends BaseAuto {
                 break;
             case OUTTAKE2:
                 flyWheel2.setVelocity(1100);
-                move(outtake2, () -> setPathState(PathState.SHOOT2), true);
+                move(outtake2, () -> setPathState(PathState.SHOOT2), true, false);
                 break;
             case SHOOT2:
                 shoot(PathState.INTAKE31);
                 break;
             case INTAKE31:
-                move(intake31, () -> setPathState(PathState.INTAKE32));
+                move(intake31, () -> setPathState(PathState.INTAKE32), false, false);
                 break;
             case INTAKE32:
                 moveIntake(intake32, 0.7, false, 50, () -> setPathState(PathState.OUTTAKE3));
                 break;
             case OUTTAKE3:
                 flyWheel2.setVelocity(1100);
-                move(outtake3, () -> setPathState(PathState.SHOOT3), true);
+                move(outtake3, () -> setPathState(PathState.SHOOT3), true, false);
                 break;
             case SHOOT3:
                 shoot(PathState.END);
                 break;
             case END:
-                move(endPath, () -> setPathState(PathState.STOP));
+                move(endPath, () -> setPathState(PathState.STOP), false, false);
                 break;
         }
 
@@ -216,7 +215,7 @@ public class RedClose15 extends BaseAuto {
         }
     }
 
-    public void shoot(PathState nextPath) {
+    private void shoot(PathState nextPath) {
         double targetV = toFWV(range);
         flyWheel1.setVelocity(targetV);
         flyWheel2.setVelocity(targetV);
@@ -243,14 +242,14 @@ public class RedClose15 extends BaseAuto {
         }
     }
 
-    public void aiming(List<AprilTagDetection> detectedTags) {
+    private void aiming(List<AprilTagDetection> detectedTags) {
         range = goalPos.findRange(xPos, yPos);
         if (gainSet) {
             for (AprilTagDetection detection : detectedTags) {
                 if (detection.metadata != null && detection.id == 24) {
                     camRange = detection.ftcPose.range + camOffsetX;
                     bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(3.2 / range));
-                    elevation = detection.ftcPose.elevation;
+                    double elevation = detection.ftcPose.elevation;
                     bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180 / 976;
                     bearing = Math.toRadians(bearing);
                     elevation = Math.toRadians(elevation);

@@ -145,20 +145,17 @@ public abstract class BaseAuto extends OpMode {
     }
 
     public void move(PathChain path, Runnable onComplete) {
-        if (!moving) {
-            follower.followPath(path, true);
-            moving = true;
-        }
-        if (!follower.isBusy() && actionTimer.getElapsedTime() > 50) {
-            moving = false;
-            onComplete.run();
-        }
+        move(path, onComplete, false, true);
     }
 
     public void move(PathChain path, Runnable onComplete, boolean idle) {
+        move(path, onComplete, idle, true);
+    }
+
+    public void move(PathChain path, Runnable onComplete, boolean idle, boolean holdEnd) {
         if (!moving) {
             if (idle) flyWheel1.setVelocity(1100);
-            follower.followPath(path, true);
+            follower.followPath(path, holdEnd);
             moving = true;
         }
         if (!follower.isBusy() && actionTimer.getElapsedTime() > 50) {
@@ -169,12 +166,12 @@ public abstract class BaseAuto extends OpMode {
 
     /**
      * Follows path at reduced speed while running intake, then calls onComplete when done.
-     * @param holonomic  pass true for normal autos, false for RedCloseGate/RedClose15 intake paths
+     * @param holdEnd    pass true to hold position at end of path, false to coast
      * @param timeoutMs  50 for close autos, 1500 for far autos (extra dwell for loading zone)
      */
-    public void moveIntake(PathChain path, double speed, boolean holonomic, int timeoutMs, Runnable onComplete) {
+    public void moveIntake(PathChain path, double speed, boolean holdEnd, int timeoutMs, Runnable onComplete) {
         if (!moving) {
-            follower.followPath(path, speed, holonomic);
+            follower.followPath(path, speed, holdEnd);
             intake.setPower(1);
             moving = true;
         }

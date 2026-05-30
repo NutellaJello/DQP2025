@@ -40,7 +40,7 @@ public class RedFar extends BaseAuto {
     private final Pose end        = new Pose(108, 6, Math.toRadians(0));
 
     private PathChain preload, alignIntake, intake1Path, outtake1, endPath;
-//    private PathChain Intake21, Intake22, Outtake2;
+//    private PathChain intake21, intake22, outtake2;
 
     @Override protected double getPIDFP()        { return 380; }
     @Override protected GoalPos createGoalPos()  { return new GoalPos(147, 144, 15.5); }
