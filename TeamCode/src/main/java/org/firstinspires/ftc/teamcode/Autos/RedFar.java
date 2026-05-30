@@ -185,7 +185,7 @@ public class RedFar extends BaseAuto {
             }
         }
 
-        double turretTarget = goalPos.findAngle(xPos, yPos)
+        double turretTarget = goalPos.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
         if (turretTarget > 360 + 30) {

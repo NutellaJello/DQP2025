@@ -309,7 +309,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         }
 
         //required turret angle
-        double turretTarget = goal.findAngle(xPos, yPos)
+        double turretTarget = goal.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
                 + Math.toDegrees(Math.atan(hOffset/range)); // SIDE +/-

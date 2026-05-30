@@ -293,7 +293,7 @@ public class FlywheelTesting extends LinearOpMode {
         }
 
         //required turret angle
-        double turretTarget = goalPos.findAngle(xPos, yPos)
+        double turretTarget = goalPos.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading);
         if (turretTarget > 360 + 20) { //wrap angle
@@ -401,7 +401,7 @@ public class FlywheelTesting extends LinearOpMode {
 //        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
 //                follower.getPose().getX(), follower.getPose().getY()
 //        ) - Math.toDegrees(follower.getPose().getHeading())));
-//        telemetry.addData("target bearing", (goalPos.findAngle(follower.getPose().getX(), follower.getPose().getY())));
+//        telemetry.addData("target bearing", (goalPos.findBearing(follower.getPose().getX(), follower.getPose().getY())));
         telemetry.update();
 
     }

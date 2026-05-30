@@ -257,7 +257,7 @@ public class BlueCloseGate extends BaseAuto {
             }
         }
 
-        double turretTarget = goalPos.findAngle(xPos, yPos)
+        double turretTarget = goalPos.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
         // Blue turret homes at 0 ticks = one side of range; wraps 0-360° → limits [0, 1865] ticks

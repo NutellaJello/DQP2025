@@ -397,7 +397,7 @@ public class RedClose15 extends OpMode {
         }
 
         //required turret angle
-        double turretTarget = goal.findAngle(xPos, yPos)
+        double turretTarget = goal.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
         if (turretTarget > 180 + 30) { //wrap angle

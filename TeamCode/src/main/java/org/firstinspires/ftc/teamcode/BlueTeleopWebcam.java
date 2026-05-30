@@ -306,7 +306,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
         }
 
         //required turret angle
-        double turretTarget = goal.findAngle(xPos, yPos)
+        double turretTarget = goal.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading);
         if (turretTarget > 180 + 30) { //wrap angle
