@@ -81,3 +81,15 @@ lint/tmp/
 # lint/reports/
 # Added by code-review-graph
 .code-review-graph/
+
+# AI assistant config (local to each developer's machine)
+.claude/
+.cursor/
+.cursorrules
+.kiro/
+.mcp.json
+.opencode.json
+.superpowers/
+.windsurfrules
+AGENTS.md
+GEMINI.md
