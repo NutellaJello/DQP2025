@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Autos;
+package org.firstinspires.ftc.teamcode.autos;
 
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -11,39 +11,37 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 import java.util.List;
 
-@Autonomous(name = "Blue Far Gate", group = "Autos")
-public class BlueFarGate extends BaseAuto {
-    private double targetV = 0;
-    private final double fwv = 1885;
+@Autonomous(name = "Red Far Gate", group = "Autos")
+public class RedFarGate extends BaseAuto {
+    private final double fwv = 1878;
     private final double lowLimit = 0;
     private final double highLimit = 1865;
-    private final double braking = 0.5;
 
     private enum PathState {
         PRELOAD, SHOOTPRE,
         ALIGNINTAKE1, INTAKE1, OUTTAKE1, SHOOT1,
-        ALIGNINTAKE2, TOGATE, OUTTAKE2, SHOOT2,
+        ALIGNINTAKE2, WAIT, INTAKE2, OUTTAKE2, SHOOT2,
         END, STOP
     }
 
     private PathState pathState;
 
-    private final Pose start       = new Pose(56, 0,  Math.toRadians(90));
-    private final Pose outtakePre  = new Pose(56, 10, Math.toRadians(90));
-    private final Pose outtake     = new Pose(56, 10, Math.toRadians(90));
-    private final Pose preintake1  = new Pose(26, 7,  Math.toRadians(180));
-    private final Pose intake1     = new Pose(15, 7,  Math.toRadians(180));
-    private final Pose preintake2  = new Pose(26, 7,  Math.toRadians(180));
-    private final Pose togate      = new Pose(15, 7,  Math.toRadians(180));
-    private final Pose end         = new Pose(42, 7,  Math.toRadians(180));
+    private final Pose start      = new Pose(90, 0,   Math.toRadians(0));
+    private final Pose outtakePre = new Pose(90, 10,  Math.toRadians(0));
+    private final Pose outtake    = new Pose(90, 10,  Math.toRadians(0));
+    private final Pose preintake1 = new Pose(120, 5,  Math.toRadians(0));
+    private final Pose intake1    = new Pose(136, 0,  Math.toRadians(0));
+    private final Pose preintake2 = new Pose(120, 8,  Math.toRadians(90));
+    private final Pose intake2    = new Pose(138, 3,  Math.toRadians(90));
+    private final Pose end        = new Pose(108, 6,  Math.toRadians(0));
 
     private PathChain preload, alignIntake, intake1Path, outtake1;
-    private PathChain alignIntake2, toGate, outtake2, endPath;
+    private PathChain intake21, intake22, outtake2, endPath;
 
     @Override protected double getPIDFP()        { return 380; }
-    @Override protected GoalPos createGoalPos()  { return new GoalPos(0, 144, 15.5); }
+    @Override protected GoalPos createGoalPos()  { return new GoalPos(147, 144, 15.5); }
     @Override protected Pose getStartPose()       { return start; }
-    @Override protected double getFWVConstant()   { return 1025; } // tuned lower — was shooting over when tested
+    @Override protected double getFWVConstant()   { return 1162; }
 
     @Override
     public void init() {
@@ -55,44 +53,42 @@ public class BlueFarGate extends BaseAuto {
     public void buildPaths() {
         preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
-                .setConstantHeadingInterpolation(Math.toRadians(90))
-                .setBrakingStrength(0.5)
+                .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
                 .setGlobalDeceleration(0.9)
                 .build();
         alignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1))
-                .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
         intake1Path = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
         outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
-                .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(90))
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
-        alignIntake2 = follower.pathBuilder()
+        intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, preintake2))
-                .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+                .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(90))
                 .setGlobalDeceleration(0.9)
                 .build();
-        toGate = follower.pathBuilder()
-                .addPath(new BezierLine(preintake2, togate))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
-                .setBrakingStrength(0.5)
+        intake22 = follower.pathBuilder()
+                .addPath(new BezierLine(preintake2, intake2))
+                .setConstantHeadingInterpolation(Math.toRadians(90))
                 .setGlobalDeceleration(0.9)
                 .build();
         outtake2 = follower.pathBuilder()
-                .addPath(new BezierLine(togate, outtake))
-                .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(90))
+                .addPath(new BezierLine(intake2, outtake))
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
         endPath = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
-                .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
     }
@@ -105,7 +101,7 @@ public class BlueFarGate extends BaseAuto {
     @Override
     public void statePathUpdate() {
         List<AprilTagDetection> detectedTags = aprilTag.getDetections();
-        if (pathState != PathState.END && pathState != PathState.STOP && opmodeTimer.getElapsedTimeSeconds() < 29.5) {
+        if (pathState != PathState.END && pathState != PathState.STOP) {
             aiming(detectedTags);
         } else {
             turret.setTargetPosition(0);
@@ -128,29 +124,45 @@ public class BlueFarGate extends BaseAuto {
                 move(outtake1, () -> setPathState(PathState.SHOOT1));
                 break;
             case SHOOT1:
-                fixedshoot(PathState.ALIGNINTAKE2);
+                shoot(PathState.ALIGNINTAKE2);
                 break;
             case ALIGNINTAKE2:
-                move(alignIntake2, () -> setPathState(PathState.TOGATE));
+                move(intake21, () -> setPathState(PathState.WAIT));
                 break;
-            case TOGATE:
-                moveIntake(toGate, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE2));
+            case WAIT:
+                if (!moving) {
+                    follower.followPath(intake22, 0.35, true);
+                    intake.setPower(1);
+                    moving = true;
+                }
+                waitMs(500, () -> setPathState(PathState.INTAKE2));
+                break;
+            case INTAKE2:
+                if (!follower.isBusy() && actionTimer.getElapsedTime() > 1500) {
+                    intake.setPower(0);
+                    moving = false;
+                    setPathState(PathState.OUTTAKE2);
+                }
                 break;
             case OUTTAKE2:
                 move(outtake2, () -> setPathState(PathState.SHOOT2));
                 break;
             case SHOOT2:
-                fixedshoot(PathState.END);
+                shoot(PathState.END);
                 break;
             case END:
-                move(endPath, () -> setPathState(PathState.STOP));
-                turret.setTargetPosition(0);
+                move(endPath, () -> {
+                    if (visionPortal != null) {
+                        visionPortal.close();
+                        visionPortal = null;
+                    }
+                    setPathState(PathState.STOP);
+                });
                 break;
         }
     }
 
     public void shoot(PathState nextPath) {
-        targetV = toFWV(range);
         range = goalPos.findRange(xPos, yPos);
         flyWheel1.setVelocity(fwv);
         if (range < 40) {
@@ -170,42 +182,16 @@ public class BlueFarGate extends BaseAuto {
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
-            pathState = nextPath;
-            actionTimer.resetTimer();
-        }
-    }
-
-    public void fixedshoot(PathState nextPath) {
-        range = goalPos.findRange(xPos, yPos);
-        flyWheel1.setVelocity(fwv);
-        if (range < 40) {
-            flapPos = 0;
-        } else if (range < 95) {
-            flapPos = 0.2;
-        } else {
-            flapPos = 0.24;
-        }
-        flap.setPosition(flapPos);
-        double FWV = flyWheel1.getVelocity();
-        if (FWV >= fwv) {
-            stopper.setPosition(0.973);
-            intake.setPower(0.67);
-        }
-        if (actionTimer.getElapsedTime() > 5500) {
-            intake.setPower(0);
-            stopper.setPosition(0.9);
-            flyWheel1.setVelocity(0);
-            pathState = nextPath;
-            actionTimer.resetTimer();
+            setPathState(nextPath);
         }
     }
 
     public void aiming(List<AprilTagDetection> detectedTags) {
         for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
+            if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
 
-                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.6 / range)); // 2.6 in: camera is left of turret axis — re-measure if remounted
+                bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is left of turret axis — re-measure if remounted
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180 / 976;   // in degrees
                 bearing = Math.toRadians(bearing);
 
@@ -219,9 +205,9 @@ public class BlueFarGate extends BaseAuto {
         double turretTarget = goalPos.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
-        if (turretTarget > 200) {
+        if (turretTarget > 360 + 30) {
             turretTarget -= 360;
-        } else if (turretTarget < -200) {
+        } else if (turretTarget < 0 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget;

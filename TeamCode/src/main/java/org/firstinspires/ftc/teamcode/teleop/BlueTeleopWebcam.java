@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.testcode;
+package org.firstinspires.ftc.teamcode.teleop;
 
 import android.util.Size;
 
@@ -10,7 +10,6 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
@@ -22,8 +21,7 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.Exposur
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.config.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
 import org.firstinspires.ftc.vision.VisionPortal;
@@ -34,39 +32,31 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
-@TeleOp(name = "FW Testing", group = "TeleOp")
+@TeleOp(name = "Blue Teleop", group = "TeleOp") // SIDE RED/BLUE
 
-public class FlywheelTesting extends LinearOpMode {
+public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
     private DcMotorEx flyWheel1;
+    private DcMotorEx flyWheel2;
     private Servo stopper;
     private Servo flap;
 
-
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
+    private boolean gainSet = false;
     boolean fieldCentric = true;
+    private ElapsedTime opModeTimer = new ElapsedTime();
+
+    double hOffset = 0.25;
+    double feedPower = 1;
 
     boolean useWebcam = true;
     double intakePower = 0;
     double flywheelTarget = 0;
-    double stopperPos = 0.9;
     double flapPos = 0.2;
-
-    double shotFreq = 0;
-    double feedPower = 1;
-
-    double pidP = 200;
-    double pidD = 0;
-    double pidI = 0;
-    double pidF = 13.5;
-
-
-    PIDFCoefficients fwPID = new PIDFCoefficients(pidP, 0, 0,  pidF);
-
-
+    double stopperPos = 0.9;
     double turretPos;
     double flywheelVelocity1;
     double flywheelVelocity2;
@@ -75,11 +65,8 @@ public class FlywheelTesting extends LinearOpMode {
     double lastRange;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goalPos = new GoalPos(20,50, 29.5);
-    ElapsedTime clickTimer1 = new ElapsedTime();
-    ElapsedTime clickTimer2 = new ElapsedTime();
-    ElapsedTime shootDelay = new ElapsedTime();
-    boolean atSpeed = false;
+    GoalPos goal = new GoalPos(30,-50, 15.5); // SIDE 50/-50
+
     private Follower follower;
     private boolean holding = false;
     private boolean a2Press = false;
@@ -87,20 +74,23 @@ public class FlywheelTesting extends LinearOpMode {
     private double xEst;
     private double yEst;
     private double range;
+    private double height;
     private double xPos = 0, yPos = 0, heading = 0;
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
-    private final double startingAngle = 0; // angle from straight forward (counterclockwise)
-    private final double lowLimit = 0;
-    private final double highLimit = 1865;
+    private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
+    private final double lowLimit = -1523; //495/90
+    private final double highLimit = 410  ;
+    double pidP = 400;
+    double pidD = 0;
+    double pidI = 0;
+    double pidF = 13.5;
 
+
+    PIDFCoefficients fwPID = new PIDFCoefficients(pidP, pidI, pidD,  pidF);
 
     @Override
     public void runOpMode() {
-        if (visionPortal != null) {
-            visionPortal.close();
-            sleep(250);
-        }
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap, gamepad1, telemetry, false, fieldCentric);
         follower = Constants.createFollower(hardwareMap);
@@ -112,7 +102,12 @@ public class FlywheelTesting extends LinearOpMode {
         flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
         flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
         flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-        flyWheel1.setPIDFCoefficients(DcMotorEx.RunMode.RUN_USING_ENCODER, fwPID);
+        flyWheel1.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
+
+        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
+        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        flyWheel2.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
@@ -125,26 +120,28 @@ public class FlywheelTesting extends LinearOpMode {
         stopper.setDirection(Servo.Direction.FORWARD);
 
         flap = hardwareMap.get(Servo.class, "flap");
+        flap.setDirection(Servo.Direction.FORWARD);
 
 
         initWebcam();
         waitForStart();
-
-        new Thread(() -> {
-            try {
-                cameraControls();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
+        opModeTimer.reset();
 
         while (opModeIsActive()) {
             follower.update();
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
+            range = goal.findRange(xPos, yPos);
+            height = goal.getZ() + 14;
+//            if(!gainSet && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
+//                cameraControls();
+//            }
 
-            List<AprilTagDetection> detectedTags = aprilTag.getDetections();
+            if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
+                List<AprilTagDetection> detectedTags = aprilTag.getDetections();
+                aiming(detectedTags);
+            }
 
             // all the movement controls.
             if(!holding){
@@ -153,14 +150,15 @@ public class FlywheelTesting extends LinearOpMode {
 
             turretPos = turret.getCurrentPosition();
 
-            flywheelVelocity1 = flyWheel1.getVelocity();
+            flywheelVelocity1 = -flyWheel1.getVelocity();
+            flywheelVelocity2 = -flyWheel2.getVelocity();
             setIdlePower();
 
             if(!gamepad1.x){
                 setIntakePower();
             }
 
-            aiming(detectedTags);
+
 
             if(!(gamepad1.left_trigger > 0.1 || gamepad1.a)){
                 firing();
@@ -170,12 +168,17 @@ public class FlywheelTesting extends LinearOpMode {
             brake();
 
             intake.setPower(intakePower);
+            flyWheel1.setVelocity(flywheelTarget);
+            flyWheel2.setVelocity(flywheelTarget);
+            stopper.setPosition(stopperPos);
 
             botTelemetry();
 
         }
-        visionPortal.close();
-
+        if (visionPortal != null) {
+            visionPortal.close();
+            visionPortal = null;
+        }
     }
 
 
@@ -187,9 +190,9 @@ public class FlywheelTesting extends LinearOpMode {
 
         // Create the AprilTag processor.
         aprilTag = new AprilTagProcessor.Builder()
-                .setDrawAxes(true)
-                .setDrawCubeProjection(true)
-                .setDrawTagOutline(true)
+                .setDrawAxes(false)
+                .setDrawCubeProjection(false)
+                .setDrawTagOutline(false)
                 .setOutputUnits(DistanceUnit.INCH, AngleUnit.DEGREES)
                 .build();
         // Decimation = 1 ..  Detect 2" Tag from 10 feet away at 10 Frames per second
@@ -223,17 +226,34 @@ public class FlywheelTesting extends LinearOpMode {
 
 
 
-    public void cameraControls() throws InterruptedException {
-        Thread.sleep(3000);
-        if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
-            // exposure and gain
-            ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
-            GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
+    public void cameraControls(){
 
-            exposureControl.setMode(ExposureControl.Mode.Manual);
-            exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
-            gainControl.setGain(100);
+        ExposureControl exposureControl =
+                visionPortal.getCameraControl(ExposureControl.class);
+
+        GainControl gainControl =
+                visionPortal.getCameraControl(GainControl.class);
+
+        if(exposureControl == null || gainControl == null){
+            return;
         }
+
+        exposureControl.setMode(ExposureControl.Mode.Manual);
+
+        sleep(50);
+
+        boolean exposureOK =
+                exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
+
+        sleep(20);
+
+        boolean gainOK =
+                gainControl.setGain(100);
+
+        gainSet = exposureOK && gainOK;
+
+        telemetry.addData("Exposure OK", exposureOK);
+        telemetry.addData("Gain OK", gainOK);
     }
 
 
@@ -254,7 +274,9 @@ public class FlywheelTesting extends LinearOpMode {
 
     public void setIntakePower(){
         if (gamepad1.left_trigger > 0.1) {
-            intakePower = 0.8;
+            flywheelTarget = 0;
+            stopperPos = 0.9;
+            intakePower = 1;
         } else if(gamepad1.a){
             intakePower = -0.5;
         }
@@ -266,26 +288,17 @@ public class FlywheelTesting extends LinearOpMode {
 
     public void aiming(List<AprilTagDetection> detectedTags){
         for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
+            if (detection.metadata != null && detection.id == 20) { // SIDE 24/20
                 camRange = detection.ftcPose.range + camOffsetX;
-                bearing = detection.ftcPose.bearing + Math.atan(1/range);
+                bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(hOffset/range)); // SIDE +/-
                 elevation = detection.ftcPose.elevation;
-//                bearing = Math.toRadians(detection.ftcPose.bearing);
-//                double xCam = camRange * Math.cos(bearing); //cartesian coordinates in cam frame of reference
-//                double yCam = camRange * Math.sin(bearing) - camOffset;
-//                range = Math.hypot(xCam, yCam); // corrected range
-//                bearing = Math.toDegrees(Math.atan2(yCam, xCam)); // corrected bearing
 
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
                 bearing = Math.toRadians(bearing);
-                if(!gamepad1.x){
-                    goalPos.update(0.08, xPos, yPos, bearing, elevation, camRange);
-                }
-                xEst = xPos + camRange * Math.cos(bearing);
-                yEst = yPos + camRange * Math.sin(bearing);
+                elevation = Math.toRadians(elevation);
+                goal.update(0.08, xPos, yPos, bearing, elevation, camRange);
                 if(!hasEst){
-                    goalPos.setX(xEst);
-                    goalPos.setY(yEst);
+                    goal.update(1, xPos, yPos, bearing, elevation, camRange);
                 }
                 hasEst = true;
                 break;
@@ -293,19 +306,19 @@ public class FlywheelTesting extends LinearOpMode {
         }
 
         //required turret angle
-        double turretTarget = goalPos.findBearing(xPos, yPos)
+        double turretTarget = goal.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading);
-        if (turretTarget > 360 + 20) { //wrap angle
+        if (turretTarget > 180 + 30) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < 0 - 20) {
+        } else if (turretTarget < -180 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
         // hardware limit
         turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
 
-        if (false){
+        if (gamepad2.a){
             double turretPower = 0;
             if(!a2Press){
                 turret.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
@@ -318,14 +331,14 @@ public class FlywheelTesting extends LinearOpMode {
             }else{
                 turretPower = 0;
             }
-            if ((turretPower > 0 && turretPos < highLimit) || (turretPower < 0 && turretPos > lowLimit)) { //left, right limits
-                turret.setPower(turretPower);
-            } else {
-                turret.setPower(0);   // stop at limits
+            if(gamepad2.y){
+                turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+                turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             }
+            turret.setPower(turretPower);
             if(hasEst){
-                goalPos.setX(xEst);
-                goalPos.setY(yEst);
+                goal.setX(xEst);
+                goal.setY(yEst);
             }
         }else{ // manual aiming
             if(a2Press){
@@ -339,36 +352,43 @@ public class FlywheelTesting extends LinearOpMode {
 
 
     public void firing(){
-        range = goalPos.findRange(xPos, yPos);
-        flapPos = range/600;
-        flap.setPosition(flapPos);
-        if(gamepad2.dpad_up && clickTimer1.seconds() > 0.05){
-            flywheelTarget += 50;
-            clickTimer1.reset();
-        } else if (gamepad2.dpad_down && clickTimer1.seconds() > 0.05) {
-            flywheelTarget -= 50;
-            clickTimer1.reset();
+        //setting flap position
+        //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
+        if (range<45) {
+            flapPos = 0;
+            feedPower = 1;
+            hOffset = -3.5; // SIDE -1.5/-3.5
+        }else if (range < 95){
+            flapPos = 0.195;
+            feedPower = 1;
+            hOffset = -3.5; // SIDE -1.5/-3.5
+        }else{
+            flapPos = 0.24;
+            feedPower = 0.8;
+            hOffset = -0.5; // SIDE 2.5/-0.5
         }
+        flap.setPosition(flapPos);
+
 
         if (gamepad1.x) {
-            flyWheel1.setVelocity(flywheelTarget);
+
+            //setting target velocity
+            flywheelTarget = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
+
+            if (range< 45){
+                flywheelTarget-=100;
+            }
+
+
             if(flywheelVelocity1 >= flywheelTarget){
-                if(!atSpeed) {
-                    atSpeed = true;
-                    shootDelay.reset();
-                }
-                if (shootDelay.seconds() > shotFreq && atSpeed) {
-                    stopperPos = 0.973; // open
-                    intakePower = feedPower;
-                }
+                stopperPos = 0.973; // open
+                intakePower = feedPower;
             }
         } else {
-            atSpeed = false;
             intakePower = 0;
             stopperPos = 0.9; // closed
-            flyWheel1.setVelocity(0);
+            flywheelTarget = idlePower;
         }
-        stopper.setPosition(stopperPos);
     }
 
 
@@ -379,7 +399,7 @@ public class FlywheelTesting extends LinearOpMode {
                         .addPath(new BezierLine(follower.getPose(), new Pose(xPos + 0.00000001, yPos, heading)))
                         .setConstantHeadingInterpolation(heading)
                         .build();
-                follower.followPath(hold, true);
+                follower.followPath(hold,0.65, true);
                 holding = true;
             }
         }else{
@@ -391,18 +411,14 @@ public class FlywheelTesting extends LinearOpMode {
     }
 
     public void botTelemetry(){
-        telemetry.addData("Range", range);
-        telemetry.addData("FW1 target", flywheelTarget);
-
-        telemetry.addData("\nFW1 vel", flywheelVelocity1);
-        telemetry.addData("flap pos", flapPos);
-        telemetry.addData("coefficients", flyWheel1.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER) );
-
-//        telemetry.addData("robot angle",Math.toDegrees(follower.getPose().getHeading()));
-//                follower.getPose().getX(), follower.getPose().getY()
-//        ) - Math.toDegrees(follower.getPose().getHeading())));
-//        telemetry.addData("target bearing", (goalPos.findBearing(follower.getPose().getX(), follower.getPose().getY())));
+        telemetry.addData("gainSet", gainSet);
+        telemetry.addData("goal est", goal);
+        telemetry.addData("turret pos", turret.getCurrentPosition());
+        telemetry.addData("Cam Status", visionPortal.getCameraState());
+        telemetry.addData("range", range);
+        telemetry.addData("FWV", flywheelVelocity1);
         telemetry.update();
+
 
     }
 

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Autos;
+package org.firstinspires.ftc.teamcode.autos;
 
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
@@ -15,15 +15,15 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import java.util.Arrays;
 import java.util.List;
 
-@Autonomous(name = "Blue Close Gate", group = "Autos")
-public class BlueCloseGate extends BaseAuto {
+@Autonomous(name = "Red Close Gate", group = "Autos")
+public class RedCloseGate extends BaseAuto {
     private DcMotorEx flyWheel2;
     private boolean shooting = false;
     private double minFWVSinceOpen = Double.MAX_VALUE;
     private long stopperOpenTime = 0;
-    private final double lowLimit = 0;
-    private final double highLimit = 1865;
-    private final double braking = 0.9;
+    private final double lowLimit = -990;
+    private final double highLimit = 850;
+    private final double braking = 0.8;
 
     private enum PathState {
         PRELOAD, SHOOTPRE,
@@ -35,25 +35,25 @@ public class BlueCloseGate extends BaseAuto {
 
     private PathState pathState;
 
-    private final Pose start      = new Pose(14, 142,  Math.toRadians(139));
-    private final Pose outtakePre = new Pose(40, 105,  Math.toRadians(135));
-    private final Pose outtake    = new Pose(38, 105,  Math.toRadians(180));
-    private final Pose intake1    = new Pose(11, 99,   Math.toRadians(180));
-    private final Pose gatePoint  = new Pose(10, 93,   Math.toRadians(180));
-    private final Pose gate       = new Pose(4.5, 93,  Math.toRadians(180));
-    private final Pose intake2p1  = new Pose(38, 77,   Math.toRadians(180));
-    private final Pose intake2p2  = new Pose(10, 77 - 2, Math.toRadians(180));
-    private final Pose intake3p1  = new Pose(38, 58,   Math.toRadians(180));
-    private final Pose intake3p2  = new Pose(10, 54 - 2, Math.toRadians(180));
-    private final Pose end        = new Pose(25, 87,   Math.toRadians(180));
+    private final Pose start      = new Pose(120, 133,  Math.toRadians(0));
+    private final Pose outtakePre = new Pose(93,  90,   Math.toRadians(0));
+    private final Pose outtake    = new Pose(100, 90,   Math.toRadians(0));
+    private final Pose intake1    = new Pose(126, 88,   Math.toRadians(0));
+    private final Pose gatePoint  = new Pose(122, 78,   Math.toRadians(0));
+    private final Pose gate       = new Pose(129, 80,   Math.toRadians(0));
+    private final Pose intake2p1  = new Pose(105, 67,   Math.toRadians(0));
+    private final Pose intake2p2  = new Pose(127, 67 - 2, Math.toRadians(0));
+    private final Pose intake3p1  = new Pose(105, 41,   Math.toRadians(0));
+    private final Pose intake3p2  = new Pose(128.5, 41, Math.toRadians(0));
+    private final Pose end        = new Pose(108, 77,   Math.toRadians(0));
 
     private PathChain preload, intake1Path, openGate, outtake1;
     private PathChain intake21, intake22, outtake2;
     private PathChain intake31, intake32, outtake3;
     private PathChain endPath;
 
-    @Override protected double getPIDFP()        { return 380; } // tuned lower than Red (400) — verify both sides use this intentionally
-    @Override protected GoalPos createGoalPos()  { return new GoalPos(0, 144, 15.5); }
+    @Override protected double getPIDFP()        { return 400; }
+    @Override protected GoalPos createGoalPos()  { return new GoalPos(147, 144, 15.5); }
     @Override protected Pose getStartPose()       { return start; }
     @Override protected double getFWVConstant()   { return 1162; }
 
@@ -77,58 +77,57 @@ public class BlueCloseGate extends BaseAuto {
                 .build();
         intake1Path = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
         openGate = follower.pathBuilder()
                 .addPath(new BezierCurve(Arrays.asList(intake1, gatePoint, gate)))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         outtake1 = follower.pathBuilder()
-                .addPath(new BezierLine(intake1, outtake))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .addPath(new BezierLine(gate, outtake))
+                .setLinearHeadingInterpolation(gate.getHeading(), outtake.getHeading())
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
-                .setBrakingStrength(braking)
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
         intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p1, intake2p2))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
         outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         intake32 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p1, intake3p2))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
         outtake3 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p2, outtake))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         endPath = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
     }
@@ -141,7 +140,7 @@ public class BlueCloseGate extends BaseAuto {
     @Override
     public void statePathUpdate() {
         telemetry.update();
-        if (pathState != PathState.END && pathState != PathState.STOP && opmodeTimer.getElapsedTimeSeconds() < 29.3) {
+        if (pathState != PathState.END && pathState != PathState.STOP && opmodeTimer.getElapsedTimeSeconds() < 29.5) {
             List<AprilTagDetection> detectedTags = aprilTag.getDetections();
             aiming(detectedTags);
         } else {
@@ -157,7 +156,7 @@ public class BlueCloseGate extends BaseAuto {
                 shoot(PathState.INTAKE1);
                 break;
             case INTAKE1:
-                moveIntake(intake1Path, 0.37, true, 50, () -> setPathState(PathState.OPENGATE));
+                moveIntake(intake1Path, 0.5, false, 50, () -> setPathState(PathState.OPENGATE));
                 break;
             case OPENGATE:
                 move(openGate, () -> setPathState(PathState.OUTTAKE1));
@@ -172,7 +171,7 @@ public class BlueCloseGate extends BaseAuto {
                 move(intake21, () -> setPathState(PathState.INTAKE22));
                 break;
             case INTAKE22:
-                moveIntake(intake22, 0.37, true, 50, () -> setPathState(PathState.OUTTAKE2));
+                moveIntake(intake22, 0.5, false, 50, () -> setPathState(PathState.OUTTAKE2));
                 break;
             case OUTTAKE2:
                 move(outtake2, () -> setPathState(PathState.SHOOT2));
@@ -184,7 +183,7 @@ public class BlueCloseGate extends BaseAuto {
                 move(intake31, () -> setPathState(PathState.INTAKE32));
                 break;
             case INTAKE32:
-                moveIntake(intake32, 0.37, true, 50, () -> setPathState(PathState.OUTTAKE3));
+                moveIntake(intake32, 0.5, false, 50, () -> setPathState(PathState.OUTTAKE3));
                 break;
             case OUTTAKE3:
                 move(outtake3, () -> setPathState(PathState.SHOOT3));
@@ -199,8 +198,6 @@ public class BlueCloseGate extends BaseAuto {
     }
 
     public void shoot(PathState nextPath) {
-        // range also updated in aiming(); kept here as fallback when aiming() is skipped (t > 29.3 s)
-        range = goalPos.findRange(xPos, yPos);
         double targetV = toFWV(range);
         flyWheel1.setVelocity(targetV);
         flyWheel2.setVelocity(targetV);
@@ -212,7 +209,7 @@ public class BlueCloseGate extends BaseAuto {
             flapPos = 0.24;
         }
         flap.setPosition(flapPos);
-        double FWV = Math.min(flyWheel1.getVelocity(), flyWheel2.getVelocity());
+        double FWV = flyWheel1.getVelocity();
         if (FWV >= targetV && !shooting) {
             stopper.setPosition(0.973);
             intake.setPower(1);
@@ -242,10 +239,10 @@ public class BlueCloseGate extends BaseAuto {
         range = goalPos.findRange(xPos, yPos);
         if (gainSet) {
             for (AprilTagDetection detection : detectedTags) {
-                if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
+                if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
                     camRange = detection.ftcPose.range + camOffsetX;
 
-                    bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is right of turret axis — re-measure if remounted
+                    bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is left of turret axis — re-measure if remounted
                     bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180 / 976;   // in degrees
                     bearing = Math.toRadians(bearing);
 
@@ -260,10 +257,10 @@ public class BlueCloseGate extends BaseAuto {
         double turretTarget = goalPos.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
-        // Blue turret homes at 0 ticks = one side of range; wraps 0-360° → limits [0, 1865] ticks
-        if (turretTarget > 360 + 30) {
+        // Red turret homes at 0 ticks = forward center; range is ±180° → limits [-990, 850] ticks
+        if (turretTarget > 180 + 30) {
             turretTarget -= 360;
-        } else if (turretTarget < 0 - 30) {
+        } else if (turretTarget < -180 - 30) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget;

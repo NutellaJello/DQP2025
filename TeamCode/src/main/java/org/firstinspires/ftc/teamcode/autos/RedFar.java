@@ -1,9 +1,10 @@
-package org.firstinspires.ftc.teamcode.Autos;
+package org.firstinspires.ftc.teamcode.autos;
 
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
@@ -11,8 +12,9 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 import java.util.List;
 
-@Autonomous(name = "Red Far Gate", group = "Autos")
-public class RedFarGate extends BaseAuto {
+@Disabled
+@Autonomous(name = "Red Far", group = "Autos")
+public class RedFar extends BaseAuto {
     private final double fwv = 1878;
     private final double lowLimit = 0;
     private final double highLimit = 1865;
@@ -20,23 +22,25 @@ public class RedFarGate extends BaseAuto {
     private enum PathState {
         PRELOAD, SHOOTPRE,
         ALIGNINTAKE1, INTAKE1, OUTTAKE1, SHOOT1,
-        ALIGNINTAKE2, WAIT, INTAKE2, OUTTAKE2, SHOOT2,
+        INTAKE21, INTAKE22, OUTTAKE2, SHOOT2,
         END, STOP
     }
 
     private PathState pathState;
 
-    private final Pose start      = new Pose(90, 0,   Math.toRadians(0));
-    private final Pose outtakePre = new Pose(90, 10,  Math.toRadians(0));
-    private final Pose outtake    = new Pose(90, 10,  Math.toRadians(0));
-    private final Pose preintake1 = new Pose(120, 5,  Math.toRadians(0));
-    private final Pose intake1    = new Pose(136, 0,  Math.toRadians(0));
-    private final Pose preintake2 = new Pose(120, 8,  Math.toRadians(90));
-    private final Pose intake2    = new Pose(138, 3,  Math.toRadians(90));
-    private final Pose end        = new Pose(108, 6,  Math.toRadians(0));
+    private final Pose start      = new Pose(90, 0,  Math.toRadians(0));
+    private final Pose outtakePre = new Pose(90, 10, Math.toRadians(0));
+    private final Pose outtake    = new Pose(90, 10, Math.toRadians(0));
+    private final Pose preintake1 = new Pose(120, 5, Math.toRadians(0));
+    private final Pose intake1    = new Pose(136, 0, Math.toRadians(0));
+//    private final Pose preintake2 = new Pose(120, 5,  Math.toRadians(0));
+//    private final Pose intake2    = new Pose(136, 0,  Math.toRadians(0));
+//    private final Pose intake2p1  = new Pose(90,  52, Math.toRadians(0));
+//    private final Pose intake2p2  = new Pose(120, 57, Math.toRadians(0));
+    private final Pose end        = new Pose(108, 6, Math.toRadians(0));
 
-    private PathChain preload, alignIntake, intake1Path, outtake1;
-    private PathChain intake21, intake22, outtake2, endPath;
+    private PathChain preload, alignIntake, intake1Path, outtake1, endPath;
+//    private PathChain intake21, intake22, outtake2;
 
     @Override protected double getPIDFP()        { return 380; }
     @Override protected GoalPos createGoalPos()  { return new GoalPos(147, 144, 15.5); }
@@ -71,21 +75,18 @@ public class RedFarGate extends BaseAuto {
                 .setConstantHeadingInterpolation(0)
                 .setGlobalDeceleration(0.9)
                 .build();
-        intake21 = follower.pathBuilder()
-                .addPath(new BezierLine(outtake, preintake2))
-                .setLinearHeadingInterpolation(Math.toRadians(0), Math.toRadians(90))
-                .setGlobalDeceleration(0.9)
-                .build();
-        intake22 = follower.pathBuilder()
-                .addPath(new BezierLine(preintake2, intake2))
-                .setConstantHeadingInterpolation(Math.toRadians(90))
-                .setGlobalDeceleration(0.9)
-                .build();
-        outtake2 = follower.pathBuilder()
-                .addPath(new BezierLine(intake2, outtake))
-                .setConstantHeadingInterpolation(0)
-                .setGlobalDeceleration(0.9)
-                .build();
+//        intake21 = follower.pathBuilder()
+//                .addPath(new BezierLine(outtake, intake2p1))
+//                .setConstantHeadingInterpolation(0)
+//                .build();
+//        intake22 = follower.pathBuilder()
+//                .addPath(new BezierLine(intake2p1, intake2p2))
+//                .setConstantHeadingInterpolation(0)
+//                .build();
+//        outtake2 = follower.pathBuilder()
+//                .addPath(new BezierLine(intake2p2, outtake))
+//                .setConstantHeadingInterpolation(0)
+//                .build();
         endPath = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setConstantHeadingInterpolation(0)
@@ -111,7 +112,6 @@ public class RedFarGate extends BaseAuto {
                 move(preload, () -> setPathState(PathState.SHOOTPRE));
                 break;
             case SHOOTPRE:
-                if (!gainSet && opmodeTimer.getElapsedTimeSeconds() < 3.0) { break; }
                 shoot(PathState.ALIGNINTAKE1);
                 break;
             case ALIGNINTAKE1:
@@ -124,40 +124,22 @@ public class RedFarGate extends BaseAuto {
                 move(outtake1, () -> setPathState(PathState.SHOOT1));
                 break;
             case SHOOT1:
-                shoot(PathState.ALIGNINTAKE2);
-                break;
-            case ALIGNINTAKE2:
-                move(intake21, () -> setPathState(PathState.WAIT));
-                break;
-            case WAIT:
-                if (!moving) {
-                    follower.followPath(intake22, 0.35, true);
-                    intake.setPower(1);
-                    moving = true;
-                }
-                waitMs(500, () -> setPathState(PathState.INTAKE2));
-                break;
-            case INTAKE2:
-                if (!follower.isBusy() && actionTimer.getElapsedTime() > 1500) {
-                    intake.setPower(0);
-                    moving = false;
-                    setPathState(PathState.OUTTAKE2);
-                }
-                break;
-            case OUTTAKE2:
-                move(outtake2, () -> setPathState(PathState.SHOOT2));
-                break;
-            case SHOOT2:
                 shoot(PathState.END);
                 break;
+//            case INTAKE21:
+//                move(intake21, () -> setPathState(PathState.INTAKE22));
+//                break;
+//            case INTAKE22:
+//                moveIntake(intake22, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE2));
+//                break;
+//            case OUTTAKE2:
+//                move(outtake2, () -> setPathState(PathState.SHOOT2));
+//                break;
+//            case SHOOT2:
+//                shoot(PathState.END);
+//                break;
             case END:
-                move(endPath, () -> {
-                    if (visionPortal != null) {
-                        visionPortal.close();
-                        visionPortal = null;
-                    }
-                    setPathState(PathState.STOP);
-                });
+                move(endPath, () -> setPathState(PathState.STOP));
                 break;
         }
     }
@@ -182,7 +164,8 @@ public class RedFarGate extends BaseAuto {
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
-            setPathState(nextPath);
+            pathState = nextPath;
+            actionTimer.resetTimer();
         }
     }
 

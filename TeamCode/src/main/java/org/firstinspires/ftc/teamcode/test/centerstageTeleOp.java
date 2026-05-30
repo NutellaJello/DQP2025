@@ -1,5 +1,5 @@
 //ftc package yay!
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.test;
 
 //importing needed things
 import com.qualcomm.hardware.limelightvision.LLResult;

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Autos;
+package org.firstinspires.ftc.teamcode.autos;
 
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -15,8 +15,8 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import java.util.List;
 
 @Disabled
-@Autonomous(name = "Red Close", group = "Autos")
-public class RedClose extends BaseAuto {
+@Autonomous(name = "Blue Close", group = "Autos")
+public class BlueClose extends BaseAuto {
     private DcMotorEx flyWheel2;
     private boolean shooting = false;
     private double minFWVSinceOpen = Double.MAX_VALUE;
@@ -35,23 +35,23 @@ public class RedClose extends BaseAuto {
 
     private PathState pathState;
 
-    private final Pose start      = new Pose(130, 142, Math.toRadians(-139));
-    private final Pose outtakePre = new Pose(93,  90,  Math.toRadians(0));
-    private final Pose outtake    = new Pose(100, 90,  Math.toRadians(0));
-    private final Pose intake1    = new Pose(125, 88,  Math.toRadians(0));
-    private final Pose intake2p1  = new Pose(100, 67,  Math.toRadians(0));
-    private final Pose intake2p2  = new Pose(128, 67 - 2, Math.toRadians(0));
-    private final Pose intake3p1  = new Pose(100, 39,  Math.toRadians(0));
-    private final Pose intake3p2  = new Pose(128, 39,  Math.toRadians(0));
-    private final Pose end        = new Pose(112, 77,  Math.toRadians(0));
+    private final Pose start      = new Pose(14, 142, Math.toRadians(139));
+    private final Pose outtakePre = new Pose(40, 105, Math.toRadians(135));
+    private final Pose outtake    = new Pose(40, 105, Math.toRadians(180));
+    private final Pose intake1    = new Pose(6,  105, Math.toRadians(180));
+    private final Pose intake2p1  = new Pose(40, 77,  Math.toRadians(180));
+    private final Pose intake2p2  = new Pose(4,  77 - 2, Math.toRadians(180));
+    private final Pose intake3p1  = new Pose(40, 58,  Math.toRadians(180));
+    private final Pose intake3p2  = new Pose(1,  54 - 2, Math.toRadians(180));
+    private final Pose end        = new Pose(25, 85,  Math.toRadians(180));
 
     private PathChain preload, intake1Path, outtake1;
     private PathChain intake21, intake22, outtake2;
     private PathChain intake31, intake32, outtake3;
     private PathChain endPath;
 
-    @Override protected double getPIDFP()        { return 380; } // tuned lower than RedClose15/RedCloseGate (400) — verify intentional
-    @Override protected GoalPos createGoalPos()  { return new GoalPos(147, 144, 15.5); }
+    @Override protected double getPIDFP()        { return 380; } // tuned lower than gate autos (400) — verify intentional
+    @Override protected GoalPos createGoalPos()  { return new GoalPos(0, 144, 15.5); }
     @Override protected Pose getStartPose()       { return start; }
     @Override protected double getFWVConstant()   { return 1162; }
 
@@ -63,9 +63,6 @@ public class RedClose extends BaseAuto {
         flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
         flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel2.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, fwPID);
-        shooting = false;
-        minFWVSinceOpen = Double.MAX_VALUE;
-        stopperOpenTime = 0;
     }
 
     @Override
@@ -78,50 +75,52 @@ public class RedClose extends BaseAuto {
                 .build();
         intake1Path = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
         outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p1, intake2p2))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
         outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
+                .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         intake32 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p1, intake3p2))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
         outtake3 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p2, outtake))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
         endPath = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
     }
@@ -237,10 +236,10 @@ public class RedClose extends BaseAuto {
         range = goalPos.findRange(xPos, yPos);
         if (gainSet) {
             for (AprilTagDetection detection : detectedTags) {
-                if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
+                if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
                     camRange = detection.ftcPose.range + camOffsetX;
 
-                    bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is left of turret axis — re-measure if remounted
+                    bearing = detection.ftcPose.bearing - Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is right of turret axis — re-measure if remounted
                     bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180 / 976;   // in degrees
                     bearing = Math.toRadians(bearing);
 

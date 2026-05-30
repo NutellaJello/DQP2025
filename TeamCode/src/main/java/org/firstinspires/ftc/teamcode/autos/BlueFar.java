@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Autos;
+package org.firstinspires.ftc.teamcode.autos;
 
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -7,15 +7,20 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.ExposureControl;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
+import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Disabled
-@Autonomous(name = "Red Far", group = "Autos")
-public class RedFar extends BaseAuto {
-    private final double fwv = 1878;
+@Autonomous(name = "Blue Far", group = "Autos")
+public class BlueFar extends BaseAuto {
+    private double targetV = 0;
+    private final double fwv = 1885;
     private final double lowLimit = 0;
     private final double highLimit = 1865;
 
@@ -28,24 +33,19 @@ public class RedFar extends BaseAuto {
 
     private PathState pathState;
 
-    private final Pose start      = new Pose(90, 0,  Math.toRadians(0));
-    private final Pose outtakePre = new Pose(90, 10, Math.toRadians(0));
-    private final Pose outtake    = new Pose(90, 10, Math.toRadians(0));
-    private final Pose preintake1 = new Pose(120, 5, Math.toRadians(0));
-    private final Pose intake1    = new Pose(136, 0, Math.toRadians(0));
-//    private final Pose preintake2 = new Pose(120, 5,  Math.toRadians(0));
-//    private final Pose intake2    = new Pose(136, 0,  Math.toRadians(0));
-//    private final Pose intake2p1  = new Pose(90,  52, Math.toRadians(0));
-//    private final Pose intake2p2  = new Pose(120, 57, Math.toRadians(0));
-    private final Pose end        = new Pose(108, 6, Math.toRadians(0));
+    private final Pose start      = new Pose(56, 0,  Math.toRadians(90));
+    private final Pose outtakePre = new Pose(56, 10, Math.toRadians(90));
+    private final Pose outtake    = new Pose(56, 10, Math.toRadians(90));
+    private final Pose preintake1 = new Pose(26, 7,  Math.toRadians(180));
+    private final Pose intake1    = new Pose(15, 7,  Math.toRadians(180));
+    private final Pose end        = new Pose(44, 7,  Math.toRadians(180));
 
     private PathChain preload, alignIntake, intake1Path, outtake1, endPath;
-//    private PathChain intake21, intake22, outtake2;
 
     @Override protected double getPIDFP()        { return 380; }
-    @Override protected GoalPos createGoalPos()  { return new GoalPos(147, 144, 15.5); }
+    @Override protected GoalPos createGoalPos()  { return new GoalPos(0, 144, 15.5); }
     @Override protected Pose getStartPose()       { return start; }
-    @Override protected double getFWVConstant()   { return 1162; }
+    @Override protected double getFWVConstant()   { return 1025; } // tuned lower — was shooting over when tested
 
     @Override
     public void init() {
@@ -54,42 +54,69 @@ public class RedFar extends BaseAuto {
     }
 
     @Override
+    public void start() {
+        opmodeTimer.resetTimer();
+        actionTimer.resetTimer();
+        // Camera controls run in a background thread with a 3 s sleep
+        // to avoid blocking the loop thread while waiting for STREAMING state.
+        new Thread(() -> cameraControls()).start();
+    }
+
+    /** Overrides BaseAuto: uses Thread.sleep(3000) instead of opmodeTimer guard. */
+    @Override
+    public void cameraControls() {
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+        if (visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING) {
+            ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
+            GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
+            exposureControl.setMode(ExposureControl.Mode.Manual);
+            exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
+            gainControl.setGain(100);
+            gainSet = true;
+        }
+    }
+
+    /** Overrides BaseAuto: camera controls handled by background thread in start(), not here. */
+    @Override
+    public void loop() {
+        follower.update();
+        xPos = follower.getPose().getX();
+        yPos = follower.getPose().getY();
+        heading = follower.getPose().getHeading();
+        turretPos = turret.getCurrentPosition();
+        statePathUpdate();
+    }
+
+    @Override
     public void buildPaths() {
         preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
-                .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
+                .setConstantHeadingInterpolation(Math.toRadians(90))
                 .setGlobalDeceleration(0.9)
                 .build();
         alignIntake = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, preintake1))
-                .setConstantHeadingInterpolation(0)
+                .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
         intake1Path = follower.pathBuilder()
                 .addPath(new BezierLine(preintake1, intake1))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
         outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
-                .setConstantHeadingInterpolation(0)
+                .setLinearHeadingInterpolation(Math.toRadians(180), Math.toRadians(90))
                 .setGlobalDeceleration(0.9)
                 .build();
-//        intake21 = follower.pathBuilder()
-//                .addPath(new BezierLine(outtake, intake2p1))
-//                .setConstantHeadingInterpolation(0)
-//                .build();
-//        intake22 = follower.pathBuilder()
-//                .addPath(new BezierLine(intake2p1, intake2p2))
-//                .setConstantHeadingInterpolation(0)
-//                .build();
-//        outtake2 = follower.pathBuilder()
-//                .addPath(new BezierLine(intake2p2, outtake))
-//                .setConstantHeadingInterpolation(0)
-//                .build();
         endPath = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
-                .setConstantHeadingInterpolation(0)
+                .setLinearHeadingInterpolation(Math.toRadians(90), Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
     }
@@ -124,27 +151,42 @@ public class RedFar extends BaseAuto {
                 move(outtake1, () -> setPathState(PathState.SHOOT1));
                 break;
             case SHOOT1:
-                shoot(PathState.END);
+                fixedshoot(PathState.END);
                 break;
-//            case INTAKE21:
-//                move(intake21, () -> setPathState(PathState.INTAKE22));
-//                break;
-//            case INTAKE22:
-//                moveIntake(intake22, 0.35, true, 1500, () -> setPathState(PathState.OUTTAKE2));
-//                break;
-//            case OUTTAKE2:
-//                move(outtake2, () -> setPathState(PathState.SHOOT2));
-//                break;
-//            case SHOOT2:
-//                shoot(PathState.END);
-//                break;
             case END:
                 move(endPath, () -> setPathState(PathState.STOP));
+                turret.setTargetPosition(0);
                 break;
         }
     }
 
     public void shoot(PathState nextPath) {
+        targetV = toFWV(range);
+        range = goalPos.findRange(xPos, yPos);
+        flyWheel1.setVelocity(fwv);
+        if (range < 40) {
+            flapPos = 0;
+        } else if (range < 95) {
+            flapPos = 0.2;
+        } else {
+            flapPos = 0.24;
+        }
+        flap.setPosition(flapPos);
+        double FWV = flyWheel1.getVelocity();
+        if (FWV >= fwv) {
+            stopper.setPosition(0.973);
+            intake.setPower(0.67);
+        }
+        if (actionTimer.getElapsedTime() > 5500) {
+            intake.setPower(0);
+            stopper.setPosition(0.9);
+            flyWheel1.setVelocity(0);
+            pathState = nextPath;
+            actionTimer.resetTimer();
+        }
+    }
+
+    public void fixedshoot(PathState nextPath) {
         range = goalPos.findRange(xPos, yPos);
         flyWheel1.setVelocity(fwv);
         if (range < 40) {
@@ -171,7 +213,7 @@ public class RedFar extends BaseAuto {
 
     public void aiming(List<AprilTagDetection> detectedTags) {
         for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 24) { // SIDE DEPENDENT
+            if (detection.metadata != null && detection.id == 20) { // SIDE DEPENDENT
                 camRange = detection.ftcPose.range + camOffsetX;
 
                 bearing = detection.ftcPose.bearing + Math.toDegrees(Math.atan(2.5 / range)); // 2.5 in: camera is left of turret axis — re-measure if remounted
@@ -188,9 +230,9 @@ public class RedFar extends BaseAuto {
         double turretTarget = goalPos.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
-        if (turretTarget > 360 + 30) {
+        if (turretTarget > 200) {
             turretTarget -= 360;
-        } else if (turretTarget < 0 - 30) {
+        } else if (turretTarget < -200) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget;
@@ -198,3 +240,13 @@ public class RedFar extends BaseAuto {
         turret.setTargetPosition((int) turretTarget);
     }
 }
+
+/*
+ * Second variant (different start heading) — preserved as reference while active autos are tuned.
+ * To activate: move class body above into a new file or replace start/heading values.
+ *
+ * start = new Pose(56, 0, Math.toRadians(180))
+ * outtakePre = new Pose(56, 10, Math.toRadians(180))
+ * outtake = new Pose(56, 10, Math.toRadians(180))
+ * preintake1 = new Pose(26, 0, Math.toRadians(180))
+ */

@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode; // make sure this aligns with class location
+package org.firstinspires.ftc.teamcode.test;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -11,14 +11,14 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.config.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 
 @Disabled
-@Autonomous(name = "Red Side Far", group = "Autos")
-public class RedSideFar extends OpMode {
+@Autonomous(name = "Red Side Close", group = "Autos")
+public class RedSideClose extends OpMode {
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
@@ -39,8 +39,7 @@ public class RedSideFar extends OpMode {
     private enum PathState{
         PRELOAD,
         SHOOTPRE,
-        INTAKE11,
-        INTAKE12,
+        INTAKE1,
         OUTTAKE1,
         SHOOT1,
         INTAKE21,
@@ -53,19 +52,17 @@ public class RedSideFar extends OpMode {
 
     PathState pathState;
     //positions
-    private final Pose start = new Pose(90,0,Math.toRadians(90));
-    private final Pose outtakePre = new Pose(90,17,Math.toRadians(90));
-    private final Pose outtake = new Pose(90,18, Math.toRadians(0));
-    private final Pose intake1p1 = new Pose(100,23,Math.toRadians(0));
-    private final Pose intake1p2 = new Pose(133,23+3,Math.toRadians(0));
-    private final Pose intake2p1 = new Pose(100,44, Math.toRadians(0));
-    private final Pose intake2p2 = new Pose(130,44+3,Math.toRadians(0));
-    private final Pose end = new Pose(110,18,Math.toRadians(0));
+    private final Pose start = new Pose(130,130,Math.toRadians(41));
+    private final Pose outtakePre = new Pose(95,90,Math.toRadians(41));
+    private final Pose outtake = new Pose(100,90, Math.toRadians(0));
+    private final Pose intake1 = new Pose(133,88,Math.toRadians(0));
+    private final Pose intake2p1 = new Pose(100,68, Math.toRadians(0));
+    private final Pose intake2p2 = new Pose(127,68-5,Math.toRadians(0));
+    private final Pose end = new Pose(130,90,Math.toRadians(0));
 
     //paths
     private PathChain Preload;
-    private PathChain Intake11;
-    private PathChain Intake12;
+    private PathChain Intake1;
     private PathChain Outtake1;
     private PathChain Intake21;
     private PathChain Intake22;
@@ -74,19 +71,15 @@ public class RedSideFar extends OpMode {
 
     public void buildPaths(){
         Preload = follower.pathBuilder()
-                .addPath(new BezierLine(start,outtakePre))
-                .setConstantHeadingInterpolation(Math.toRadians(90))
+                .addPath(new BezierLine(start, outtakePre))
+                .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
                 .build();
-        Intake11 = follower.pathBuilder()
-                .addPath(new BezierLine(outtakePre, intake1p1))
-                .setLinearHeadingInterpolation(outtake.getHeading(),intake1p1.getHeading())
-                .build();
-        Intake12 = follower.pathBuilder()
-                .addPath(new BezierLine(intake1p1,intake1p2))
+        Intake1 = follower.pathBuilder()
+                .addPath(new BezierLine(outtakePre, intake1))
                 .setConstantHeadingInterpolation(0)
                 .build();
         Outtake1 = follower.pathBuilder()
-                .addPath(new BezierLine(intake1p2, outtake))
+                .addPath(new BezierLine(intake1, outtake))
                 .setConstantHeadingInterpolation(0)
                 .build();
         Intake21 = follower.pathBuilder()
@@ -163,7 +156,7 @@ public class RedSideFar extends OpMode {
         switch(pathState){
             case PRELOAD:
                 if(!moving) {
-                    turret.setTargetPosition(-120);
+                    turret.setTargetPosition(60);
                     follower.followPath(Preload, true);
                     moving = true;
                 }
@@ -175,7 +168,7 @@ public class RedSideFar extends OpMode {
                 break;
             case SHOOTPRE:
                 if(!follower.isBusy()){
-                    loopOuttake(2550);
+                    loopOuttake(67);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -184,28 +177,17 @@ public class RedSideFar extends OpMode {
                     pusherPos = 0.4;
                     fireState = 0;
                     shotCount = 0;
-                    pathState = PathState.INTAKE11;
+                    pathState = PathState.INTAKE1;
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                     pathTimer.resetTimer();
                 }
                 break;
-            case INTAKE11:
+            case INTAKE1:
                 if(!moving){
-                    turret.setTargetPosition(350);
+                    turret.setTargetPosition(280);
                     intake.setPower(1);
-                    follower.followPath(Intake11, false);
-                    moving = true;
-                }
-                if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
-                    pathState = PathState.INTAKE12;
-                    pathTimer.resetTimer();
-                    moving = false;
-                }
-                break;
-            case INTAKE12:
-                if(!moving){
-                    follower.followPath(Intake12,0.3, false);
+                    follower.followPath(Intake1, 0.3,false);
                     moving = true;
                 }
                 if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
@@ -228,7 +210,7 @@ public class RedSideFar extends OpMode {
                 break;
             case SHOOT1:
                 if(!follower.isBusy()){
-                    loopOuttake(2550);
+                    loopOuttake(67);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -237,6 +219,7 @@ public class RedSideFar extends OpMode {
                     pusherPos = 0.4;
                     fireState = 0;
                     shotCount = 0;
+                    intake.setPower(0);
                     pathState = PathState.INTAKE21;
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
@@ -245,7 +228,6 @@ public class RedSideFar extends OpMode {
                 break;
             case INTAKE21:
                 if(!moving){
-                    intake.setPower(1);
                     follower.followPath(Intake21, false);
                     moving = true;
                 }
@@ -257,6 +239,7 @@ public class RedSideFar extends OpMode {
                 break;
             case INTAKE22:
                 if(!moving){
+                    intake.setPower(1);
                     follower.followPath(Intake22,0.3, false);
                     moving = true;
                 }
@@ -280,7 +263,7 @@ public class RedSideFar extends OpMode {
                 break;
             case SHOOT2:
                 if(!follower.isBusy()){
-                    loopOuttake(2550);
+                    loopOuttake(66);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -313,10 +296,10 @@ public class RedSideFar extends OpMode {
         follower.update();
         statePathUpdate();
     }
-    private void loopOuttake(double FW) {
+    private void loopOuttake(double range) {
 
         if (fireState == 0) {
-            flyWheelPower = FW;
+            flyWheelPower = 11.5 * range + 1250;
             fireState = 1;
         }
 
