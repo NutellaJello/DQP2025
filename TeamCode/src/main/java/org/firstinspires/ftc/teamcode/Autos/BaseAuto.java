@@ -58,10 +58,10 @@ public abstract class BaseAuto extends OpMode {
     protected final double startingAngle = 0; // angle from straight forward (counterclockwise)
 
     // === PIDF — p varies by file; d/i/f are universal ===
-    protected double p;
-    protected double d = 0;
-    protected double i = 0;
-    protected double f = 13.5;
+    protected double pidP;
+    protected double pidD = 0;
+    protected double pidI = 0;
+    protected double pidF = 13.5;
     protected PIDFCoefficients fwPID;
 
     // === Per-file configuration ===
@@ -78,9 +78,9 @@ public abstract class BaseAuto extends OpMode {
      * Initializes all hardware shared across every auto.
      * Subclass init() must call this after setting up subclass-only hardware (e.g. flyWheel2).
      */
-    protected void baseInit() {
-        p = getPIDFP();
-        fwPID = new PIDFCoefficients(p, i, d, f);
+    protected void initHardware() {
+        pidP = getPIDFP();
+        fwPID = new PIDFCoefficients(pidP, pidI, pidD, pidF);
         goalPos = createGoalPos();
 
         actionTimer = new Timer();
@@ -146,6 +146,18 @@ public abstract class BaseAuto extends OpMode {
 
     public void move(PathChain path, Runnable onComplete) {
         if (!moving) {
+            follower.followPath(path, true);
+            moving = true;
+        }
+        if (!follower.isBusy() && actionTimer.getElapsedTime() > 50) {
+            moving = false;
+            onComplete.run();
+        }
+    }
+
+    public void move(PathChain path, Runnable onComplete, boolean idle) {
+        if (!moving) {
+            if (idle) flyWheel1.setVelocity(1100);
             follower.followPath(path, true);
             moving = true;
         }

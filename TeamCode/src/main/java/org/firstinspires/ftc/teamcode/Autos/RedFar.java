@@ -50,7 +50,7 @@ public class RedFar extends BaseAuto {
     @Override
     public void init() {
         pathState = PathState.PRELOAD;
-        baseInit();
+        initHardware();
     }
 
     @Override

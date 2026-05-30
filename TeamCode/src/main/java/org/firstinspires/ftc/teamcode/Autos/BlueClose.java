@@ -58,7 +58,7 @@ public class BlueClose extends BaseAuto {
     @Override
     public void init() {
         pathState = PathState.PRELOAD;
-        baseInit();
+        initHardware();
         flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
         flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
         flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
