@@ -702,6 +702,8 @@ git commit -m "refactor: migrate RedClose15 to BaseAuto; apply Phase 2 path rena
 
 Each file is independent. Rename PascalCase `PathChain` fields to camelCase throughout each file (declarations, `buildPaths()`, and all `statePathUpdate()` switch-case references). Do all 8 in one commit.
 
+> **Conflict check before starting:** Some autos may declare a lowercase `Pose end` field, which would collide with renaming the `End` `PathChain` to `end`. Before applying each rename table, grep the file for a pose named `end`: `grep "Pose end" <file>`. If found, rename the `PathChain` to `endPath` instead (matching the pattern used in RedClose15) and update the `buildPaths()` and switch-case references accordingly.
+
 **Files:**
 - Modify: all 8 BaseAuto subclasses (not RedClose15 — done in Task 4)
 
