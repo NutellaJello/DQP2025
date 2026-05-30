@@ -56,12 +56,12 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     boolean useWebcam = true;
     double intakePower = 0;
-    double FWTarget = 0;
+    double flywheelTarget = 0;
     double flapPos = 0.2;
     double stopperPos = 0.9;
     double turretPos;
-    double FWV1;
-    double FWV2;
+    double flywheelVelocity1;
+    double flywheelVelocity2;
     double idlePower = 0;
     double camRange = 0;
     double lastRange;
@@ -83,13 +83,13 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = -2167; //495/90
     private final double highLimit =  340 ;
-    double p = 400;
-    double d = 0;
-    double i = 0;
-    double f = 13.5;
+    double pidP = 400;
+    double pidD = 0;
+    double pidI = 0;
+    double pidF = 13.5;
 
 
-    PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
+    PIDFCoefficients fwPID = new PIDFCoefficients(pidP, pidI, pidD,  pidF);
 
     @Override
     public void runOpMode() {
@@ -137,8 +137,8 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             heading = follower.getPose().getHeading();
             range = goal.findRange(xPos, yPos);
             turretPos = turret.getCurrentPosition();
-            FWV1 = flyWheel1.getVelocity();
-            FWV2 = flyWheel2.getVelocity();
+            flywheelVelocity1 = flyWheel1.getVelocity();
+            flywheelVelocity2 = flyWheel2.getVelocity();
 
             // set initial values
             intakePower = 0;
@@ -179,8 +179,8 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             brake();
 
             intake.setPower(intakePower);
-            flyWheel1.setVelocity(FWTarget);
-            flyWheel2.setVelocity(FWTarget);
+            flyWheel1.setVelocity(flywheelTarget);
+            flyWheel2.setVelocity(flywheelTarget);
             stopper.setPosition(stopperPos);
 
             botTelemetry();
@@ -275,7 +275,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     public void setIntakePower(){
         if (gamepad1.left_trigger > 0.1) {
-            FWTarget = 0;
+            flywheelTarget = 0;
             stopperPos = 0.9;
             intakePower = 1;
         } else if(gamepad1.a){
@@ -377,25 +377,25 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         if (gamepad1.x) {
 
             //setting target velocity
-            FWTarget = (0.00673 * range * range) + (5.54 * range) +  (1095);  //10.27 * range + 1300;2.937 * range + 716.11;
+            flywheelTarget = (0.00673 * range * range) + (5.54 * range) +  (1095);  //10.27 * range + 1300;2.937 * range + 716.11;
 
 
 
             if (range< 45){
-                FWTarget-=90;
+                flywheelTarget-=90;
             }
             else if (range < 100){
-                FWTarget-=46.7;
+                flywheelTarget-=46.7;
             }
 
 
-            if(Math.abs(FWV1) >= Math.abs(FWTarget)){
+            if(Math.abs(flywheelVelocity1) >= Math.abs(flywheelTarget)){
                 stopperPos = 0.973; // open
                 intakePower = feedPower;
             }
         } else {
             stopperPos = 0.9; // closed
-            FWTarget = idlePower;
+            flywheelTarget = idlePower;
         }
     }
 
@@ -450,9 +450,9 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         telemetry.addData("turret pos", turret.getCurrentPosition());
         telemetry.addData("Cam Status", visionPortal.getCameraState());
         telemetry.addData("range", range);
-        telemetry.addData("FWV1", FWV1);
-        telemetry.addData("FWV2", FWV2);
-        telemetry.addData("targetVel", FWTarget);
+        telemetry.addData("FWV1", flywheelVelocity1);
+        telemetry.addData("FWV2", flywheelVelocity2);
+        telemetry.addData("targetVel", flywheelTarget);
         telemetry.addData("turretpos", turretPos);
         telemetry.addData("isBusy", follower.isBusy());
         telemetry.update();

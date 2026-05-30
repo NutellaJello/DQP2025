@@ -51,25 +51,25 @@ public class FlywheelTesting extends LinearOpMode {
 
     boolean useWebcam = true;
     double intakePower = 0;
-    double FW1Target = 0;
+    double flywheelTarget = 0;
     double stopperPos = 0.9;
     double flapPos = 0.2;
 
     double shotFreq = 0;
     double feedPower = 1;
 
-    double p = 200;
-    double d = 0;
-    double i = 0;
-    double f = 13.5;
+    double pidP = 200;
+    double pidD = 0;
+    double pidI = 0;
+    double pidF = 13.5;
 
 
-    PIDFCoefficients fwPID = new PIDFCoefficients(p, 0, 0,  f);
+    PIDFCoefficients fwPID = new PIDFCoefficients(pidP, 0, 0,  pidF);
 
 
     double turretPos;
-    double FWV1;
-    double FWV2;
+    double flywheelVelocity1;
+    double flywheelVelocity2;
     double idlePower = 0;
     double camRange = 0;
     double lastRange;
@@ -153,7 +153,7 @@ public class FlywheelTesting extends LinearOpMode {
 
             turretPos = turret.getCurrentPosition();
 
-            FWV1 = flyWheel1.getVelocity();
+            flywheelVelocity1 = flyWheel1.getVelocity();
             setIdlePower();
 
             if(!gamepad1.x){
@@ -343,16 +343,16 @@ public class FlywheelTesting extends LinearOpMode {
         flapPos = range/600;
         flap.setPosition(flapPos);
         if(gamepad2.dpad_up && clickTimer1.seconds() > 0.05){
-            FW1Target += 50;
+            flywheelTarget += 50;
             clickTimer1.reset();
         } else if (gamepad2.dpad_down && clickTimer1.seconds() > 0.05) {
-            FW1Target -= 50;
+            flywheelTarget -= 50;
             clickTimer1.reset();
         }
 
         if (gamepad1.x) {
-            flyWheel1.setVelocity(FW1Target);
-            if(FWV1 >= FW1Target){
+            flyWheel1.setVelocity(flywheelTarget);
+            if(flywheelVelocity1 >= flywheelTarget){
                 if(!atSpeed) {
                     atSpeed = true;
                     shootDelay.reset();
@@ -392,9 +392,9 @@ public class FlywheelTesting extends LinearOpMode {
 
     public void botTelemetry(){
         telemetry.addData("Range", range);
-        telemetry.addData("FW1 target", FW1Target);
+        telemetry.addData("FW1 target", flywheelTarget);
 
-        telemetry.addData("\nFW1 vel", FWV1);
+        telemetry.addData("\nFW1 vel", flywheelVelocity1);
         telemetry.addData("flap pos", flapPos);
         telemetry.addData("coefficients", flyWheel1.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER) );
 
