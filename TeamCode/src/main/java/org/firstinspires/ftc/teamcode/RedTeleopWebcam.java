@@ -159,7 +159,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
             // all the movement controls.
             if(!auto){
-                drivetrain.Teleop(heading);
+                drivetrain.drive(heading);
             }
 
             setIdlePower();
