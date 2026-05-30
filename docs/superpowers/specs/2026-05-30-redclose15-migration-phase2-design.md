@@ -40,8 +40,8 @@ No runtime behaviour changes except: `RedClose15` gains the servo initial-positi
 | Field | `camAngle` | `camElevationAngleDeg` |
 | Method | `findAngle()` | `findBearing()` |
 
-**Callsites for `findBearing()` (was `findAngle()`):** 10 active + 1 commented-out  
-`BlueCloseGate`, `RedCloseGate`, `BlueClose`, `RedClose`, `BlueFar`, `RedFar`, `BlueFarGate`, `RedFarGate`, `BlueTeleopWebcam`, `RedTeleopWebcam`, `FlywheelTesting` (commented)
+**Callsites for `findBearing()` (was `findAngle()`):** 11 active + 1 commented-out  
+`BlueCloseGate`, `RedCloseGate`, `BlueClose`, `RedClose`, `BlueFar`, `RedFar`, `BlueFarGate`, `RedFarGate`, `BlueTeleopWebcam`, `RedTeleopWebcam`, `RedClose15` (handled in Section 4), `FlywheelTesting` (commented)
 
 ---
 
@@ -204,7 +204,7 @@ For each of `BlueCloseGate`, `RedCloseGate`, `BlueClose`, `RedClose`, `BlueFar`,
 
 1. `./gradlew assembleDebug` passes with zero errors
 2. `RedClose15` extends `BaseAuto` and has no duplicate hardware init or shared utility methods
-3. No method names starting uppercase in TeamCode (`Teleop`, `baseInit` gone)
+3. No method names starting uppercase in TeamCode (`Teleop` gone); `baseInit` renamed to verb-first `initHardware`
 4. No single-letter PIDF field names (`p`, `i`, `d`, `f`) in TeamCode
 5. No PascalCase `PathChain` field declarations in any auto class
 6. `findAngle` does not appear anywhere in TeamCode
