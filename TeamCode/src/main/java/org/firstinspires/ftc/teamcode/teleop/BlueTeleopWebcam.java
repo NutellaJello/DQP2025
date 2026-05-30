@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.teleop;
 
 import android.util.Size;
 
@@ -21,7 +21,7 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.Exposur
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.config.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
 import org.firstinspires.ftc.vision.VisionPortal;
@@ -54,12 +54,12 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
     boolean useWebcam = true;
     double intakePower = 0;
-    double FWTarget = 0;
+    double flywheelTarget = 0;
     double flapPos = 0.2;
     double stopperPos = 0.9;
     double turretPos;
-    double FWV1;
-    double FWV2;
+    double flywheelVelocity1;
+    double flywheelVelocity2;
     double idlePower = 0;
     double camRange = 0;
     double lastRange;
@@ -81,18 +81,18 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = -1523; //495/90
     private final double highLimit = 410  ;
-    double p = 400;
-    double d = 0;
-    double i = 0;
-    double f = 13.5;
+    double pidP = 400;
+    double pidD = 0;
+    double pidI = 0;
+    double pidF = 13.5;
 
 
-    PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
+    PIDFCoefficients fwPID = new PIDFCoefficients(pidP, pidI, pidD,  pidF);
 
     @Override
     public void runOpMode() {
         // initializes movement motors
-        drivetrain = new DecodeDriveTrain(hardwareMap);
+        drivetrain = new DecodeDriveTrain(hardwareMap, gamepad1, telemetry, false, fieldCentric);
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose(0,0,Math.toRadians(0)));
 
@@ -145,13 +145,13 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
             // all the movement controls.
             if(!holding){
-                drivetrain.Teleop(gamepad1, heading, telemetry, fieldCentric);
+                drivetrain.drive(heading);
             }
 
             turretPos = turret.getCurrentPosition();
 
-            FWV1 = -flyWheel1.getVelocity();
-            FWV2 = -flyWheel2.getVelocity();
+            flywheelVelocity1 = -flyWheel1.getVelocity();
+            flywheelVelocity2 = -flyWheel2.getVelocity();
             setIdlePower();
 
             if(!gamepad1.x){
@@ -168,8 +168,8 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             brake();
 
             intake.setPower(intakePower);
-            flyWheel1.setVelocity(FWTarget);
-            flyWheel2.setVelocity(FWTarget);
+            flyWheel1.setVelocity(flywheelTarget);
+            flyWheel2.setVelocity(flywheelTarget);
             stopper.setPosition(stopperPos);
 
             botTelemetry();
@@ -274,7 +274,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
     public void setIntakePower(){
         if (gamepad1.left_trigger > 0.1) {
-            FWTarget = 0;
+            flywheelTarget = 0;
             stopperPos = 0.9;
             intakePower = 1;
         } else if(gamepad1.a){
@@ -306,7 +306,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
         }
 
         //required turret angle
-        double turretTarget = goal.findAngle(xPos, yPos)
+        double turretTarget = goal.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading);
         if (turretTarget > 180 + 30) { //wrap angle
@@ -373,21 +373,21 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
         if (gamepad1.x) {
 
             //setting target velocity
-            FWTarget = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
+            flywheelTarget = (0.00673 * range * range) + (5.54 * range) +  (1162);  //10.27 * range + 1300;2.937 * range + 716.11;
 
             if (range< 45){
-                FWTarget-=100;
+                flywheelTarget-=100;
             }
 
 
-            if(FWV1 >= FWTarget){
+            if(flywheelVelocity1 >= flywheelTarget){
                 stopperPos = 0.973; // open
                 intakePower = feedPower;
             }
         } else {
             intakePower = 0;
             stopperPos = 0.9; // closed
-            FWTarget = idlePower;
+            flywheelTarget = idlePower;
         }
     }
 
@@ -416,7 +416,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
         telemetry.addData("turret pos", turret.getCurrentPosition());
         telemetry.addData("Cam Status", visionPortal.getCameraState());
         telemetry.addData("range", range);
-        telemetry.addData("FWV", FWV1);
+        telemetry.addData("FWV", flywheelVelocity1);
         telemetry.update();
 
 

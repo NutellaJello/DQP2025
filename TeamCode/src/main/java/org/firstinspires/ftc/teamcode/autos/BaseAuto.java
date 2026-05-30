@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Autos;
+package org.firstinspires.ftc.teamcode.autos;
 
 import android.util.Size;
 
@@ -17,7 +17,7 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.Exposur
 import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainControl;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.config.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -58,10 +58,10 @@ public abstract class BaseAuto extends OpMode {
     protected final double startingAngle = 0; // angle from straight forward (counterclockwise)
 
     // === PIDF — p varies by file; d/i/f are universal ===
-    protected double p;
-    protected double d = 0;
-    protected double i = 0;
-    protected double f = 13.5;
+    protected double pidP;
+    protected double pidD = 0;
+    protected double pidI = 0;
+    protected double pidF = 13.5;
     protected PIDFCoefficients fwPID;
 
     // === Per-file configuration ===
@@ -78,9 +78,9 @@ public abstract class BaseAuto extends OpMode {
      * Initializes all hardware shared across every auto.
      * Subclass init() must call this after setting up subclass-only hardware (e.g. flyWheel2).
      */
-    protected void baseInit() {
-        p = getPIDFP();
-        fwPID = new PIDFCoefficients(p, i, d, f);
+    protected void initHardware() {
+        pidP = getPIDFP();
+        fwPID = new PIDFCoefficients(pidP, pidI, pidD, pidF);
         goalPos = createGoalPos();
 
         actionTimer = new Timer();
@@ -145,8 +145,17 @@ public abstract class BaseAuto extends OpMode {
     }
 
     public void move(PathChain path, Runnable onComplete) {
+        move(path, onComplete, false, true);
+    }
+
+    public void move(PathChain path, Runnable onComplete, boolean idle) {
+        move(path, onComplete, idle, true);
+    }
+
+    public void move(PathChain path, Runnable onComplete, boolean idle, boolean holdEnd) {
         if (!moving) {
-            follower.followPath(path, true);
+            if (idle) flyWheel1.setVelocity(1100);
+            follower.followPath(path, holdEnd);
             moving = true;
         }
         if (!follower.isBusy() && actionTimer.getElapsedTime() > 50) {
@@ -157,12 +166,12 @@ public abstract class BaseAuto extends OpMode {
 
     /**
      * Follows path at reduced speed while running intake, then calls onComplete when done.
-     * @param holonomic  pass true for normal autos, false for RedCloseGate/RedClose15 intake paths
+     * @param holdEnd    pass true to hold position at end of path, false to coast
      * @param timeoutMs  50 for close autos, 1500 for far autos (extra dwell for loading zone)
      */
-    public void moveIntake(PathChain path, double speed, boolean holonomic, int timeoutMs, Runnable onComplete) {
+    public void moveIntake(PathChain path, double speed, boolean holdEnd, int timeoutMs, Runnable onComplete) {
         if (!moving) {
-            follower.followPath(path, speed, holonomic);
+            follower.followPath(path, speed, holdEnd);
             intake.setPower(1);
             moving = true;
         }

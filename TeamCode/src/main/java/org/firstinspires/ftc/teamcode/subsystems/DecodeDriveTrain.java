@@ -20,10 +20,10 @@ import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
 public class DecodeDriveTrain {
 
     // Instantiate the drivetrain motor variables
-    private DcMotorEx FL; //Front left motor of drivetrain
-    private DcMotorEx FR; //Front right motor of drivetrain
-    private DcMotorEx BL; //Back left motor of drivetrain
-    private DcMotorEx BR; //Back right motor of drivetrain
+    private DcMotorEx frontLeft; //Front left motor of drivetrain
+    private DcMotorEx frontRight; //Front right motor of drivetrain
+    private DcMotorEx backLeft; //Back left motor of drivetrain
+    private DcMotorEx backRight; //Back right motor of drivetrain
     GoBildaPinpointDriver pinpoint;
     private double dampSpeedRatio = 1;
     private double dampTurnRatio  = -0.6;
@@ -38,10 +38,10 @@ public class DecodeDriveTrain {
 
     public DecodeDriveTrain(HardwareMap hardwareMap, Gamepad gamepad, Telemetry telemetry, boolean showTelemetry, boolean fieldCentric){
         // Motor Mapping
-        FL = hardwareMap.get(DcMotorEx.class, "FL");
-        FR = hardwareMap.get(DcMotorEx.class, "FR");
-        BL = hardwareMap.get(DcMotorEx.class, "BL");
-        BR = hardwareMap.get(DcMotorEx.class, "BR");
+        frontLeft = hardwareMap.get(DcMotorEx.class, "FL");
+        frontRight = hardwareMap.get(DcMotorEx.class, "FR");
+        backLeft = hardwareMap.get(DcMotorEx.class, "BL");
+        backRight = hardwareMap.get(DcMotorEx.class, "BR");
         this.gamepad = gamepad;
         this.telemetry = telemetry;
         this.showTelemetry = showTelemetry;
@@ -49,10 +49,10 @@ public class DecodeDriveTrain {
 
 
         // Set motor direction based on which side of the robot the motors are on
-        FR.setDirection(DcMotorEx.Direction.FORWARD);
-        BR.setDirection(DcMotorEx.Direction.FORWARD);
-        FL.setDirection(DcMotorEx.Direction.REVERSE);
-        BL.setDirection(DcMotorEx.Direction.FORWARD);
+        frontRight.setDirection(DcMotorEx.Direction.FORWARD);
+        backRight.setDirection(DcMotorEx.Direction.FORWARD);
+        frontLeft.setDirection(DcMotorEx.Direction.REVERSE);
+        backLeft.setDirection(DcMotorEx.Direction.FORWARD);
 //
 //        FR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 //        BR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -91,13 +91,13 @@ public class DecodeDriveTrain {
         pinpoint.resetPosAndIMU();
     }
 
-    public void Teleop(double heading){ //Code to be run in Teleop Mode void Loop at top level
+    public void drive(double heading){ //Code to be run in Teleop Mode void Loop at top level
         heading = -heading;
 
-        double PowerFL = 0;
-        double PowerFR = 0;
-        double PowerBL = 0;
-        double PowerBR = 0;
+        double powerFl = 0;
+        double powerFr = 0;
+        double powerBl = 0;
+        double powerBr = 0;
 
         double y = Range.clip(-gamepad.left_stick_y, -1, 1);
         //left stick x value
@@ -122,59 +122,59 @@ public class DecodeDriveTrain {
 
             double turn     =  0.8 * -gamepad.right_stick_x;
 
-            PowerFL = dampSpeedRatio*(axial - lateral) + turn*dampTurnRatio;
-            PowerFR = dampSpeedRatio*(axial + lateral) - turn*dampTurnRatio;
-            PowerBL = dampSpeedRatio*(axial + lateral) + turn*dampTurnRatio;
-            PowerBR = dampSpeedRatio*(axial - lateral) - turn*dampTurnRatio;
+            powerFl = dampSpeedRatio*(axial - lateral) + turn*dampTurnRatio;
+            powerFr = dampSpeedRatio*(axial + lateral) - turn*dampTurnRatio;
+            powerBl = dampSpeedRatio*(axial + lateral) + turn*dampTurnRatio;
+            powerBr = dampSpeedRatio*(axial - lateral) - turn*dampTurnRatio;
 
             // Normalize the values so no wheel power exceeds 100%
-            max = Math.max(Math.abs(PowerFL), Math.abs(PowerFR));
-            max = Math.max(max, Math.abs(PowerBL));
-            max = Math.max(max, Math.abs(PowerBR));
+            max = Math.max(Math.abs(powerFl), Math.abs(powerFr));
+            max = Math.max(max, Math.abs(powerBl));
+            max = Math.max(max, Math.abs(powerBr));
 
             if (max > 1.0) {
-                PowerFL  /= max;
-                PowerFR /= max;
-                PowerBL   /= max;
-                PowerBR  /= max;
+                powerFl  /= max;
+                powerFr /= max;
+                powerBl   /= max;
+                powerBr  /= max;
             }
             //telemetry.addData("heading",Math.toDegrees(heading));
-            FL.setPower(PowerFL);
-            FR.setPower(PowerFR);
-            BL.setPower(PowerBL);
-            BR.setPower(PowerBR);
+            frontLeft.setPower(powerFl);
+            frontRight.setPower(powerFr);
+            backLeft.setPower(powerBl);
+            backRight.setPower(powerBr);
         }
         else{
 
-            PowerFL = (y - x) * dampSpeedRatio + dampTurnRatio * rx;
-            PowerFR = (y + x) * dampSpeedRatio - dampTurnRatio * rx;
-            PowerBL = (y + x) * dampSpeedRatio + dampTurnRatio * rx;
-            PowerBR = (y - x) * dampSpeedRatio - dampTurnRatio * rx;
+            powerFl = (y - x) * dampSpeedRatio + dampTurnRatio * rx;
+            powerFr = (y + x) * dampSpeedRatio - dampTurnRatio * rx;
+            powerBl = (y + x) * dampSpeedRatio + dampTurnRatio * rx;
+            powerBr = (y - x) * dampSpeedRatio - dampTurnRatio * rx;
 
-            double maxFront = Math.max(PowerFL, PowerFR);
-            double maxBack = Math.max(PowerBL, PowerBR);
+            double maxFront = Math.max(powerFl, powerFr);
+            double maxBack = Math.max(powerBl, powerBr);
             double maxPower = Math.max(maxFront, maxBack);
 
             if (maxPower > 1.0) {
-                PowerFL /= maxPower;
-                PowerFR /= maxPower;
-                PowerBL /= maxPower;
-                PowerBR /= maxPower;
+                powerFl /= maxPower;
+                powerFr /= maxPower;
+                powerBl /= maxPower;
+                powerBr /= maxPower;
             }
             //finally moving the motors
-            FL.setPower(PowerFL);
-            BL.setPower(PowerBL);
-            FR.setPower(PowerFR);
-            BR.setPower(PowerBR);
+            frontLeft.setPower(powerFl);
+            backLeft.setPower(powerBl);
+            frontRight.setPower(powerFr);
+            backRight.setPower(powerBr);
         }
         if(showTelemetry) {
             telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
             telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
             telemetry.addData("Heading angle (DEG)", pose2D.getHeading(AngleUnit.DEGREES));
-            telemetry.addData("FL Power", PowerFL);
-            telemetry.addData("BL Power", PowerBL);
-            telemetry.addData("FR Power", PowerFR);
-            telemetry.addData("BR Power", PowerBR);
+            telemetry.addData("FL Power", powerFl);
+            telemetry.addData("BL Power", powerBl);
+            telemetry.addData("FR Power", powerFr);
+            telemetry.addData("BR Power", powerBr);
         }
 
     }

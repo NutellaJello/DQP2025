@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode; // make sure this aligns with class location
+package org.firstinspires.ftc.teamcode.test;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -11,14 +11,13 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Servo;
 
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
+import org.firstinspires.ftc.teamcode.config.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
-
 @Disabled
-@Autonomous(name = "Red Side Close", group = "Autos")
-public class RedSideClose extends OpMode {
+@Autonomous(name = "Blue Side Far", group = "Autos")
+public class BlueSideFar extends OpMode {
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
@@ -39,7 +38,8 @@ public class RedSideClose extends OpMode {
     private enum PathState{
         PRELOAD,
         SHOOTPRE,
-        INTAKE1,
+        INTAKE11,
+        INTAKE12,
         OUTTAKE1,
         SHOOT1,
         INTAKE21,
@@ -52,17 +52,19 @@ public class RedSideClose extends OpMode {
 
     PathState pathState;
     //positions
-    private final Pose start = new Pose(130,130,Math.toRadians(41));
-    private final Pose outtakePre = new Pose(95,90,Math.toRadians(41));
-    private final Pose outtake = new Pose(100,90, Math.toRadians(0));
-    private final Pose intake1 = new Pose(133,88,Math.toRadians(0));
-    private final Pose intake2p1 = new Pose(100,68, Math.toRadians(0));
-    private final Pose intake2p2 = new Pose(127,68-5,Math.toRadians(0));
-    private final Pose end = new Pose(130,90,Math.toRadians(0));
+    private final Pose start = new Pose(144-90,0,Math.toRadians(90));
+    private final Pose outtakePre = new Pose(144-90,17,Math.toRadians(90));
+    private final Pose outtake = new Pose(144-90,18, Math.toRadians(180));
+    private final Pose intake1p1 = new Pose(144-100,23,Math.toRadians(180));
+    private final Pose intake1p2 = new Pose(144-133,23+3,Math.toRadians(180));
+    private final Pose intake2p1 = new Pose(144-100,44, Math.toRadians(180));
+    private final Pose intake2p2 = new Pose(144-130,44+3,Math.toRadians(180));
+    private final Pose end = new Pose(144-110,18,Math.toRadians(180));
 
     //paths
     private PathChain Preload;
-    private PathChain Intake1;
+    private PathChain Intake11;
+    private PathChain Intake12;
     private PathChain Outtake1;
     private PathChain Intake21;
     private PathChain Intake22;
@@ -71,32 +73,36 @@ public class RedSideClose extends OpMode {
 
     public void buildPaths(){
         Preload = follower.pathBuilder()
-                .addPath(new BezierLine(start, outtakePre))
-                .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
+                .addPath(new BezierLine(start,outtakePre))
+                .setConstantHeadingInterpolation(Math.toRadians(90))
                 .build();
-        Intake1 = follower.pathBuilder()
-                .addPath(new BezierLine(outtakePre, intake1))
-                .setConstantHeadingInterpolation(0)
+        Intake11 = follower.pathBuilder()
+                .addPath(new BezierLine(outtakePre, intake1p1))
+                .setLinearHeadingInterpolation(outtake.getHeading(),intake1p1.getHeading())
+                .build();
+        Intake12 = follower.pathBuilder()
+                .addPath(new BezierLine(intake1p1,intake1p2))
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
         Outtake1 = follower.pathBuilder()
-                .addPath(new BezierLine(intake1, outtake))
-                .setConstantHeadingInterpolation(0)
+                .addPath(new BezierLine(intake1p2, outtake))
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
         Intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
         Intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p1,intake2p2))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake,end))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(Math.toRadians(180))
                 .build();
     }
 
@@ -156,7 +162,7 @@ public class RedSideClose extends OpMode {
         switch(pathState){
             case PRELOAD:
                 if(!moving) {
-                    turret.setTargetPosition(60);
+                    turret.setTargetPosition(120);
                     follower.followPath(Preload, true);
                     moving = true;
                 }
@@ -168,7 +174,7 @@ public class RedSideClose extends OpMode {
                 break;
             case SHOOTPRE:
                 if(!follower.isBusy()){
-                    loopOuttake(67);
+                    loopOuttake(2550);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -177,17 +183,28 @@ public class RedSideClose extends OpMode {
                     pusherPos = 0.4;
                     fireState = 0;
                     shotCount = 0;
-                    pathState = PathState.INTAKE1;
+                    pathState = PathState.INTAKE11;
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                     pathTimer.resetTimer();
                 }
                 break;
-            case INTAKE1:
+            case INTAKE11:
                 if(!moving){
-                    turret.setTargetPosition(280);
+                    turret.setTargetPosition(-350);
                     intake.setPower(1);
-                    follower.followPath(Intake1, 0.3,false);
+                    follower.followPath(Intake11, false);
+                    moving = true;
+                }
+                if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
+                    pathState = PathState.INTAKE12;
+                    pathTimer.resetTimer();
+                    moving = false;
+                }
+                break;
+            case INTAKE12:
+                if(!moving){
+                    follower.followPath(Intake12,0.3, false);
                     moving = true;
                 }
                 if(!follower.isBusy() && pathTimer.getElapsedTime() > 50){
@@ -210,7 +227,7 @@ public class RedSideClose extends OpMode {
                 break;
             case SHOOT1:
                 if(!follower.isBusy()){
-                    loopOuttake(67);
+                    loopOuttake(2550);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -219,7 +236,6 @@ public class RedSideClose extends OpMode {
                     pusherPos = 0.4;
                     fireState = 0;
                     shotCount = 0;
-                    intake.setPower(0);
                     pathState = PathState.INTAKE21;
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
@@ -228,6 +244,7 @@ public class RedSideClose extends OpMode {
                 break;
             case INTAKE21:
                 if(!moving){
+                    intake.setPower(1);
                     follower.followPath(Intake21, false);
                     moving = true;
                 }
@@ -239,7 +256,6 @@ public class RedSideClose extends OpMode {
                 break;
             case INTAKE22:
                 if(!moving){
-                    intake.setPower(1);
                     follower.followPath(Intake22,0.3, false);
                     moving = true;
                 }
@@ -263,7 +279,7 @@ public class RedSideClose extends OpMode {
                 break;
             case SHOOT2:
                 if(!follower.isBusy()){
-                    loopOuttake(66);
+                    loopOuttake(2550);
                     flyWheel.setVelocity(flyWheelPower);
                     pusher.setPosition(pusherPos);
                 }
@@ -296,10 +312,10 @@ public class RedSideClose extends OpMode {
         follower.update();
         statePathUpdate();
     }
-    private void loopOuttake(double range) {
+    private void loopOuttake(double FW) {
 
         if (fireState == 0) {
-            flyWheelPower = 11.5 * range + 1250;
+            flyWheelPower = FW;
             fireState = 1;
         }
 

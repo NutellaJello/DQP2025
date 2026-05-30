@@ -1,10 +1,10 @@
-package org.firstinspires.ftc.teamcode.Autos;
+package org.firstinspires.ftc.teamcode.autos;
 
-import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.Range;
@@ -12,11 +12,11 @@ import com.qualcomm.robotcore.util.Range;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 
-import java.util.Arrays;
 import java.util.List;
 
-@Autonomous(name = "Blue Close Gate", group = "Autos")
-public class BlueCloseGate extends BaseAuto {
+@Disabled
+@Autonomous(name = "Blue Close", group = "Autos")
+public class BlueClose extends BaseAuto {
     private DcMotorEx flyWheel2;
     private boolean shooting = false;
     private double minFWVSinceOpen = Double.MAX_VALUE;
@@ -27,7 +27,7 @@ public class BlueCloseGate extends BaseAuto {
 
     private enum PathState {
         PRELOAD, SHOOTPRE,
-        INTAKE1, OPENGATE, OUTTAKE1, SHOOT1,
+        INTAKE1, OUTTAKE1, SHOOT1,
         INTAKE21, INTAKE22, OUTTAKE2, SHOOT2,
         INTAKE31, INTAKE32, OUTTAKE3, SHOOT3,
         END, STOP
@@ -35,24 +35,22 @@ public class BlueCloseGate extends BaseAuto {
 
     private PathState pathState;
 
-    private final Pose start      = new Pose(14, 142,  Math.toRadians(139));
-    private final Pose outtakePre = new Pose(40, 105,  Math.toRadians(135));
-    private final Pose outtake    = new Pose(38, 105,  Math.toRadians(180));
-    private final Pose intake1    = new Pose(11, 99,   Math.toRadians(180));
-    private final Pose gatePoint  = new Pose(10, 93,   Math.toRadians(180));
-    private final Pose gate       = new Pose(4.5, 93,  Math.toRadians(180));
-    private final Pose intake2p1  = new Pose(38, 77,   Math.toRadians(180));
-    private final Pose intake2p2  = new Pose(10, 77 - 2, Math.toRadians(180));
-    private final Pose intake3p1  = new Pose(38, 58,   Math.toRadians(180));
-    private final Pose intake3p2  = new Pose(10, 54 - 2, Math.toRadians(180));
-    private final Pose end        = new Pose(25, 87,   Math.toRadians(180));
+    private final Pose start      = new Pose(14, 142, Math.toRadians(139));
+    private final Pose outtakePre = new Pose(40, 105, Math.toRadians(135));
+    private final Pose outtake    = new Pose(40, 105, Math.toRadians(180));
+    private final Pose intake1    = new Pose(6,  105, Math.toRadians(180));
+    private final Pose intake2p1  = new Pose(40, 77,  Math.toRadians(180));
+    private final Pose intake2p2  = new Pose(4,  77 - 2, Math.toRadians(180));
+    private final Pose intake3p1  = new Pose(40, 58,  Math.toRadians(180));
+    private final Pose intake3p2  = new Pose(1,  54 - 2, Math.toRadians(180));
+    private final Pose end        = new Pose(25, 85,  Math.toRadians(180));
 
-    private PathChain Preload, Intake1, Opengate, Outtake1;
-    private PathChain Intake21, Intake22, Outtake2;
-    private PathChain Intake31, Intake32, Outtake3;
-    private PathChain End;
+    private PathChain preload, intake1Path, outtake1;
+    private PathChain intake21, intake22, outtake2;
+    private PathChain intake31, intake32, outtake3;
+    private PathChain endPath;
 
-    @Override protected double getPIDFP()        { return 380; } // tuned lower than Red (400) — verify both sides use this intentionally
+    @Override protected double getPIDFP()        { return 380; } // tuned lower than gate autos (400) — verify intentional
     @Override protected GoalPos createGoalPos()  { return new GoalPos(0, 144, 15.5); }
     @Override protected Pose getStartPose()       { return start; }
     @Override protected double getFWVConstant()   { return 1162; }
@@ -60,7 +58,7 @@ public class BlueCloseGate extends BaseAuto {
     @Override
     public void init() {
         pathState = PathState.PRELOAD;
-        baseInit();
+        initHardware();
         flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
         flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
         flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
@@ -69,64 +67,58 @@ public class BlueCloseGate extends BaseAuto {
 
     @Override
     public void buildPaths() {
-        Preload = follower.pathBuilder()
+        preload = follower.pathBuilder()
                 .addPath(new BezierLine(start, outtakePre))
                 .setLinearHeadingInterpolation(start.getHeading(), outtakePre.getHeading())
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake1 = follower.pathBuilder()
+        intake1Path = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
-        Opengate = follower.pathBuilder()
-                .addPath(new BezierCurve(Arrays.asList(intake1, gatePoint, gate)))
-                .setConstantHeadingInterpolation(Math.toRadians(180))
-                .setBrakingStrength(braking)
-                .setGlobalDeceleration(0.9)
-                .build();
-        Outtake1 = follower.pathBuilder()
+        outtake1 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1, outtake))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake21 = follower.pathBuilder()
+        intake21 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2p1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake22 = follower.pathBuilder()
+        intake22 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p1, intake2p2))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
-        Outtake2 = follower.pathBuilder()
+        outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake31 = follower.pathBuilder()
+        intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        Intake32 = follower.pathBuilder()
+        intake32 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p1, intake3p2))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
                 .build();
-        Outtake3 = follower.pathBuilder()
+        outtake3 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p2, outtake))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setBrakingStrength(braking)
                 .setGlobalDeceleration(0.9)
                 .build();
-        End = follower.pathBuilder()
+        endPath = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
                 .setConstantHeadingInterpolation(Math.toRadians(180))
                 .setGlobalDeceleration(0.9)
@@ -150,50 +142,53 @@ public class BlueCloseGate extends BaseAuto {
         }
         switch (pathState) {
             case PRELOAD:
-                move(Preload, () -> setPathState(PathState.SHOOTPRE));
+                move(preload, () -> setPathState(PathState.SHOOTPRE));
                 break;
             case SHOOTPRE:
                 if (!gainSet && opmodeTimer.getElapsedTimeSeconds() < 3.0) { break; }
                 shoot(PathState.INTAKE1);
                 break;
             case INTAKE1:
-                moveIntake(Intake1, 0.37, true, 50, () -> setPathState(PathState.OPENGATE));
-                break;
-            case OPENGATE:
-                move(Opengate, () -> setPathState(PathState.OUTTAKE1));
+                moveIntake(intake1Path, 0.35, true, 50, () -> setPathState(PathState.OUTTAKE1));
                 break;
             case OUTTAKE1:
-                move(Outtake1, () -> setPathState(PathState.SHOOT1));
+                move(outtake1, () -> setPathState(PathState.SHOOT1));
                 break;
             case SHOOT1:
                 shoot(PathState.INTAKE21);
                 break;
             case INTAKE21:
-                move(Intake21, () -> setPathState(PathState.INTAKE22));
+                move(intake21, () -> setPathState(PathState.INTAKE22));
                 break;
             case INTAKE22:
-                moveIntake(Intake22, 0.37, true, 50, () -> setPathState(PathState.OUTTAKE2));
+                moveIntake(intake22, 0.35, true, 50, () -> setPathState(PathState.OUTTAKE2));
                 break;
             case OUTTAKE2:
-                move(Outtake2, () -> setPathState(PathState.SHOOT2));
+                move(outtake2, () -> setPathState(PathState.SHOOT2));
                 break;
             case SHOOT2:
                 shoot(PathState.INTAKE31);
                 break;
             case INTAKE31:
-                move(Intake31, () -> setPathState(PathState.INTAKE32));
+                move(intake31, () -> setPathState(PathState.INTAKE32));
                 break;
             case INTAKE32:
-                moveIntake(Intake32, 0.37, true, 50, () -> setPathState(PathState.OUTTAKE3));
+                moveIntake(intake32, 0.35, true, 50, () -> setPathState(PathState.OUTTAKE3));
                 break;
             case OUTTAKE3:
-                move(Outtake3, () -> setPathState(PathState.SHOOT3));
+                move(outtake3, () -> setPathState(PathState.SHOOT3));
                 break;
             case SHOOT3:
                 shoot(PathState.END);
                 break;
             case END:
-                move(End, () -> setPathState(PathState.STOP));
+                move(endPath, () -> {
+                    if (visionPortal != null) {
+                        visionPortal.close();
+                        visionPortal = null;
+                    }
+                    setPathState(PathState.STOP);
+                });
                 break;
         }
     }
@@ -233,8 +228,7 @@ public class BlueCloseGate extends BaseAuto {
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
             flyWheel2.setVelocity(0);
-            pathState = nextPath;
-            actionTimer.resetTimer();
+            setPathState(nextPath);
         }
     }
 
@@ -257,10 +251,9 @@ public class BlueCloseGate extends BaseAuto {
             }
         }
 
-        double turretTarget = goalPos.findAngle(xPos, yPos)
+        double turretTarget = goalPos.findBearing(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
-        // Blue turret homes at 0 ticks = one side of range; wraps 0-360° → limits [0, 1865] ticks
         if (turretTarget > 360 + 30) {
             turretTarget -= 360;
         } else if (turretTarget < 0 - 30) {
