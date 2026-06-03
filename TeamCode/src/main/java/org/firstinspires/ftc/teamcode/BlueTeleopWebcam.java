@@ -33,7 +33,7 @@ import java.util.concurrent.TimeUnit;
 
 
 @TeleOp(name = "Blue Teleop", group = "TeleOp") // SIDE RED/BLUE
-// Hello
+// here is a new comment for the coding guide
 
 public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     private DecodeDriveTrain drivetrain;
