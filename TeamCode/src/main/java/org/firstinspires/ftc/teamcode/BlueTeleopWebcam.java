@@ -93,7 +93,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     @Override
     public void runOpMode() {
         // initializes movement motors
-        drivetrain = new DecodeDriveTrain(hardwareMap);
+        drivetrain = new DecodeDriveTrain(hardwareMap,gamepad1,telemetry, false, false);
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose(0,0,Math.toRadians(0)));
 
@@ -146,7 +146,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
             // all the movement controls.
             if(!holding){
-                drivetrain.Teleop(gamepad1, heading, telemetry, fieldCentric);
+                drivetrain.Teleop(heading);
             }
 
             turretPos = turret.getCurrentPosition();
