@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
@@ -49,8 +50,8 @@ public class RedClose15 extends OpMode {
     private double xPos = 0, yPos = 0, heading = 0;
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -990;
-    private final double highLimit = 850;
+    private final double lowLimit = -2167;
+    private final double highLimit = 340;
     private double camRange;
     private double bearing;
     private double elevation;
@@ -194,14 +195,21 @@ public class RedClose15 extends OpMode {
         intake.setDirection(DcMotorEx.Direction.REVERSE);
 
         flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
-        flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
+        flyWheel1.setDirection(DcMotorEx.Direction.FORWARD);
         flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel1.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
         flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
-        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel2.setDirection(DcMotorEx.Direction.REVERSE);
         flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel2.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
+
+        turret = hardwareMap.get(DcMotorEx.class, "turret");
+        turret.setDirection(DcMotorEx.Direction.FORWARD);
+        turret.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
+        turret.setTargetPosition(0);
+        turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
+        turret.setPower(1);
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
@@ -400,9 +408,9 @@ public class RedClose15 extends OpMode {
         double turretTarget = goal.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading); // SIDE DEPENDENT
-        if (turretTarget > 180 + 30) { //wrap angle
+        if (turretTarget > highLimit * (90.0/495.0) + 30.0) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < -180 - 30) {
+        } else if (turretTarget < lowLimit * (90.0/495.0) - 30.0) {
             turretTarget += 360;
         }
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
