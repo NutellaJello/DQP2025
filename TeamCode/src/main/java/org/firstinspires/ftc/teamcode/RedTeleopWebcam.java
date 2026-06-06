@@ -320,7 +320,12 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         }
 
         //required turret angle
-        hOffset = range * 0.0309 - 5.367;
+        if(range < 100){
+            hOffset = range * 0.0309 - 5.367;
+        } else{
+            hOffset = range * 0.0298 - 5.317;
+        }
+        
         double turretTarget = goal.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
@@ -371,13 +376,20 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
         flapPos = range * 0.00086 + 0.1481;
+        if(flapPos > 0.22){
+            flapPos = 0.22;
+        }
         flap.setPosition(flapPos);
 
 
         if (gamepad1.x) {
 
             //setting target velocity
-            FWTarget = range * 7.710 + 980;  //FWTarget = range * 7.710 + 980
+            if(range < 100) {
+                FWTarget = range * 7.710 + 980;  //FWTarget = range * 7.710 + 980
+            } else {
+                FWTarget = range * 7.462 + 1021; //FWTarget = range * 7.462 + 1021
+            }
 
             if(Math.abs(FWV2) >= Math.abs(FWTarget)){
                 stopperPos = 0.973; // open
