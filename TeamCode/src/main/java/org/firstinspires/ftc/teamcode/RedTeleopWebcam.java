@@ -78,6 +78,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private double range;
     private double height;
     private double xPos = 0, yPos = 0, heading = 0;
+    private double headingOffset = 0;
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
@@ -135,6 +136,9 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
+            if(gamepad2.dpad_up){
+                headingOffset = heading;
+            }
             range = goal.findRange(xPos, yPos);
             turretPos = turret.getCurrentPosition();
             FWV1 = flyWheel1.getVelocity();
@@ -154,19 +158,20 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
                 gainSet = cameraControls();
             }
 
-            if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
-                List<AprilTagDetection> detectedTags = aprilTag.getDetections();
-                aiming(detectedTags);
-            }
 
             // all the movement controls.
             if(!auto){
                 drivetrain.Teleop(heading);
             }
 
-            setIdlePower();
+            //aiming
+            if(visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
+                List<AprilTagDetection> detectedTags = aprilTag.getDetections();
+                aiming(detectedTags);
+            }
 
-            if(!auto){ // disable manual intake if shooting/gate intake
+            // intake controls
+            if(!auto){
                 setIntakePower();
             }
             boolean gateButton = gamepad1.left_bumper;
@@ -175,7 +180,8 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             }
 
 
-
+            // outtake controls
+            setIdlePower();
             if(!(gamepad1.left_trigger > 0.1 || gamepad1.a)){ // disable if manual intake
                 firing();
             }
@@ -185,12 +191,13 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
                 brake();
             }
 
-
+            // stop autonomous pathing
             if(auto && !gateButton && !brakeButton) {
                 follower.breakFollowing();
                 auto = false;
             }
 
+            // apply final values
             intake.setPower(intakePower);
             flyWheel1.setVelocity(FWTarget);
             flyWheel2.setVelocity(FWTarget);
@@ -311,7 +318,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
                 bearing = Math.toRadians(bearing);
                 elevation = Math.toRadians(elevation);
                 if(hasEst){
-                    goal.update(0.2, xPos, yPos, bearing, elevation, camRange);
+                    goal.update(0.15, xPos, yPos, bearing, elevation, camRange);
                 }else{
                     goal.update(1, xPos, yPos, bearing, elevation, camRange);
                     hasEst = true;
@@ -323,9 +330,9 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
         //required turret angle
         if(range < 100){
-            hOffset = range * 0.0309 - 5.367;
+            hOffset = range * 0.0309 - 5; //hOffset = range * 0.0309 - 5.367
         } else{
-            hOffset = range * 0.0298 - 5.317;
+            hOffset = range * 0.0298 - 5.317; //hOffset = range * 0.0298 - 5.317
         }
 
         double turretTarget = goal.findAngle(xPos, yPos)
@@ -377,10 +384,12 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     public void firing(){
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
-        flapPos = range * 0.00086 + 0.1481;
-        if(flapPos > 0.22){
-            flapPos = 0.22;
+        if(range > 53){
+            flapPos = range * 0.00086 + 0.1481;
+        } else{
+            flapPos = range * 0.011 -0.385;
         }
+        flapPos = Range.clip(flapPos, 0, 0.22);
         flap.setPosition(flapPos);
 
 
@@ -388,9 +397,11 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
             //setting target velocity
             if(range < 100) {
-                FWTarget = range * 7.710 + 980;  //FWTarget = range * 7.710 + 980
+                FWTarget = range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
+                feedPower = 1;
             } else {
                 FWTarget = range * 7.462 + 1021; //FWTarget = range * 7.462 + 1021
+                feedPower = 0.8;
             }
 
             if(Math.abs(FWV2) >= Math.abs(FWTarget)){
@@ -407,7 +418,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     public void brake(){
            if(!auto){
                 PathChain hold = follower.pathBuilder()
-                        .addPath(new BezierLine(follower.getPose(), new Pose(xPos + 0.00000001, yPos, heading)))
+                        .addPath(new BezierLine(follower.getPose(), new Pose(xPos + 0.01, yPos, heading)))
                         .setConstantHeadingInterpolation(heading)
                         .build();
                 follower.followPath(hold,1, true);
@@ -417,17 +428,15 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     public void gate(){
         if(!auto){
-            double moveX = -3; // back 3in
+            double moveX = 5.2; // forward 5.2in
             double moveY = -10; // left/right 3in SIDE -10/+10
-            double sin = Math.sin(heading);
-            double cos = Math.cos(heading);
+
+            double sin = Math.sin(headingOffset);
+            double cos = Math.cos(headingOffset);
 
             double targetX = xPos + moveX * cos - moveY * sin;
             double targetY = yPos + moveX * sin + moveY * cos;
-            double targetH = Math.PI/6;
-            if(Math.abs(Math.toDegrees(heading)) > 20){
-                targetH = heading + Math.PI/6;
-            }
+            double targetH = Math.toRadians(40) + headingOffset;
 
             PathChain gate = follower.pathBuilder()
                     .addPath(new BezierLine(follower.getPose(),
@@ -437,7 +446,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
                                     targetH
                             )
                     ))
-                    .setLinearHeadingInterpolation(heading, heading + Math.PI/6)
+                    .setLinearHeadingInterpolation(heading, targetH)
                     .build();
             intakePower = 1;
             follower.followPath(gate, false);
