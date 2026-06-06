@@ -51,7 +51,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private boolean streamStarted = false;
     private double camStreamingTime;
 
-    double hOffset = 0.25;
+    double hOffset = 0;
     double feedPower = 1;
 
     boolean useWebcam = true;
@@ -160,7 +160,9 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             }
 
             // all the movement controls.
-            drivetrain.Teleop(heading);
+            if(!auto){
+                drivetrain.Teleop(heading);
+            }
 
             setIdlePower();
 
@@ -325,7 +327,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         } else{
             hOffset = range * 0.0298 - 5.317;
         }
-        
+
         double turretTarget = goal.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
@@ -415,17 +417,26 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     public void gate(){
         if(!auto){
-            double moveX = -3;
-            double moveY = -15;
+            double moveX = -3; // back 3in
+            double moveY = -10; // left/right 3in SIDE -10/+10
             double sin = Math.sin(heading);
             double cos = Math.cos(heading);
+
+            double targetX = xPos + moveX * cos - moveY * sin;
+            double targetY = yPos + moveX * sin + moveY * cos;
+            double targetH = Math.PI/6;
+            if(Math.abs(Math.toDegrees(heading)) > 20){
+                targetH = heading + Math.PI/6;
+            }
+
             PathChain gate = follower.pathBuilder()
                     .addPath(new BezierLine(follower.getPose(),
                             new Pose(
-                                xPos + moveX * cos - moveY * sin,
-                                yPos + moveX * sin + moveY * cos,
-                                heading + Math.PI/6)
-                            ))
+                                    targetX,
+                                    targetY,
+                                    targetH
+                            )
+                    ))
                     .setLinearHeadingInterpolation(heading, heading + Math.PI/6)
                     .build();
             intakePower = 1;
