@@ -428,15 +428,15 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     public void gate(){
         if(!auto){
-            double moveX = 5.2; // forward 5.2in
-            double moveY = -10; // left/right 3in SIDE -10/+10
+            double moveX = 6; // forward 6in
+            double moveY = -13; // left/right 3in SIDE -13/+13
 
             double sin = Math.sin(headingOffset);
             double cos = Math.cos(headingOffset);
 
             double targetX = xPos + moveX * cos - moveY * sin;
             double targetY = yPos + moveX * sin + moveY * cos;
-            double targetH = Math.toRadians(40) + headingOffset;
+            double targetH = Math.toRadians(50) + headingOffset;
 
             PathChain gate = follower.pathBuilder()
                     .addPath(new BezierLine(follower.getPose(),
