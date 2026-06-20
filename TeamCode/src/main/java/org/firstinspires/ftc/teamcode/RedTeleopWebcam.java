@@ -84,7 +84,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -2167; //495/90
+    private final double lowLimit = -1454; //495/90
     private final double highLimit =  340 ;
     double p = 400;
     double d = 0;
@@ -465,7 +465,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     public void botTelemetry(){
         telemetry.addData("gainSet", gainSet);
         telemetry.addData("goal est", goal);
-        telemetry.addData("turret pos", turret.getCurrentPosition());
         telemetry.addData("Cam Status", visionPortal.getCameraState());
         telemetry.addData("range", range);
         telemetry.addData("flap", flapPos);
