@@ -138,7 +138,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
-            if(gamepad2.dpad_up){
+            if(gamepad1.dpad_up){
                 headingOffset = heading;
             }
             range = goal.findRange(xPos, yPos);
