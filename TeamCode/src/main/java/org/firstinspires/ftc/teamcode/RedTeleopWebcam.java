@@ -48,7 +48,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
     private boolean gainSet = false;
-    boolean fieldCentric = false;
+    boolean fieldCentric = true;
     private ElapsedTime opModeTimer = new ElapsedTime();
     private boolean streamStarted = false;
     private double camStreamingTime;
@@ -97,7 +97,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     @Override
     public void runOpMode() {
         // initializes movement motors
-        drivetrain = new DecodeDriveTrain(hardwareMap, gamepad1, telemetry, false, false);
+        drivetrain = new DecodeDriveTrain(hardwareMap, gamepad1, telemetry, false, fieldCentric);
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose(0,0,Math.toRadians(0)));
 
