@@ -3,7 +3,9 @@ package org.firstinspires.ftc.teamcode;
 import android.util.Size;
 
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
+import com.pedropathing.geometry.BezierPoint;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -192,7 +194,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             }
 
             // stop autonomous pathing
-            if(auto && !gateButton && !brakeButton) {
+            if( (auto || follower.isBusy()) && !(gateButton || brakeButton) ){
                 follower.breakFollowing();
                 auto = false;
             }
@@ -330,7 +332,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
         //required turret angle
         if(range < 100){
-            hOffset = range * 0.0309 - 5; //hOffset = range * 0.0309 - 5.367
+            hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
         } else{
             hOffset = range * 0.0298 - 5.317; //hOffset = range * 0.0298 - 5.317
         }
@@ -385,9 +387,9 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
         if(range > 53){
-            flapPos = range * 0.00086 + 0.1481;
+            flapPos = range * 0.00080 + 0.1481; //flapPos = range * 0.00086 + 0.1481;
         } else{
-            flapPos = range * 0.011 -0.385;
+            flapPos = range * 0.011 - 0.385;
         }
         flapPos = Range.clip(flapPos, 0, 0.22);
         flap.setPosition(flapPos);
@@ -400,8 +402,8 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
                 FWTarget = range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
                 feedPower = 1;
             } else {
-                FWTarget = range * 7.462 + 1021; //FWTarget = range * 7.462 + 1021
-                feedPower = 0.8;
+                FWTarget = range * 7.462 + 1030; //FWTarget = range * 7.462 + 1021
+                feedPower = 0.65;
             }
 
             if(Math.abs(FWV2) >= Math.abs(FWTarget)){
@@ -429,17 +431,23 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     public void gate(){
         if(!auto){
             double moveX = 6; // forward 6in
-            double moveY = -13; // left/right 3in SIDE -13/+13
+            double moveY = -14; // left/right 3in SIDE -14/+14
 
             double sin = Math.sin(headingOffset);
             double cos = Math.cos(headingOffset);
 
             double targetX = xPos + moveX * cos - moveY * sin;
             double targetY = yPos + moveX * sin + moveY * cos;
-            double targetH = Math.toRadians(50) + headingOffset;
+            double targetH = Math.toRadians(35) + headingOffset;
+
+            double controlX = xPos - moveY * sin;
 
             PathChain gate = follower.pathBuilder()
-                    .addPath(new BezierLine(follower.getPose(),
+                    .addPath(new BezierCurve(follower.getPose(),
+                            new Pose(
+                                    controlX,
+                                    targetY
+                            ),
                             new Pose(
                                     targetX,
                                     targetY,
