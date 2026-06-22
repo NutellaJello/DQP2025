@@ -48,7 +48,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
     private boolean gainSet = false;
-    boolean fieldCentric = true;
+    boolean fieldCentric = false;
     private ElapsedTime opModeTimer = new ElapsedTime();
     private boolean streamStarted = false;
     private double camStreamingTime;
@@ -133,12 +133,14 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         opModeTimer.reset();
 
         while (opModeIsActive()) {
+
+
             // update variables
             follower.update();
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
-            if(gamepad1.dpad_up){
+            if(gamepad1.dpad_up || gamepad2.dpad_up){
                 headingOffset = heading;
             }
             range = goal.findRange(xPos, yPos);
@@ -176,11 +178,11 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             if(!auto){
                 setIntakePower();
             }
+
             boolean gateButton = gamepad1.left_bumper;
             if(gateButton){
                 gate();
             }
-
 
             // outtake controls
             setIdlePower();
@@ -194,7 +196,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             }
 
             // stop autonomous pathing
-            if( (auto || follower.isBusy()) && !(gateButton || brakeButton) ){
+            if((auto || follower.isBusy())&& !(gateButton || brakeButton) ){
                 follower.breakFollowing();
                 auto = false;
             }
@@ -438,7 +440,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
             double targetX = xPos + moveX * cos - moveY * sin;
             double targetY = yPos + moveX * sin + moveY * cos;
-            double targetH = Math.toRadians(35) + headingOffset;
+            double targetH = Math.toRadians(35) + headingOffset; // SIDE +35/-35
 
             double controlX = xPos - moveY * sin;
 
