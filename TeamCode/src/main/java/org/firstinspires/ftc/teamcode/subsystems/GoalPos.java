@@ -51,6 +51,7 @@ public class GoalPos {
 //    }
 
     public void update(double alpha, double x, double y, double heading, double elevation, double dist){
+        dist *= 1.1076;
         elevation += Math.toRadians(camAngle);
         double phi = Math.PI/2 - elevation;
         phi = Range.clip(phi, 0, Math.PI);
