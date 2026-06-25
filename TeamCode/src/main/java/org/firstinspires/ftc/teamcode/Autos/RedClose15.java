@@ -132,11 +132,11 @@ public class RedClose15 extends OpMode { // SIDE Red/Blue
                 .build();
         Intake11 = follower.pathBuilder()
                 .addPath(new BezierLine(outtakePre, intake1p1))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(outtakePre.getHeading())
                 .build();
         Intake12 = follower.pathBuilder()
                 .addPath(new BezierLine(intake1p1, intake1p2))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(intake1p1.getHeading())
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierCurve(Arrays.asList(intake1p2, outtake1Point, outtake)))
@@ -157,27 +157,27 @@ public class RedClose15 extends OpMode { // SIDE Red/Blue
                 .build();
         Intake2 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(outtake.getHeading())
                 .build();
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2, outtake))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(intake2.getHeading())
                 .build();
         Intake31 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake3p1))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(outtake.getHeading())
                 .build();
         Intake32 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p1, intake3p2))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(intake3p1.getHeading())
                 .build();
         Outtake3 = follower.pathBuilder()
                 .addPath(new BezierLine(intake3p2, outtake))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(intake3p2.getHeading())
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
-                .setConstantHeadingInterpolation(0)
+                .setConstantHeadingInterpolation(outtake.getHeading())
                 .build();
     }
 
@@ -371,7 +371,7 @@ public class RedClose15 extends OpMode { // SIDE Red/Blue
     }
 
     public void shoot(PathState nextPath){
-        double targetV = range * 7.710 + 980;  //FWTarget = range * 7.710 + 980
+        double targetV = 0.903*range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
         flyWheel1.setVelocity(targetV);
         flyWheel2.setVelocity(targetV);
 
@@ -417,7 +417,7 @@ public class RedClose15 extends OpMode { // SIDE Red/Blue
         }
 
         //required turret angle
-        hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
+        hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367 // SIDE 4.0/3.0
         double turretTarget = goal.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
