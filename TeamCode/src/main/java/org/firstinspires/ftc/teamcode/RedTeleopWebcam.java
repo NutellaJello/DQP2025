@@ -212,10 +212,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             botTelemetry();
 
         }
-        if (visionPortal != null) {
-            visionPortal.close();
-            visionPortal = null;
-        }
     }
 
 
@@ -313,7 +309,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // SIDE 24/20
                 camRange = detection.ftcPose.range + camOffsetX;
-                bearing = detection.ftcPose.bearing; // SIDE +/-
+                bearing = detection.ftcPose.bearing;
                 elevation = detection.ftcPose.elevation;
 
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180.0/976.0;   // in degrees
@@ -334,7 +330,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         if(range < 100){
             hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
         } else{
-            hOffset = range * 0.0298 - 5.317; //hOffset = range * 0.0298 - 5.317 // SIDE 5.317/4.0
+            hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317 // SIDE 3.0/4.0
         }
 
         double turretTarget = goal.findAngle(xPos, yPos)
@@ -399,10 +395,10 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
             //setting target velocity
             if(range < 100) {
-                FWTarget = range * 7.710 + 980;  //FWTarget = range * 7.710 + 980
+                FWTarget = 0.903*range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
                 feedPower = 1;
             } else {
-                FWTarget = range * 7.462 + 1010; //FWTarget = range * 7.462 + 1021
+                FWTarget = 0.903*range * 7.462 + 1000; //FWTarget = range * 7.462 + 1021
                 feedPower = 0.65;
             }
 
