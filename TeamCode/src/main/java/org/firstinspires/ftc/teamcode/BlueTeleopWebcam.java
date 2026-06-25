@@ -318,7 +318,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
                 bearing = detection.ftcPose.bearing;
                 elevation = detection.ftcPose.elevation;
 
-                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
+                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180.0/976.0;   // in degrees
                 bearing = Math.toRadians(bearing);
                 elevation = Math.toRadians(elevation);
                 if(hasEst){
@@ -336,7 +336,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
         if(range < 100){
             hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
         } else{
-            hOffset = range * 0.0298 - 5.317; //hOffset = range * 0.0298 - 5.317
+            hOffset = range * 0.0298 - 4.0; //hOffset = range * 0.0298 - 5.317 // SIDE -5.317
         }
 
         double turretTarget = goal.findAngle(xPos, yPos)
@@ -401,10 +401,10 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
             //setting target velocity
             if(range < 100) {
-                FWTarget = range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
+                FWTarget = range * 7.710 + 980;  //FWTarget = range * 7.710 + 980
                 feedPower = 1;
             } else {
-                FWTarget = range * 7.462 + 1030; //FWTarget = range * 7.462 + 1021
+                FWTarget = range * 7.462 + 1010; //FWTarget = range * 7.462 + 1021
                 feedPower = 0.65;
             }
 
@@ -432,7 +432,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
 
     public void gate(){
         if(!auto){
-            double moveX = 6; // forward 6in
+            double moveX = 5; // forward 5in SIDE 6/5
             double moveY = 14; // left/right 3in SIDE -14/+14
 
             double sin = Math.sin(headingOffset);
