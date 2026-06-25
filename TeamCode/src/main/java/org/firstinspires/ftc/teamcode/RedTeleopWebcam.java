@@ -14,6 +14,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -84,7 +85,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -1454; //495/90
+    private final double lowLimit = -1506; //495/90
     private final double highLimit =  340 ;
     double p = 400;
     double d = 0;
@@ -153,12 +154,13 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
                 intakePower = 0;
             }
 
+
             // configure webcam
             if(!streamStarted && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
                 camStreamingTime = opModeTimer.milliseconds();
                 streamStarted = true;
             }
-            if(!gainSet && streamStarted){
+            if(!gainSet && streamStarted && opModeTimer.milliseconds() > camStreamingTime + 500){
                 gainSet = cameraControls();
             }
 
@@ -264,20 +266,19 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     public boolean cameraControls(){
         boolean exposureOK = false;
         boolean gainOK = true;
-        if(opModeTimer.milliseconds() > camStreamingTime + 500){
-            ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
+        ExposureControl exposureControl = visionPortal.getCameraControl(ExposureControl.class);
 
-            GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
+        GainControl gainControl = visionPortal.getCameraControl(GainControl.class);
 
-            if(exposureControl == null || gainControl == null){
-                return false;
-            }
-
-            exposureControl.setMode(ExposureControl.Mode.Manual);
-            exposureOK = exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
-
-            gainOK = gainControl.setGain(100);
+        if(exposureControl == null || gainControl == null){
+            return false;
         }
+
+        exposureControl.setMode(ExposureControl.Mode.Manual);
+        exposureOK = exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
+
+        gainOK = gainControl.setGain(100);
+
         return exposureOK && gainOK;
     }
 
@@ -308,9 +309,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     }
 
 
-
-
-
     public void aiming(List<AprilTagDetection> detectedTags){
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // SIDE 24/20
@@ -318,7 +316,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
                 bearing = detection.ftcPose.bearing; // SIDE +/-
                 elevation = detection.ftcPose.elevation;
 
-                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180/976;   // in degrees
+                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180.0/976.0;   // in degrees
                 bearing = Math.toRadians(bearing);
                 elevation = Math.toRadians(elevation);
                 if(hasEst){
@@ -336,7 +334,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         if(range < 100){
             hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
         } else{
-            hOffset = range * 0.0298 - 5.317; //hOffset = range * 0.0298 - 5.317
+            hOffset = range * 0.0298 - 5.317; //hOffset = range * 0.0298 - 5.317 // SIDE 5.317/4.0
         }
 
         double turretTarget = goal.findAngle(xPos, yPos)
@@ -401,10 +399,10 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
             //setting target velocity
             if(range < 100) {
-                FWTarget = range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
+                FWTarget = range * 7.710 + 980;  //FWTarget = range * 7.710 + 980
                 feedPower = 1;
             } else {
-                FWTarget = range * 7.462 + 1030; //FWTarget = range * 7.462 + 1021
+                FWTarget = range * 7.462 + 1010; //FWTarget = range * 7.462 + 1021
                 feedPower = 0.65;
             }
 
@@ -432,7 +430,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     public void gate(){
         if(!auto){
-            double moveX = 6; // forward 6in
+            double moveX = 6; // forward 6in SIDE 6/5
             double moveY = -14; // left/right 3in SIDE -14/+14
 
             double sin = Math.sin(headingOffset);
@@ -465,18 +463,23 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     }
 
     public void botTelemetry(){
-        telemetry.addData("gainSet", gainSet);
-        telemetry.addData("goal est", goal);
+//        for (VoltageSensor sensor : hardwareMap.voltageSensor) {
+//            telemetry.addData(sensor.getDeviceName(), sensor.getVoltage());
+//        }
         telemetry.addData("Cam Status", visionPortal.getCameraState());
-        telemetry.addData("range", range);
-        telemetry.addData("flap", flapPos);
+        telemetry.addData("Cam Setup", gainSet);
+        telemetry.addData("Goal Position", goal);
+        telemetry.addData("Range", range);
+        telemetry.addData("targetVel", FWTarget);
         telemetry.addData("FWV1", FWV1);
         telemetry.addData("FWV2", FWV2);
-        telemetry.addData("targetVel", FWTarget);
+        telemetry.addData("Flap", flapPos);
         telemetry.addData("turretPos", turretPos);
         telemetry.addData("auto", auto);
         telemetry.addData("isBusy", follower.isBusy());
         telemetry.update();
+
+
 
 
     }
