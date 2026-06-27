@@ -214,6 +214,7 @@ public class RedClose15 extends OpMode { // SIDE Red/Blue
         turret.setTargetPosition(0);
         turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         turret.setPower(1);
+        turret.setPositionPIDFCoefficients(20);
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
