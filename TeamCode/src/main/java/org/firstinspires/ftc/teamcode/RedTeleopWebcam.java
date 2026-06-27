@@ -121,6 +121,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         turret.setTargetPosition(0);
         turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         turret.setPower(1);
+        turret.setPositionPIDFCoefficients(20);
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
@@ -345,7 +346,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
         // hardware limit
         turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
-
         if (gamepad2.a){
             double turretPower = 0;
             if(!a2Press){
