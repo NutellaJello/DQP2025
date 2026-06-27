@@ -121,6 +121,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
         turret.setTargetPosition(0);
         turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         turret.setPower(1);
+        turret.setPositionPIDFCoefficients(20);
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
