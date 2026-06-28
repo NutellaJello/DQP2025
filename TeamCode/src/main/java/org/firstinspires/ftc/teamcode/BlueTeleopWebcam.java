@@ -65,6 +65,7 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
     double turretPos;
     double FWV1;
     double FWV2;
+    double FWV;
     double idlePower = 0;
     double camRange = 0;
     double lastRange;
@@ -149,6 +150,8 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
             turretPos = turret.getCurrentPosition();
             FWV1 = flyWheel1.getVelocity();
             FWV2 = flyWheel2.getVelocity();
+            FWV = Math.max(FWV1, FWV2);
+
 
             // set initial values
             if(!auto){
@@ -399,11 +402,11 @@ public class BlueTeleopWebcam extends LinearOpMode { // SIDE
                 FWTarget = 0.903*range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
                 feedPower = 1;
             } else {
-                FWTarget = 0.903*range * 7.462 + 1000; //FWTarget = range * 7.462 + 1021
+                FWTarget = 0.903*range * 7.462 + 1020; //FWTarget = range * 7.462 + 1021
                 feedPower = 0.65;
             }
 
-            if(Math.abs(FWV2) >= Math.abs(FWTarget)){
+            if(Math.abs(FWV) >= Math.abs(FWTarget)){
                 stopperPos = 0.973; // open
                 intakePower = feedPower;
             }
