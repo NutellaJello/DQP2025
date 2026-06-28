@@ -45,7 +45,7 @@ public class RedFar extends OpMode { // SIDE Red/Blue
     private Follower follower;
     private Timer actionTimer, opModeTimer;
     private boolean moving = false;
-    GoalPos goal = new GoalPos(130,135, 15.5); // SIDE +14/-14
+    GoalPos goal = new GoalPos(133,136, 15.5); // SIDE +14/-14
     private double xPos = 0, yPos = 0, heading = 0;
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
@@ -66,10 +66,12 @@ public class RedFar extends OpMode { // SIDE Red/Blue
     double i = 0;
     double f = 13.5;
     PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
+
+    private int shotCounter = 0;
     private enum PathState {
         PRELOAD, SHOOTPRE,
         ALIGNINTAKE1, INTAKE1, OUTTAKE1, SHOOT1,
-        INTAKE21, INTAKE22, OUTTAKE2, SHOOT2,
+        INTAKE21, INTAKE22, OUTTAKE2, SHOOT2, INTAKEG, OUTTAKEG, SHOOTG,
         END, STOP
     }
 
@@ -79,16 +81,17 @@ public class RedFar extends OpMode { // SIDE Red/Blue
     private final Pose outtakePre = new Pose(88, 8, Math.toRadians(90)); // moving out to shoot preload
     private final Pose outtake = new Pose(88, 10, Math.toRadians(90));  // general position to shoot after getting preload
 
-    private final Pose preintake1 = new Pose(118, 7.3, Math.toRadians(0));// need to align because doesnt curve
+    private final Pose preintake1 = new Pose(118, 6.8, Math.toRadians(0));// need to align because doesnt curve
     // test bezier curve later.
 
-    private final Pose intake1 = new Pose(127, 7.3, Math.toRadians(0)); // intaking the batch @ loading
+    private final Pose intake1 = new Pose(127, 6.8, Math.toRadians(0)); // intaking the batch @ loading
     private final Pose intake2p1 = new Pose(88, 32, Math.toRadians(0)); // moving to get the second batch
     private final Pose intake2p2 = new Pose(118, 32, Math.toRadians(0)); // actually moving inward to get batch
+    private final Pose gateCycle = new Pose(126,8,Math.toRadians(0));
     private final Pose end = new Pose(100, 10, Math.toRadians(0));
 
     //Paths
-    private PathChain Preload, AlignIntake, Intake1, Outtake1, Intake21, Intake22, Outtake2, End;
+    private PathChain Preload, AlignIntake, Intake1, Outtake1, Intake21, Intake22, Outtake2, IntakeG, OuttakeG, End;
 
     public void buildPaths() {
         Preload = follower.pathBuilder()
@@ -118,6 +121,14 @@ public class RedFar extends OpMode { // SIDE Red/Blue
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
                 .setLinearHeadingInterpolation(intake2p2.getHeading(),outtake.getHeading())
+                .build();
+        IntakeG = follower.pathBuilder()
+                .addPath(new BezierLine(outtake, gateCycle))
+                .setLinearHeadingInterpolation(outtake.getHeading(),gateCycle.getHeading())
+                .build();
+        OuttakeG = follower.pathBuilder()
+                .addPath(new BezierLine(gateCycle, outtake))
+                .setLinearHeadingInterpolation(gateCycle.getHeading(),outtake.getHeading())
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
@@ -199,7 +210,7 @@ public class RedFar extends OpMode { // SIDE Red/Blue
                 move(AlignIntake, PathState.INTAKE1);
                 break;
             case INTAKE1:
-                moveIntake(Intake1, PathState.OUTTAKE1, 0.4, 2000);
+                moveIntake(Intake1, PathState.OUTTAKE1, 0.4, 1300);
                 break;
             case OUTTAKE1:
                 move(Outtake1, PathState.SHOOT1, true);
@@ -217,6 +228,15 @@ public class RedFar extends OpMode { // SIDE Red/Blue
                 move(Outtake2, PathState.SHOOT2, true);
                 break;
             case SHOOT2:
+                shoot(PathState.INTAKEG);
+                break;
+            case INTAKEG:
+                moveIntake(IntakeG, PathState.OUTTAKEG, 1);
+                break;
+            case OUTTAKEG:
+                move(OuttakeG, PathState.SHOOTG, true);
+                break;
+            case SHOOTG:
                 shoot(PathState.END);
                 break;
             case END:
@@ -273,6 +293,12 @@ public class RedFar extends OpMode { // SIDE Red/Blue
             actionTimer.resetTimer();
             moving = false;
         }
+        if(actionTimer.getElapsedTime() > 3000){
+            follower.breakFollowing();
+            pathState = nextPath;
+            actionTimer.resetTimer();
+            moving = false;
+        }
     }
     public void moveIntake(PathChain path, PathState nextPath){
         moveIntake(path, nextPath, 0.7, 50);
@@ -292,9 +318,16 @@ public class RedFar extends OpMode { // SIDE Red/Blue
             actionTimer.resetTimer();
             moving = false;
         }
+        if(actionTimer.getElapsedTime() > 3000){
+            follower.breakFollowing();
+            pathState = nextPath;
+            actionTimer.resetTimer();
+            moving = false;
+        }
     }
 
     public void shoot(PathState nextPath){
+
         double targetV = 0.903*range * 7.462 + 1000;  //FWTarget = range * 7.710 + 980
         flyWheel1.setVelocity(targetV);
         flyWheel2.setVelocity(targetV);
@@ -302,17 +335,22 @@ public class RedFar extends OpMode { // SIDE Red/Blue
         // no regression needed
         flap.setPosition(0.22);
 
-        double FWV = flyWheel1.getVelocity();
+        double FWV = Math.max(flyWheel1.getVelocity(), flyWheel2.getVelocity());
         if(FWV >= targetV){
             stopper.setPosition(0.973);
             intake.setPower(1);
         }
         if (actionTimer.getElapsedTime() > 2000) {
+            shotCounter++;
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
             flyWheel2.setVelocity(0);
-            pathState = nextPath;
+            if(shotCounter >= 4 && shotCounter <= 5){
+                pathState = PathState.INTAKEG;
+            }else{
+                pathState = nextPath;
+            }
             actionTimer.resetTimer();
         }
     }
