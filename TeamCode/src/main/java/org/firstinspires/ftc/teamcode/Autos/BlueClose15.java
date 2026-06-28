@@ -350,6 +350,12 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
             actionTimer.resetTimer();
             moving = false;
         }
+        if(actionTimer.getElapsedTime() > 3000){
+            follower.breakFollowing();
+            pathState = nextPath;
+            actionTimer.resetTimer();
+            moving = false;
+        }
     }
     public void moveIntake(PathChain path, PathState nextPath){
         moveIntake(path, nextPath, 0.7, 50);
@@ -369,6 +375,12 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
             actionTimer.resetTimer();
             moving = false;
         }
+        if(actionTimer.getElapsedTime() > 3000){
+            follower.breakFollowing();
+            pathState = nextPath;
+            actionTimer.resetTimer();
+            moving = false;
+        }
     }
 
     public void shoot(PathState nextPath){
@@ -384,7 +396,7 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
         flapPos = Range.clip(flapPos, 0, 0.22);
         flap.setPosition(flapPos);
 
-        double FWV = flyWheel1.getVelocity();
+        double FWV = Math.max(flyWheel1.getVelocity(), flyWheel2.getVelocity());
         if(FWV >= targetV){
             stopper.setPosition(0.973);
             intake.setPower(1);
