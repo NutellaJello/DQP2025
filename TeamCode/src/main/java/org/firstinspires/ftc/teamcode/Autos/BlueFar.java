@@ -66,10 +66,11 @@ public class BlueFar extends OpMode { // SIDE Red/Blue
     double i = 0;
     double f = 13.5;
     PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
+    private int shotCounter = 0;
     private enum PathState {
         PRELOAD, SHOOTPRE,
         ALIGNINTAKE1, INTAKE1, OUTTAKE1, SHOOT1,
-        INTAKE21, INTAKE22, OUTTAKE2, SHOOT2,
+        INTAKE21, INTAKE22, OUTTAKE2, SHOOT2, INTAKEG, OUTTAKEG, SHOOTG,
         END, STOP
     }
 
@@ -85,10 +86,11 @@ public class BlueFar extends OpMode { // SIDE Red/Blue
     private final Pose intake1 = new Pose(15, 7.3, Math.toRadians(180)); // intaking the batch @ loading
     private final Pose intake2p1 = new Pose(56, 35, Math.toRadians(180)); // moving to get the second batch
     private final Pose intake2p2 = new Pose(26, 35, Math.toRadians(180)); // actually moving inward to get batch
+    private final Pose gateCycle = new Pose(15, 8, Math.toRadians(180));
     private final Pose end = new Pose(44, 10, Math.toRadians(180));
 
     //Paths
-    private PathChain Preload, AlignIntake, Intake1, Outtake1, Intake21, Intake22, Outtake2, End;
+    private PathChain Preload, AlignIntake, Intake1, Outtake1, Intake21, Intake22, Outtake2, IntakeG, OuttakeG, End;
 
     public void buildPaths() {
         Preload = follower.pathBuilder()
@@ -118,6 +120,14 @@ public class BlueFar extends OpMode { // SIDE Red/Blue
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2p2, outtake))
                 .setLinearHeadingInterpolation(intake2p2.getHeading(),outtake.getHeading())
+                .build();
+        IntakeG = follower.pathBuilder()
+                .addPath(new BezierLine(outtake, gateCycle))
+                .setLinearHeadingInterpolation(outtake.getHeading(),gateCycle.getHeading())
+                .build();
+        OuttakeG = follower.pathBuilder()
+                .addPath(new BezierLine(gateCycle, outtake))
+                .setLinearHeadingInterpolation(gateCycle.getHeading(),outtake.getHeading())
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
@@ -217,6 +227,15 @@ public class BlueFar extends OpMode { // SIDE Red/Blue
                 move(Outtake2, PathState.SHOOT2, true);
                 break;
             case SHOOT2:
+                shoot(PathState.INTAKEG);
+                break;
+            case INTAKEG:
+                moveIntake(IntakeG, PathState.OUTTAKEG, 1);
+                break;
+            case OUTTAKEG:
+                move(OuttakeG, PathState.SHOOTG, true);
+                break;
+            case SHOOTG:
                 shoot(PathState.END);
                 break;
             case END:
@@ -242,7 +261,6 @@ public class BlueFar extends OpMode { // SIDE Red/Blue
         heading = follower.getPose().getHeading();
         turretPos = turret.getCurrentPosition();
         statePathUpdate();
-
         // configure webcam
         if(!streamStarted && visionPortal.getCameraState() == VisionPortal.CameraState.STREAMING){
             camStreamingTime = opModeTimer.getElapsedTime();
@@ -273,6 +291,12 @@ public class BlueFar extends OpMode { // SIDE Red/Blue
             actionTimer.resetTimer();
             moving = false;
         }
+        if(actionTimer.getElapsedTime() > 3000){
+            follower.breakFollowing();
+            pathState = nextPath;
+            actionTimer.resetTimer();
+            moving = false;
+        }
     }
     public void moveIntake(PathChain path, PathState nextPath){
         moveIntake(path, nextPath, 0.7, 50);
@@ -292,6 +316,12 @@ public class BlueFar extends OpMode { // SIDE Red/Blue
             actionTimer.resetTimer();
             moving = false;
         }
+        if(actionTimer.getElapsedTime() > 3000){
+            follower.breakFollowing();
+            pathState = nextPath;
+            actionTimer.resetTimer();
+            moving = false;
+        }
     }
 
     public void shoot(PathState nextPath){
@@ -302,17 +332,22 @@ public class BlueFar extends OpMode { // SIDE Red/Blue
         // no regression needed
         flap.setPosition(0.22);
 
-        double FWV = flyWheel1.getVelocity();
+        double FWV = Math.max(flyWheel1.getVelocity(), flyWheel2.getVelocity());
         if(FWV >= targetV){
             stopper.setPosition(0.973);
             intake.setPower(1);
         }
         if (actionTimer.getElapsedTime() > 2000) {
+            shotCounter++;
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
             flyWheel2.setVelocity(0);
-            pathState = nextPath;
+            if(shotCounter >= 4 && shotCounter <= 5){
+                pathState = PathState.INTAKEG;
+            }else{
+                pathState = nextPath;
+            }
             actionTimer.resetTimer();
         }
     }
