@@ -118,7 +118,7 @@ public class DecodeDriveTrain {
             heading -= headingOffset;
             double max;
             double axial   = y * Math.cos(heading) - x * Math.sin(heading);
-            double lateral = 0.7 * (y * Math.sin(heading) + x * Math.cos(heading));
+            double lateral = 1.2 * (y * Math.sin(heading) + x * Math.cos(heading));
 
             double turn     =  0.8 * -gamepad.right_stick_x;
 

@@ -58,9 +58,11 @@ public class GoalPos {
         double a2 = x + dist * Math.cos(heading) * Math.sin(phi);
         double b2 = y + dist * Math.sin(heading) * Math.sin(phi);
         double c2 = dist * Math.cos(phi);
-        a = a * (1 - alpha) + a2 * alpha;
-        b = b * (1 - alpha) + b2 * alpha;
-        c = c * (1 - alpha) + c2 * alpha;
+        if(Double.isFinite(a2) && Double.isFinite(b2) && Double.isFinite(c2)) {
+            a = a * (1 - alpha) + a2 * alpha;
+            b = b * (1 - alpha) + b2 * alpha;
+            c = c * (1 - alpha) + c2 * alpha;
+        }
         if (c < 18){
             c = 18;
         }

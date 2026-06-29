@@ -101,7 +101,7 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
     private final Pose intake1p2 = new Pose(-130, 67 - 2, Math.toRadians(180-0));
     private final Pose outtake1Point = new Pose(-106, 65, Math.toRadians(180-0));
     private final Pose gatePoint = new Pose(-122,46, Math.toRadians(180-35));
-    private final Pose gate = new Pose (-133.5, 66, Math.toRadians(180-20));
+    private final Pose gate = new Pose (-134.2, 66, Math.toRadians(180-20));
     private final Pose bigBack = new Pose(-139, 56, Math.toRadians(180-35));
     private final Pose bigBackPoint = new Pose(-133.3, 56, Math.toRadians(180-35));
     private final Pose outtakeBPoint = new Pose(-100, 60, Math.toRadians(180-0));

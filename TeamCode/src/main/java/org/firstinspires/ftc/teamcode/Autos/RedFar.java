@@ -346,7 +346,7 @@ public class RedFar extends OpMode { // SIDE Red/Blue
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
             flyWheel2.setVelocity(0);
-            if(shotCounter >= 4 && shotCounter <= 5){
+            if(shotCounter == 4){ //shotCounter >= 4 && shotCounter <= 5
                 pathState = PathState.INTAKEG;
             }else{
                 pathState = nextPath;

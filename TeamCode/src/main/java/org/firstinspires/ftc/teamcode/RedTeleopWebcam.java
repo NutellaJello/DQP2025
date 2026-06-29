@@ -416,13 +416,13 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
 
     public void brake(){
-           if(!auto){
-                PathChain hold = follower.pathBuilder()
-                        .addPath(new BezierLine(follower.getPose(), new Pose(xPos + 0.01, yPos, heading)))
-                        .setConstantHeadingInterpolation(heading)
-                        .build();
-                follower.followPath(hold,1, true);
-                auto = true;
+        if(!auto){
+            PathChain hold = follower.pathBuilder()
+                    .addPath(new BezierLine(follower.getPose(), new Pose(xPos + 0.01, yPos, heading)))
+                    .setConstantHeadingInterpolation(heading)
+                    .build();
+            follower.followPath(hold,1, true);
+            auto = true;
         }
     }
 
