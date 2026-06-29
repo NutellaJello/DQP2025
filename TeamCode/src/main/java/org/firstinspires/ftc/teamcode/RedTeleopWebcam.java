@@ -66,7 +66,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
     double FWV1;
     double FWV2;
     double FWV;
-    double idlePower = 0;
+    boolean idle = false;
     double camRange = 0;
     double lastRange;
     double bearing = 0;
@@ -287,9 +287,9 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     public void setIdlePower(){
         if(gamepad1.dpad_left){
-            idlePower = 800;
+            idle = true;
         }else if(gamepad1.dpad_right){
-            idlePower = 0;
+            idle = false;
         }
     }
 
@@ -299,7 +299,6 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
 
     public void setIntakePower(){
         if (gamepad1.left_trigger > 0.1) {
-            FWTarget = 0;
             stopperPos = 0.9;
             intakePower = 1;
         } else if(gamepad1.a){
@@ -339,7 +338,7 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         double turretTarget = goal.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
-                + Math.toDegrees(Math.atan(hOffset/range)); // SIDE +/-
+                + Math.toDegrees(Math.atan2(hOffset, range)); // SIDE +/-
         if (turretTarget > highLimit * (90.0/495.0) + 30.0) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < lowLimit * (90.0/495.0) - 30.0) {
@@ -392,17 +391,17 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
         flapPos = Range.clip(flapPos, 0, 0.22);
         flap.setPosition(flapPos);
 
-
+        if(range < 100) {
+            FWTarget = 0.903*range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
+            feedPower = 1;
+        } else {
+            FWTarget = 0.903*range * 7.462 + 1020; //FWTarget = range * 7.462 + 1021
+            feedPower = 0.65;
+        }
         if (gamepad1.x) {
 
             //setting target velocity
-            if(range < 100) {
-                FWTarget = 0.903*range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
-                feedPower = 1;
-            } else {
-                FWTarget = 0.903*range * 7.462 + 1020; //FWTarget = range * 7.462 + 1021
-                feedPower = 0.65;
-            }
+
 
             if(Math.abs(FWV) >= Math.abs(FWTarget)){
                 stopperPos = 0.973; // open
@@ -410,7 +409,11 @@ public class RedTeleopWebcam extends LinearOpMode { // SIDE
             }
         } else {
             stopperPos = 0.9; // closed
-            FWTarget = idlePower;
+            if(idle) {
+                FWTarget *= 0.75;
+            } else{
+                FWTarget = 0;
+            }
         }
     }
 

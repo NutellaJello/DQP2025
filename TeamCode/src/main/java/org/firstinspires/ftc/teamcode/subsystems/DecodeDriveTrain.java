@@ -168,9 +168,12 @@ public class DecodeDriveTrain {
             BR.setPower(PowerBR);
         }
         if(showTelemetry) {
-            telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
-            telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
-            telemetry.addData("Heading angle (DEG)", pose2D.getHeading(AngleUnit.DEGREES));
+            telemetry.addData("y", y);
+            telemetry.addData("x", x);
+            telemetry.addData("rx", rx);
+//            telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
+//            telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
+//            telemetry.addData("Heading angle (DEG)", pose2D.getHeading(AngleUnit.DEGREES));
             telemetry.addData("FL Power", PowerFL);
             telemetry.addData("BL Power", PowerBL);
             telemetry.addData("FR Power", PowerFR);
