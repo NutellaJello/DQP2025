@@ -153,7 +153,7 @@ public class RedClose15 extends OpMode { // SIDE Red/Blue
                 .build();
         OuttakeB = follower.pathBuilder()
                 .addPath(new BezierCurve(bigBack, outtakeBPoint, outtake))
-                .setLinearHeadingInterpolation(gate.getHeading(), outtake.getHeading())
+                .setLinearHeadingInterpolation(bigBack.getHeading(), outtake.getHeading())
                 .build();
         Intake2 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2))

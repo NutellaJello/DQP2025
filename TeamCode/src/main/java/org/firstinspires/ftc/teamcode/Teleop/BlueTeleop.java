@@ -75,8 +75,6 @@ public class BlueTeleop extends LinearOpMode { // SIDE
     private boolean auto = false;
     private boolean a2Press = false;
     private boolean hasEst = false;
-    private double xEst;
-    private double yEst;
     private double range;
     private double height;
     private double xPos = 0, yPos = 0, heading = 0;
@@ -348,6 +346,7 @@ public class BlueTeleop extends LinearOpMode { // SIDE
         turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
 
         if (gamepad2.a){
+            goal.update(1, xPos, yPos, bearing, elevation, camRange);
             double turretPower = 0;
             if(!a2Press){
                 turret.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
@@ -365,10 +364,6 @@ public class BlueTeleop extends LinearOpMode { // SIDE
                 turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
             }
             turret.setPower(turretPower);
-            if(hasEst){
-                goal.setX(xEst);
-                goal.setY(yEst);
-            }
         }else{ // manual aiming
             if(a2Press){
                 turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);

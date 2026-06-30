@@ -114,59 +114,42 @@ public class DecodeDriveTrain {
         if(gamepad.dpad_up){
             headingOffset = heading;
         }
+        double max;
         if (fieldCentric){
             heading -= headingOffset;
-            double max;
             double axial   = y * Math.cos(heading) - x * Math.sin(heading);
             double lateral = 1.2 * (y * Math.sin(heading) + x * Math.cos(heading));
-
             double turn     =  0.8 * -gamepad.right_stick_x;
 
             PowerFL = dampSpeedRatio*(axial - lateral) + turn*dampTurnRatio;
             PowerFR = dampSpeedRatio*(axial + lateral) - turn*dampTurnRatio;
             PowerBL = dampSpeedRatio*(axial + lateral) + turn*dampTurnRatio;
             PowerBR = dampSpeedRatio*(axial - lateral) - turn*dampTurnRatio;
-
-            // Normalize the values so no wheel power exceeds 100%
-            max = Math.max(Math.abs(PowerFL), Math.abs(PowerFR));
-            max = Math.max(max, Math.abs(PowerBL));
-            max = Math.max(max, Math.abs(PowerBR));
-
-            if (max > 1.0) {
-                PowerFL  /= max;
-                PowerFR /= max;
-                PowerBL   /= max;
-                PowerBR  /= max;
-            }
-            //telemetry.addData("heading",Math.toDegrees(heading));
-            FL.setPower(PowerFL);
-            FR.setPower(PowerFR);
-            BL.setPower(PowerBL);
-            BR.setPower(PowerBR);
         }
         else{
-
             PowerFL = (y - x) * dampSpeedRatio + dampTurnRatio * rx;
             PowerFR = (y + x) * dampSpeedRatio - dampTurnRatio * rx;
             PowerBL = (y + x) * dampSpeedRatio + dampTurnRatio * rx;
             PowerBR = (y - x) * dampSpeedRatio - dampTurnRatio * rx;
-
-            double maxFront = Math.max(PowerFL, PowerFR);
-            double maxBack = Math.max(PowerBL, PowerBR);
-            double maxPower = Math.max(maxFront, maxBack);
-
-            if (maxPower > 1.0) {
-                PowerFL /= maxPower;
-                PowerFR /= maxPower;
-                PowerBL /= maxPower;
-                PowerBR /= maxPower;
-            }
-            //finally moving the motors
-            FL.setPower(PowerFL);
-            BL.setPower(PowerBL);
-            FR.setPower(PowerFR);
-            BR.setPower(PowerBR);
         }
+        // Normalize the values so no wheel power exceeds 100%
+        max = Math.max(Math.abs(PowerFL), Math.abs(PowerFR));
+        max = Math.max(max, Math.abs(PowerBL));
+        max = Math.max(max, Math.abs(PowerBR));
+
+        if (max > 1.0) {
+            PowerFL  /= max;
+            PowerFR /= max;
+            PowerBL   /= max;
+            PowerBR  /= max;
+        }
+
+        //finally moving the motors
+        FL.setPower(PowerFL);
+        BL.setPower(PowerBL);
+        FR.setPower(PowerFR);
+        BR.setPower(PowerBR);
+
         if(showTelemetry) {
             telemetry.addData("y", y);
             telemetry.addData("x", x);
