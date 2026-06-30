@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode;
+package org.firstinspires.ftc.teamcode.Teleop;
 
 import android.util.Size;
 
@@ -14,7 +14,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -37,7 +36,7 @@ import java.util.concurrent.TimeUnit;
 
 @TeleOp(name = "Blue Teleop", group = "TeleOp") // SIDE RED/BLUE
 
-public class BlueTeleopWebcam extends LinearOpMode { // SIDE
+public class BlueTeleop extends LinearOpMode { // SIDE
     private DecodeDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;

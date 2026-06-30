@@ -58,14 +58,13 @@ public abstract class BaseAuto extends OpMode {
     protected final double startingAngle = 0; // angle from straight forward (counterclockwise)
 
     // === PIDF — p varies by file; d/i/f are universal ===
-    protected double p;
+    protected double p = 400;
     protected double d = 0;
     protected double i = 0;
     protected double f = 13.5;
     protected PIDFCoefficients fwPID;
 
     // === Per-file configuration ===
-    protected abstract double getPIDFP();
     protected abstract GoalPos createGoalPos();
     protected abstract Pose getStartPose();
     protected abstract double getFWVConstant();
@@ -79,7 +78,6 @@ public abstract class BaseAuto extends OpMode {
      * Subclass init() must call this after setting up subclass-only hardware (e.g. flyWheel2).
      */
     protected void baseInit() {
-        p = getPIDFP();
         fwPID = new PIDFCoefficients(p, i, d, f);
         goalPos = createGoalPos();
 
@@ -89,6 +87,11 @@ public abstract class BaseAuto extends OpMode {
 
         intake = hardwareMap.get(DcMotorEx.class, "intake");
         intake.setDirection(DcMotorEx.Direction.REVERSE);
+
+        flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
+        flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
+        flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        flyWheel1.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, fwPID);
 
         flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
         flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
