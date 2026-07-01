@@ -14,6 +14,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
@@ -78,6 +79,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
     private double range;
     private double height;
     private double xPos = 0, yPos = 0, heading = 0;
+    private double leadK, shootXPos, shootYPos;
     private double headingOffset = 0;
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
@@ -118,7 +120,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
         turret.setTargetPosition(0);
         turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         turret.setPower(1);
-        turret.setPositionPIDFCoefficients(20);
+        turret.setPositionPIDFCoefficients(15);
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
@@ -139,10 +141,13 @@ public class RedTeleop extends LinearOpMode { // SIDE
             xPos = follower.getPose().getX();
             yPos = follower.getPose().getY();
             heading = follower.getPose().getHeading();
+            leadK = 0.0033 * range + 0.2667;
+            shootXPos = follower.getVelocity().getXComponent() * leadK;
+            shootYPos = follower.getVelocity().getYComponent() * leadK;
             if(gamepad1.dpad_up || gamepad2.dpad_up){
                 headingOffset = heading;
             }
-            range = goal.findRange(xPos, yPos);
+            range = goal.findRange(shootXPos + xPos, shootYPos + yPos);
             turretPos = turret.getCurrentPosition();
             FWV1 = flyWheel1.getVelocity();
             FWV2 = flyWheel2.getVelocity();
@@ -191,7 +196,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
                 firing();
             }
 
-            boolean brakeButton = gamepad1.x || (gamepad2.right_trigger > 0.7 && gamepad2.left_trigger > 0.7);
+            boolean brakeButton = /*gamepad1.x ||*/ (gamepad2.right_trigger > 0.7 && gamepad2.left_trigger > 0.7);
             if(brakeButton){
                 brake();
             }
@@ -304,6 +309,8 @@ public class RedTeleop extends LinearOpMode { // SIDE
 
 
     public void aiming(List<AprilTagDetection> detectedTags){
+        telemetry.addData("xV", follower.getVelocity().getYComponent());
+        telemetry.addData("yV", follower.getVelocity().getXComponent());
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == 24) { // SIDE 24/20
                 camRange = detection.ftcPose.range + camOffsetX;
@@ -330,8 +337,9 @@ public class RedTeleop extends LinearOpMode { // SIDE
         } else{
             hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317 // SIDE 3.0/4.0
         }
+        //hOffset = 0;
 
-        double turretTarget = goal.findAngle(xPos, yPos)
+        double turretTarget = goal.findAngle(shootXPos + xPos, shootYPos + yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
                 + Math.toDegrees(Math.atan2(hOffset, range)); // SIDE +/-
