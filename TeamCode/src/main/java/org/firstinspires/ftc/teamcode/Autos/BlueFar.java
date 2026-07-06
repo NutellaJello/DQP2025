@@ -293,6 +293,7 @@ public class BlueFar extends OpMode { // SIDE Red/Blue
         }
         if(actionTimer.getElapsedTime() > 3000){
             follower.breakFollowing();
+            intake.setPower(0);
             pathState = nextPath;
             actionTimer.resetTimer();
             moving = false;
