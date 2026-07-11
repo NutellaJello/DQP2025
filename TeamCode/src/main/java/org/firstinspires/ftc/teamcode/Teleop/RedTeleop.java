@@ -84,7 +84,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -1506; //495/90
+    private final double lowLimit = -1706; //495/90
     private final double highLimit =  340 ;
     double p = 400;
     double d = 0;
@@ -154,7 +154,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
             FWV = Math.max(FWV1, FWV2);
 
             // set initial values
-            if(!auto){
+            if(!auto && !gamepad1.x){
                 intakePower = 0;
             }
 
@@ -337,7 +337,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
         } else{
             hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317 // SIDE 3.0/4.0
         }
-        //hOffset = 0;
+        hOffset = 0;
 
         double turretTarget = goal.findAngle(shootXPos + xPos, shootYPos + yPos)
                 - startingAngle
@@ -393,7 +393,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
         flap.setPosition(flapPos);
 
         if(range < 100) {
-            FWTarget = 0.903*range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
+            FWTarget = 0.903*range * 7.710 + 990;  //FWTarget = range * 7.710 + 980
             feedPower = 1;
         } else {
             FWTarget = 0.903*range * 7.462 + 1020; //FWTarget = range * 7.462 + 1021
