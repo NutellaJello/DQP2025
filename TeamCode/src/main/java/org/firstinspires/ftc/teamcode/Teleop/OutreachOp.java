@@ -49,7 +49,7 @@ public class OutreachOp extends LinearOpMode { // SIDE
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
     private boolean gainSet = false;
-    boolean fieldCentric = false;
+    boolean fieldCentric = true;
     private ElapsedTime opModeTimer = new ElapsedTime();
     private boolean streamStarted = false;
     private double camStreamingTime;
@@ -84,7 +84,7 @@ public class OutreachOp extends LinearOpMode { // SIDE
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -1906; //495/90
+    private final double lowLimit = -1506; //495/90
     private final double highLimit =  340 ;
     double p = 400;
     double d = 0;
@@ -118,9 +118,7 @@ public class OutreachOp extends LinearOpMode { // SIDE
         turret.setDirection(DcMotorEx.Direction.FORWARD);
         turret.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         turret.setTargetPosition(0);
-        turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-        turret.setPower(1);
-        turret.setPositionPIDFCoefficients(15);
+        turret.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
@@ -308,10 +306,10 @@ public class OutreachOp extends LinearOpMode { // SIDE
         }
 
             double turretPower;
-            if(gamepad2.left_bumper){
-                turretPower = 0.4;
-            } else if (gamepad2.right_bumper){
-                turretPower = -0.4;
+            if(gamepad2.left_bumper && turretPos < highLimit){
+                turretPower = 0.35;
+            } else if (gamepad2.right_bumper && turretPos > lowLimit){
+                turretPower = -0.35;
             }else{
                 turretPower = 0;
             }
@@ -350,40 +348,6 @@ public class OutreachOp extends LinearOpMode { // SIDE
         } else {
             stopperPos = 0.9; // closed
             FWTarget = 0;
-        }
-    }
-
-    public void gate(){
-        if(!auto){
-            double moveX = 6; // forward 6in SIDE 6/5
-            double moveY = -14; // left/right 3in SIDE -14/+14
-
-            double sin = Math.sin(headingOffset);
-            double cos = Math.cos(headingOffset);
-
-            double targetX = xPos + moveX * cos - moveY * sin;
-            double targetY = yPos + moveX * sin + moveY * cos;
-            double targetH = Math.toRadians(35) + headingOffset; // SIDE +35/-35
-
-            double controlX = xPos - moveY * sin;
-
-            PathChain gate = follower.pathBuilder()
-                    .addPath(new BezierCurve(follower.getPose(),
-                            new Pose(
-                                    controlX,
-                                    targetY
-                            ),
-                            new Pose(
-                                    targetX,
-                                    targetY,
-                                    targetH
-                            )
-                    ))
-                    .setLinearHeadingInterpolation(heading, targetH)
-                    .build();
-            intakePower = 1;
-            follower.followPath(gate, false);
-            auto = true;
         }
     }
 
