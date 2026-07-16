@@ -84,7 +84,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -1706; //495/90
+    private final double lowLimit = -1906; //495/90
     private final double highLimit =  340 ;
     double p = 400;
     double d = 0;

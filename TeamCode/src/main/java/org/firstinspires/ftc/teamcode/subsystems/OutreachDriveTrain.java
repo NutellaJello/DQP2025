@@ -1,0 +1,168 @@
+package org.firstinspires.ftc.teamcode.subsystems;
+
+import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.hardware.AnalogInput;
+import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.util.Range;
+
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+import org.firstinspires.ftc.robotcore.external.navigation.YawPitchRollAngles;
+
+public class OutreachDriveTrain {
+
+    // Instantiate the drivetrain motor variables
+    private DcMotorEx FL; //Front left motor of drivetrain
+    private DcMotorEx FR; //Front right motor of drivetrain
+    private DcMotorEx BL; //Back left motor of drivetrain
+    private DcMotorEx BR; //Back right motor of drivetrain
+    GoBildaPinpointDriver pinpoint;
+    private double dampSpeedRatio = 0.7;
+    private double dampTurnRatio  = -0.4;
+    private Pose2D pose2D;
+    private double headingOffset = 0;
+    private Gamepad gamepad;
+    private Telemetry telemetry;
+    private boolean showTelemetry;
+    private boolean fieldCentric;
+
+
+
+    public OutreachDriveTrain(HardwareMap hardwareMap, Gamepad gamepad, Telemetry telemetry, boolean showTelemetry, boolean fieldCentric){
+        // Motor Mapping
+        FL = hardwareMap.get(DcMotorEx.class, "FL");
+        FR = hardwareMap.get(DcMotorEx.class, "FR");
+        BL = hardwareMap.get(DcMotorEx.class, "BL");
+        BR = hardwareMap.get(DcMotorEx.class, "BR");
+        this.gamepad = gamepad;
+        this.telemetry = telemetry;
+        this.showTelemetry = showTelemetry;
+        this.fieldCentric = fieldCentric;
+
+
+        // Set motor direction based on which side of the robot the motors are on
+        FR.setDirection(DcMotorEx.Direction.FORWARD);
+        BR.setDirection(DcMotorEx.Direction.FORWARD);
+        FL.setDirection(DcMotorEx.Direction.REVERSE);
+        BL.setDirection(DcMotorEx.Direction.FORWARD);
+//
+//        FR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        BR.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        FL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+//        BL.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+//        pinpoint = hardwareMap.get(GoBildaPinpointDriver.class, "pinpoint");
+//        configurePinpoint();
+    }
+    public void configurePinpoint(){
+        /*
+         *  The X pod offset refers to how far sideways from the tracking point the X (forward) odometry pod is.
+         *  Left of the center is a positive number, right of center is a negative number.
+         *
+         *  The Y pod offset refers to how far forwards from the tracking point the Y (strafe) odometry pod is.
+         *  Forward of center is a positive number, backwards is a negative number.
+         */
+        pinpoint.setOffsets(-2.36, -0.94, DistanceUnit.INCH); //these are tuned for 3110-0002-0001 Product Insight #1
+
+        /*
+         * Set the kind of pods used by your robot. If you're using goBILDA odometry pods, select either
+         * the goBILDA_SWINGARM_POD, or the goBILDA_4_BAR_POD.
+         * If you're using another kind of odometry pod, uncomment setEncoderResolution and input the
+         * number of ticks per unit of your odometry pod.  For example:
+         *     pinpoint.setEncoderResolution(13.26291192, DistanceUnit.MM);
+         */
+        pinpoint.setEncoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_SWINGARM_POD);
+
+        /*
+         * Set the direction that each of the two odometry pods count. The X (forward) pod should
+         * increase when you move the robot forward. And the Y (strafe) pod should increase when
+         * you move the robot to the left.
+         */
+        pinpoint.setEncoderDirections(GoBildaPinpointDriver.EncoderDirection.REVERSED,
+                GoBildaPinpointDriver.EncoderDirection.FORWARD);
+        pinpoint.resetPosAndIMU();
+    }
+
+    public void Teleop(double heading){ //Code to be run in Teleop Mode void Loop at top level
+        heading = -heading;
+
+        double PowerFL = 0;
+        double PowerFR = 0;
+        double PowerBL = 0;
+        double PowerBR = 0;
+
+        double y = Range.clip(-gamepad.left_stick_y, -1, 1);
+        //left stick x value
+        double x = Range.clip(-gamepad.left_stick_x, -1, 1);
+        //right stick x value
+        double rx = Range.clip(-gamepad.right_stick_x, -1, 1);
+        if(gamepad.right_bumper){
+            dampSpeedRatio = 0.7 - 0.4;
+            dampTurnRatio = -0.4 + 0.1;
+        }else{
+            dampSpeedRatio = 0.7;
+            dampTurnRatio = -0.4;
+        }
+        if(gamepad.dpad_up){
+            headingOffset = heading;
+        }
+        double max;
+        if (fieldCentric){
+            heading -= headingOffset;
+            double axial   = y * Math.cos(heading) - x * Math.sin(heading);
+            double lateral = 1.2 * (y * Math.sin(heading) + x * Math.cos(heading));
+            double turn     =  0.8 * -gamepad.right_stick_x;
+
+            PowerFL = dampSpeedRatio*(axial - lateral) + turn*dampTurnRatio;
+            PowerFR = dampSpeedRatio*(axial + lateral) - turn*dampTurnRatio;
+            PowerBL = dampSpeedRatio*(axial + lateral) + turn*dampTurnRatio;
+            PowerBR = dampSpeedRatio*(axial - lateral) - turn*dampTurnRatio;
+        }
+        else{
+            PowerFL = (y - x) * dampSpeedRatio + dampTurnRatio * rx;
+            PowerFR = (y + x) * dampSpeedRatio - dampTurnRatio * rx;
+            PowerBL = (y + x) * dampSpeedRatio + dampTurnRatio * rx;
+            PowerBR = (y - x) * dampSpeedRatio - dampTurnRatio * rx;
+        }
+        // Normalize the values so no wheel power exceeds 100%
+        max = Math.max(Math.abs(PowerFL), Math.abs(PowerFR));
+        max = Math.max(max, Math.abs(PowerBL));
+        max = Math.max(max, Math.abs(PowerBR));
+
+        if (max > 0.7) {
+            PowerFL  /= max;
+            PowerFR /= max;
+            PowerBL   /= max;
+            PowerBR  /= max;
+        }
+
+        //finally moving the motors
+        FL.setPower(PowerFL);
+        BL.setPower(PowerBL);
+        FR.setPower(PowerFR);
+        BR.setPower(PowerBR);
+
+        if(showTelemetry) {
+            telemetry.addData("y", y);
+            telemetry.addData("x", x);
+            telemetry.addData("rx", rx);
+//            telemetry.addData("X coordinate (IN)", pose2D.getX(DistanceUnit.INCH));
+//            telemetry.addData("Y coordinate (IN)", pose2D.getY(DistanceUnit.INCH));
+//            telemetry.addData("Heading angle (DEG)", pose2D.getHeading(AngleUnit.DEGREES));
+            telemetry.addData("FL Power", PowerFL);
+            telemetry.addData("BL Power", PowerBL);
+            telemetry.addData("FR Power", PowerFR);
+            telemetry.addData("BR Power", PowerBR);
+        }
+
+    }
+
+}

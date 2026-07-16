@@ -49,7 +49,7 @@ public class RedFar extends OpMode { // SIDE Red/Blue
     private double xPos = 0, yPos = 0, heading = 0;
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -1506;
+    private final double lowLimit = -1906;
     private final double highLimit = 340;
     private double camRange;
     private double bearing;
@@ -169,7 +169,7 @@ public class RedFar extends OpMode { // SIDE Red/Blue
         turret.setTargetPosition(0);
         turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         turret.setPower(1);
-        turret.setPositionPIDFCoefficients(20);
+        turret.setPositionPIDFCoefficients(15);
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
@@ -321,6 +321,7 @@ public class RedFar extends OpMode { // SIDE Red/Blue
         }
         if(actionTimer.getElapsedTime() > 3000){
             follower.breakFollowing();
+            intake.setPower(0);
             pathState = nextPath;
             actionTimer.resetTimer();
             moving = false;

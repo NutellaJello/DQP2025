@@ -5,14 +5,12 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
-import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
@@ -32,8 +30,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@Autonomous(name = "Blue 15", group = "Autos") // SIDE Red/Blue
-public class BlueClose15 extends OpMode { // SIDE Red/Blue
+@Autonomous(name = "Blue Close", group = "Autos") // SIDE Red/Blue
+public class BlueClose extends OpMode { // SIDE Red/Blue
     private DcMotorEx intake;
     private DcMotorEx turret;
     private DcMotorEx flyWheel1;
@@ -53,7 +51,7 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
     private double xPos = 0, yPos = 0, heading = 0;
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -1506;
+    private final double lowLimit = -1906;
     private final double highLimit = 340;
     private double camRange;
     private double bearing;
@@ -70,6 +68,7 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
     double i = 0;
     double f = 13.5;
     PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
+    private int shotCounter = 0;
     private enum PathState {
         PRELOAD,
         SHOOTPRE,
@@ -77,52 +76,44 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
         INTAKE12,
         OUTTAKE1,
         SHOOT1,
-        OPENGATE,
-        BIGBACK,
-        OUTTAKEB,
-        SHOOTB,
+        INTAKEG1,
+        OUTTAKEG1,
+        SHOOTG1,
         INTAKE2,
         OUTTAKE2,
         SHOOT2,
-        INTAKE31,
-        INTAKE32,
-        OUTTAKE3,
-        SHOOT3,
+        INTAKEG2,
+        OUTTAKEG2,
+        SHOOTG2,
         END,
         STOP
     }
 
     private PathState pathState;
     //positions SIDE +/- ALL X COORDINATES none/180- ALL ANGLES
-    private final Pose start = new Pose(-123, 133, Math.toRadians(180-0));
-    private final Pose outtakePre = new Pose(-93, 90, Math.toRadians(180-0));
-    private final Pose outtake = new Pose(-100, 90, Math.toRadians(180-0));
-    private final Pose intake1p1 = new Pose(-105, 67, Math.toRadians(180-0));
-    private final Pose intake1p2 = new Pose(-130, 67 - 2, Math.toRadians(180-0));
-    private final Pose outtake1Point = new Pose(-106, 65, Math.toRadians(180-0));
-    private final Pose gatePoint = new Pose(-122,46, Math.toRadians(180-35));
-    private final Pose gate = new Pose (-134.2, 66, Math.toRadians(180-20));
-    private final Pose bigBack = new Pose(-139, 56, Math.toRadians(180-35));
-    private final Pose bigBackPoint = new Pose(-133.3, 56, Math.toRadians(180-35));
-    private final Pose outtakeBPoint = new Pose(-100, 60, Math.toRadians(180-0));
-    private final Pose intake2 = new Pose(-127.5, 88, Math.toRadians(180-0));
-    private final Pose intake3p1 = new Pose(-100, 45, Math.toRadians(180-0));
-    private final Pose intake3p2 = new Pose(-130, 45 - 6, Math.toRadians(180-0));
-    private final Pose end = new Pose(-108, 77, Math.toRadians(180-0));
+    private final Pose start = new Pose(-123, 133, Math.toRadians(180));
+    private final Pose outtakePre = new Pose(-93, 90, Math.toRadians(180));
+    private final Pose outtake = new Pose(-100, 90, Math.toRadians(180));
+    private final Pose intake1p1 = new Pose(-105, 67, Math.toRadians(180));
+    private final Pose intake1p2 = new Pose(-130, 67 - 2, Math.toRadians(180));
+    private final Pose outtake1Point = new Pose(-106, 65, Math.toRadians(180));
+    private final Pose gatePoint = new Pose(-122,46);
+    private final Pose gate1 = new Pose (-134.2, 66, Math.toRadians(180-30));
+    private final Pose gate2 = new Pose (-134.2, 66, Math.toRadians(180-30));
+    private final Pose intake2 = new Pose(-127.5, 88, Math.toRadians(180));
+    private final Pose end = new Pose(-108, 77, Math.toRadians(180));
 
     //Paths
     private PathChain Preload;
     private PathChain Intake11;
     private PathChain Intake12;
     private PathChain Outtake1;
-    private PathChain Opengate;
-    private PathChain BigBack;
-    private PathChain OuttakeB;
+    private PathChain IntakeG1;
+    private PathChain IntakeG2;
+    private PathChain OuttakeG1;
+    private PathChain OuttakeG2;
     private PathChain Intake2;
     private PathChain Outtake2;
-    private PathChain Intake31;
-    private PathChain Intake32;
-    private PathChain Outtake3;
     private PathChain End;
 
     public void buildPaths() {
@@ -142,18 +133,22 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
                 .addPath(new BezierCurve(Arrays.asList(intake1p2, outtake1Point, outtake)))
                 .setConstantHeadingInterpolation(outtake.getHeading())
                 .build();
-        Opengate = follower.pathBuilder()
-                .addPath(new BezierCurve(Arrays.asList(outtake, gatePoint, gate)))
-                .setLinearHeadingInterpolation(outtake.getHeading(), gate.getHeading())
-                .setBrakingStrength(0.08)
+        IntakeG1 = follower.pathBuilder()
+                .addPath(new BezierCurve(Arrays.asList(outtake, gatePoint, gate1)))
+                .setLinearHeadingInterpolation(outtake.getHeading(), gate1.getHeading())
                 .build();
-        BigBack = follower.pathBuilder()
-                .addPath(new BezierCurve(gate, bigBackPoint, bigBack))
-                .setLinearHeadingInterpolation(gate.getHeading(), bigBack.getHeading())
+        IntakeG2 = follower.pathBuilder()
+                .addPath(new BezierLine(outtake, gate2))
+                .setLinearHeadingInterpolation(outtake.getHeading(), gate2.getHeading())
+                .setBrakingStrength(0.4)
                 .build();
-        OuttakeB = follower.pathBuilder()
-                .addPath(new BezierCurve(bigBack, outtakeBPoint, outtake))
-                .setLinearHeadingInterpolation(bigBack.getHeading(), outtake.getHeading())
+        OuttakeG1 = follower.pathBuilder()
+                .addPath(new BezierCurve(Arrays.asList(gate1, gatePoint, outtake)))
+                .setLinearHeadingInterpolation(gate1.getHeading(), outtake.getHeading())
+                .build();
+        OuttakeG2 = follower.pathBuilder()
+                .addPath(new BezierLine(gate2, outtake))
+                .setLinearHeadingInterpolation(gate2.getHeading(), outtake.getHeading())
                 .build();
         Intake2 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2))
@@ -162,18 +157,6 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
         Outtake2 = follower.pathBuilder()
                 .addPath(new BezierLine(intake2, outtake))
                 .setConstantHeadingInterpolation(intake2.getHeading())
-                .build();
-        Intake31 = follower.pathBuilder()
-                .addPath(new BezierLine(outtake, intake3p1))
-                .setConstantHeadingInterpolation(outtake.getHeading())
-                .build();
-        Intake32 = follower.pathBuilder()
-                .addPath(new BezierLine(intake3p1, intake3p2))
-                .setConstantHeadingInterpolation(intake3p1.getHeading())
-                .build();
-        Outtake3 = follower.pathBuilder()
-                .addPath(new BezierLine(intake3p2, outtake))
-                .setConstantHeadingInterpolation(intake3p2.getHeading())
                 .build();
         End = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, end))
@@ -214,7 +197,7 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
         turret.setTargetPosition(0);
         turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
         turret.setPower(1);
-        turret.setPositionPIDFCoefficients(20);
+        turret.setPositionPIDFCoefficients(15);
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
@@ -261,18 +244,15 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
                 move(Outtake1, PathState.SHOOT1, true);
                 break;
             case SHOOT1:
-                shoot(PathState.OPENGATE);
+                shoot(PathState.INTAKEG1);
                 break;
-            case OPENGATE:
-                move(Opengate, PathState.BIGBACK, false, 2300);
+            case INTAKEG1:
+                moveIntake(IntakeG1, PathState.OUTTAKEG1, 1, 3500);
                 break;
-            case BIGBACK:
-                moveIntake(BigBack, PathState.OUTTAKEB, 0.65, 2000);
+            case OUTTAKEG1:
+                move(OuttakeG1, PathState.SHOOTG1, true);
                 break;
-            case OUTTAKEB:
-                move(OuttakeB, PathState.SHOOTB, true);
-                break;
-            case SHOOTB:
+            case SHOOTG1:
                 shoot(PathState.INTAKE2);
                 break;
             case INTAKE2:
@@ -282,18 +262,15 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
                 move(Outtake2, PathState.SHOOT2, true);
                 break;
             case SHOOT2:
-                shoot(PathState.INTAKE31);
+                shoot(PathState.INTAKEG2);
                 break;
-            case INTAKE31:
-                move(Intake31, PathState.INTAKE32);
+            case INTAKEG2:
+                moveIntake(IntakeG2, PathState.OUTTAKEG2, 1, 3500);
                 break;
-            case INTAKE32:
-                moveIntake(Intake32, PathState.OUTTAKE3);
+            case OUTTAKEG2:
+                move(OuttakeG2, PathState.SHOOTG2, true);
                 break;
-            case OUTTAKE3:
-                move(Outtake3, PathState.SHOOT3, true);
-                break;
-            case SHOOT3:
+            case SHOOTG2:
                 shoot(PathState.END);
                 break;
             case END:
@@ -339,8 +316,8 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
     public void move(PathChain path, PathState nextPath, boolean idle, double wait){
         if (!moving) {
             if(idle){
-                flyWheel1.setVelocity(1100);
-                flyWheel2.setVelocity(1100);
+                flyWheel1.setVelocity(1300);
+                flyWheel2.setVelocity(1300);
             }
             follower.followPath(path, false);
             moving = true;
@@ -352,6 +329,7 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
         }
         if(actionTimer.getElapsedTime() > 3000){
             follower.breakFollowing();
+            intake.setPower(0);
             pathState = nextPath;
             actionTimer.resetTimer();
             moving = false;
@@ -365,7 +343,7 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
     }
     public void moveIntake(PathChain path, PathState nextPath, double power, double wait){
         if (!moving) {
-            follower.followPath(path, power, false);
+            follower.followPath(path, power, true);
             intake.setPower(1);
             moving = true;
         }
@@ -385,7 +363,7 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
     }
 
     public void shoot(PathState nextPath){
-        double targetV = 0.903*range * 7.710 + 1000;  //FWTarget = range * 7.710 + 980
+        double targetV = 0.903*range * 7.710 + 970;  //FWTarget = range * 7.710 + 980
         flyWheel1.setVelocity(targetV);
         flyWheel2.setVelocity(targetV);
 
@@ -402,12 +380,17 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
             stopper.setPosition(0.973);
             intake.setPower(1);
         }
-        if (actionTimer.getElapsedTime() > 1600) {
+        if (actionTimer.getElapsedTime() > 900) {
+            shotCounter++;
             intake.setPower(0);
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
             flyWheel2.setVelocity(0);
-            pathState = nextPath;
+            if(shotCounter == 5 /*&& shotCounter <= 6*/){
+                pathState = PathState.INTAKEG2;
+            }else{
+                pathState = nextPath;
+            }
             actionTimer.resetTimer();
         }
     }
@@ -431,7 +414,7 @@ public class BlueClose15 extends OpMode { // SIDE Red/Blue
         }
 
         //required turret angle
-        hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
+        hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367 // SIDE 4.0/3.0
         double turretTarget = goal.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading)

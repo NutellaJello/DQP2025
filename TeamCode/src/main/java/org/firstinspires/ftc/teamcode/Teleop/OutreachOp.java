@@ -25,8 +25,8 @@ import org.firstinspires.ftc.robotcore.external.hardware.camera.controls.GainCon
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
-import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
+import org.firstinspires.ftc.teamcode.subsystems.OutreachDriveTrain;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -35,10 +35,10 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
-@TeleOp(name = "Blue Teleop", group = "TeleOp") // SIDE RED/BLUE
+@TeleOp(name = "Teleop", group = "TeleOp") // SIDE RED/BLUE
 
-public class BlueTeleop extends LinearOpMode { // SIDE
-    private DecodeDriveTrain drivetrain;
+public class OutreachOp extends LinearOpMode { // SIDE
+    private OutreachDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
     private DcMotorEx flyWheel1;
@@ -70,7 +70,7 @@ public class BlueTeleop extends LinearOpMode { // SIDE
     double camRange = 0;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goal = new GoalPos(30,-50, 15.5); // SIDE 50/-50
+    GoalPos goal = new GoalPos(30,50, 15.5); // SIDE 50/-50
 
     private Follower follower;
     private boolean auto = false;
@@ -97,7 +97,7 @@ public class BlueTeleop extends LinearOpMode { // SIDE
     @Override
     public void runOpMode() {
         // initializes movement motors
-        drivetrain = new DecodeDriveTrain(hardwareMap, gamepad1, telemetry, false, fieldCentric);
+        drivetrain = new OutreachDriveTrain(hardwareMap, gamepad1, telemetry, false, fieldCentric);
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose(0,0,Math.toRadians(0)));
 
@@ -153,7 +153,6 @@ public class BlueTeleop extends LinearOpMode { // SIDE
             FWV2 = flyWheel2.getVelocity();
             FWV = Math.max(FWV1, FWV2);
 
-
             // set initial values
             if(!auto && !gamepad1.x){
                 intakePower = 0;
@@ -197,13 +196,9 @@ public class BlueTeleop extends LinearOpMode { // SIDE
                 firing();
             }
 
-            boolean brakeButton = /*gamepad1.x ||*/ (gamepad2.right_trigger > 0.7 && gamepad2.left_trigger > 0.7);
-            if(brakeButton){
-                brake();
-            }
 
             // stop autonomous pathing
-            if((auto || follower.isBusy())&& !(gateButton || brakeButton) ){
+            if((auto || follower.isBusy()) && !gateButton){
                 follower.breakFollowing();
                 auto = false;
             }
@@ -311,7 +306,7 @@ public class BlueTeleop extends LinearOpMode { // SIDE
 
     public void aiming(List<AprilTagDetection> detectedTags){
         for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 20) { // SIDE 24/20
+            if (detection.metadata != null && detection.id == 24) { // SIDE 24/20
                 camRange = detection.ftcPose.range + camOffsetX;
                 bearing = detection.ftcPose.bearing;
                 elevation = detection.ftcPose.elevation;
@@ -334,15 +329,14 @@ public class BlueTeleop extends LinearOpMode { // SIDE
         if(range < 100){
             hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
         } else{
-            hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317
+            hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317 // SIDE 3.0/4.0
         }
         hOffset = 0;
-
 
         double turretTarget = goal.findAngle(shootXPos + xPos, shootYPos + yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
-                - Math.toDegrees(Math.atan2(hOffset, range)); // SIDE +/-
+                + Math.toDegrees(Math.atan2(hOffset, range)); // SIDE +/-
         if (turretTarget > highLimit * (90.0/495.0) + 30.0) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < lowLimit * (90.0/495.0) - 30.0) {
@@ -351,7 +345,6 @@ public class BlueTeleop extends LinearOpMode { // SIDE
         turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
         // hardware limit
         turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
-
         if (gamepad2.a){
             goal.update(1, xPos, yPos, bearing, elevation, camRange);
             double turretPower = 0;
@@ -404,7 +397,6 @@ public class BlueTeleop extends LinearOpMode { // SIDE
 
             //setting target velocity
 
-
             if(Math.abs(FWV) >= Math.abs(FWTarget)){
                 stopperPos = 0.973; // open
                 intakePower = feedPower;
@@ -419,29 +411,17 @@ public class BlueTeleop extends LinearOpMode { // SIDE
         }
     }
 
-
-    public void brake(){
-        if(!auto){
-            PathChain hold = follower.pathBuilder()
-                    .addPath(new BezierLine(follower.getPose(), new Pose(xPos + 0.01, yPos, heading)))
-                    .setConstantHeadingInterpolation(heading)
-                    .build();
-            follower.followPath(hold,1, true);
-            auto = true;
-        }
-    }
-
     public void gate(){
         if(!auto){
-            double moveX = 5; // forward 6in SIDE 6/5
-            double moveY = 14; // left/right 3in SIDE -14/+14
+            double moveX = 6; // forward 6in SIDE 6/5
+            double moveY = -14; // left/right 3in SIDE -14/+14
 
             double sin = Math.sin(headingOffset);
             double cos = Math.cos(headingOffset);
 
             double targetX = xPos + moveX * cos - moveY * sin;
             double targetY = yPos + moveX * sin + moveY * cos;
-            double targetH = Math.toRadians(-35) + headingOffset; // SIDE +35/-35
+            double targetH = Math.toRadians(35) + headingOffset; // SIDE +35/-35
 
             double controlX = xPos - moveY * sin;
 
@@ -466,9 +446,9 @@ public class BlueTeleop extends LinearOpMode { // SIDE
     }
 
     public void botTelemetry(){
-        for (VoltageSensor sensor : hardwareMap.voltageSensor) {
-            telemetry.addData(sensor.getDeviceName(), sensor.getVoltage());
-        }
+//        for (VoltageSensor sensor : hardwareMap.voltageSensor) {
+//            telemetry.addData(sensor.getDeviceName(), sensor.getVoltage());
+//        }
         telemetry.addData("Cam Status", visionPortal.getCameraState());
         telemetry.addData("Cam Setup", gainSet);
         telemetry.addData("Goal Position", goal);
