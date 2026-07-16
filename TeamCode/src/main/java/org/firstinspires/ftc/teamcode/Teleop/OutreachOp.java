@@ -154,7 +154,7 @@ public class OutreachOp extends LinearOpMode { // SIDE
             FWV = Math.max(FWV1, FWV2);
 
             // set initial values
-            if(!auto && !gamepad1.x){
+            if(!auto && !gamepad2.x){
                 intakePower = 0;
             }
 
@@ -185,23 +185,17 @@ public class OutreachOp extends LinearOpMode { // SIDE
                 setIntakePower();
             }
 
-            boolean gateButton = gamepad1.left_bumper;
-            if(gateButton){
-                gate();
-            }
+//            boolean gateButton = gamepad1.left_bumper;
+//            if(gateButton){
+//                gate();
+//            }
 
             // outtake controls
-            setIdlePower();
             if(!(gamepad1.left_trigger > 0.1 || gamepad1.a)){ // disable if manual intake
                 firing();
             }
 
 
-            // stop autonomous pathing
-            if((auto || follower.isBusy()) && !gateButton){
-                follower.breakFollowing();
-                auto = false;
-            }
 
             // apply final values
             intake.setPower(intakePower);
@@ -282,13 +276,6 @@ public class OutreachOp extends LinearOpMode { // SIDE
 
 
 
-    public void setIdlePower(){
-        if(gamepad1.dpad_left){
-            idle = true;
-        }else if(gamepad1.dpad_right){
-            idle = false;
-        }
-    }
 
 
 
@@ -314,44 +301,13 @@ public class OutreachOp extends LinearOpMode { // SIDE
                 bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180.0/976.0;   // in degrees
                 bearing = Math.toRadians(bearing);
                 elevation = Math.toRadians(elevation);
-                if(hasEst){
-                    goal.update(0.15, xPos, yPos, bearing, elevation, camRange);
-                }else{
-                    goal.update(1, xPos, yPos, bearing, elevation, camRange);
-                    hasEst = true;
-                }
+                goal.update(1, xPos, yPos, bearing, elevation, camRange);
 
                 break;
             }
         }
 
-        //required turret angle
-        if(range < 100){
-            hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
-        } else{
-            hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317 // SIDE 3.0/4.0
-        }
-        hOffset = 0;
-
-        double turretTarget = goal.findAngle(shootXPos + xPos, shootYPos + yPos)
-                - startingAngle
-                - Math.toDegrees(heading)
-                + Math.toDegrees(Math.atan2(hOffset, range)); // SIDE +/-
-        if (turretTarget > highLimit * (90.0/495.0) + 30.0) { //wrap angle
-            turretTarget -= 360;
-        } else if (turretTarget < lowLimit * (90.0/495.0) - 30.0) {
-            turretTarget += 360;
-        }
-        turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
-        // hardware limit
-        turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
-        if (gamepad2.a){
-            goal.update(1, xPos, yPos, bearing, elevation, camRange);
-            double turretPower = 0;
-            if(!a2Press){
-                turret.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
-                a2Press = true;
-            }
+            double turretPower;
             if(gamepad2.left_bumper){
                 turretPower = 0.4;
             } else if (gamepad2.right_bumper){
@@ -359,41 +315,31 @@ public class OutreachOp extends LinearOpMode { // SIDE
             }else{
                 turretPower = 0;
             }
-            if(gamepad2.y){
-                turret.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                turret.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-            }
             turret.setPower(turretPower);
-        }else{ // manual aiming
-            if(a2Press){
-                turret.setMode(DcMotorEx.RunMode.RUN_TO_POSITION);
-                turret.setPower(1);
-                a2Press = false;
-            }
-            turret.setTargetPosition((int) turretTarget);
-        }
     }
 
 
     public void firing(){
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
-        if(range > 53){
-            flapPos = range * 0.00080 + 0.1481; //flapPos = range * 0.00086 + 0.1481;
-        } else{
-            flapPos = range * 0.011 - 0.385;
-        }
+//        if(range > 53){
+//            flapPos = range * 0.00080 + 0.1481; //flapPos = range * 0.00086 + 0.1481;
+//        } else{
+//            flapPos = range * 0.011 - 0.385;
+//        }
+        flapPos = 0;
         flapPos = Range.clip(flapPos, 0, 0.22);
         flap.setPosition(flapPos);
 
-        if(range < 100) {
-            FWTarget = 0.903*range * 7.710 + 990;  //FWTarget = range * 7.710 + 980
-            feedPower = 1;
-        } else {
-            FWTarget = 0.903*range * 7.462 + 1020; //FWTarget = range * 7.462 + 1021
-            feedPower = 0.65;
-        }
-        if (gamepad1.x) {
+//        if(range < 100) {
+//            FWTarget = 0.903*range * 7.710 + 990;  //FWTarget = range * 7.710 + 980
+//            feedPower = 1;
+//        } else {
+//            FWTarget = 0.903*range * 7.462 + 1020; //FWTarget = range * 7.462 + 1021
+//            feedPower = 0.65;
+//        }
+        FWTarget = 1340;
+        if (gamepad2.x) {
 
             //setting target velocity
 
@@ -403,11 +349,7 @@ public class OutreachOp extends LinearOpMode { // SIDE
             }
         } else {
             stopperPos = 0.9; // closed
-            if(idle) {
-                FWTarget *= 0.75;
-            } else{
-                FWTarget = 0;
-            }
+            FWTarget = 0;
         }
     }
 
