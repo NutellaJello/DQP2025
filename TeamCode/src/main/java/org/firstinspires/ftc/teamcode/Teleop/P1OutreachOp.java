@@ -35,9 +35,9 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 
-@TeleOp(name = "Teleop", group = "TeleOp") // SIDE RED/BLUE
+@TeleOp(name = "1 Player", group = "TeleOp") // SIDE RED/BLUE
 
-public class OutreachOp extends LinearOpMode { // SIDE
+public class P1OutreachOp extends LinearOpMode { // SIDE
     private OutreachDriveTrain drivetrain;
     private DcMotorEx intake;
     private DcMotorEx turret;
@@ -49,7 +49,7 @@ public class OutreachOp extends LinearOpMode { // SIDE
     private AprilTagProcessor aprilTag;
     private VisionPortal visionPortal;
     private boolean gainSet = false;
-    boolean fieldCentric = true;
+    boolean fieldCentric = false    ;
     private ElapsedTime opModeTimer = new ElapsedTime();
     private boolean streamStarted = false;
     private double camStreamingTime;
@@ -70,7 +70,7 @@ public class OutreachOp extends LinearOpMode { // SIDE
     double camRange = 0;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goal = new GoalPos(30,50, 15.5); // SIDE 50/-50
+    GoalPos goal = new GoalPos(30,0, 15.5); // SIDE 50/-50
 
     private Follower follower;
     private boolean auto = false;
@@ -117,8 +117,8 @@ public class OutreachOp extends LinearOpMode { // SIDE
         turret = hardwareMap.get(DcMotorEx.class, "turret");
         turret.setDirection(DcMotorEx.Direction.FORWARD);
         turret.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
-        turret.setTargetPosition(0);
         turret.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
+        turret.setPositionPIDFCoefficients(15);
 
         stopper = hardwareMap.get(Servo.class, "stopper");
         stopper.setDirection(Servo.Direction.FORWARD);
@@ -142,9 +142,6 @@ public class OutreachOp extends LinearOpMode { // SIDE
             leadK = 0.0033 * range + 0.2667;
             shootXPos = follower.getVelocity().getXComponent() * leadK;
             shootYPos = follower.getVelocity().getYComponent() * leadK;
-            if(gamepad1.dpad_up || gamepad2.dpad_up){
-                headingOffset = heading;
-            }
             range = goal.findRange(shootXPos + xPos, shootYPos + yPos);
             turretPos = turret.getCurrentPosition();
             FWV1 = flyWheel1.getVelocity();
@@ -152,7 +149,7 @@ public class OutreachOp extends LinearOpMode { // SIDE
             FWV = Math.max(FWV1, FWV2);
 
             // set initial values
-            if(!auto && !gamepad2.x){
+            if(!auto && !gamepad1.x){
                 intakePower = 0;
             }
 
@@ -183,17 +180,16 @@ public class OutreachOp extends LinearOpMode { // SIDE
                 setIntakePower();
             }
 
-//            boolean gateButton = gamepad1.left_bumper;
-//            if(gateButton){
-//                gate();
-//            }
-
             // outtake controls
             if(!(gamepad1.left_trigger > 0.1 || gamepad1.a)){ // disable if manual intake
                 firing();
             }
 
-
+            // stop autonomous pathing
+            if(auto || follower.isBusy() ){
+                follower.breakFollowing();
+                auto = false;
+            }
 
             // apply final values
             intake.setPower(intakePower);
@@ -305,41 +301,36 @@ public class OutreachOp extends LinearOpMode { // SIDE
             }
         }
 
-            double turretPower;
-            if(gamepad2.left_bumper && turretPos < highLimit){
-                turretPower = 0.35;
-            } else if (gamepad2.right_bumper && turretPos > lowLimit){
-                turretPower = -0.35;
-            }else{
-                turretPower = 0;
-            }
-            turret.setPower(turretPower);
+        double turretPower;
+        if(gamepad1.left_bumper && turretPos < highLimit){
+            turretPower = 0.35;
+        } else if (gamepad1.right_bumper && turretPos > lowLimit){
+            turretPower = -0.35;
+        }else{
+            turretPower = 0;
+        }
+        turret.setPower(turretPower);
     }
 
 
     public void firing(){
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
-//        if(range > 53){
-//            flapPos = range * 0.00080 + 0.1481; //flapPos = range * 0.00086 + 0.1481;
-//        } else{
-//            flapPos = range * 0.011 - 0.385;
-//        }
-        flapPos = 0;
+        if(range > 53){
+            flapPos = range * 0.00080 + 0.1481; //flapPos = range * 0.00086 + 0.1481;
+        } else{
+            flapPos = range * 0.011 - 0.385;
+        }
         flapPos = Range.clip(flapPos, 0, 0.22);
         flap.setPosition(flapPos);
 
-//        if(range < 100) {
-//            FWTarget = 0.903*range * 7.710 + 990;  //FWTarget = range * 7.710 + 980
-//            feedPower = 1;
-//        } else {
-//            FWTarget = 0.903*range * 7.462 + 1020; //FWTarget = range * 7.462 + 1021
-//            feedPower = 0.65;
-//        }
-        FWTarget = 1340;
-        if (gamepad2.x) {
+        FWTarget = 0.903*range * 7.710 + 790;  //FWTarget = range * 7.710 + 980
+        feedPower = 1;
+
+        if (gamepad1.x) {
 
             //setting target velocity
+
 
             if(Math.abs(FWV) >= Math.abs(FWTarget)){
                 stopperPos = 0.973; // open
@@ -347,9 +338,26 @@ public class OutreachOp extends LinearOpMode { // SIDE
             }
         } else {
             stopperPos = 0.9; // closed
-            FWTarget = 0;
+            if(idle) {
+                FWTarget *= 0.75;
+            } else{
+                FWTarget = 0;
+            }
         }
     }
+
+
+    public void brake(){
+        if(!auto){
+            PathChain hold = follower.pathBuilder()
+                    .addPath(new BezierLine(follower.getPose(), new Pose(xPos + 0.01, yPos, heading)))
+                    .setConstantHeadingInterpolation(heading)
+                    .build();
+            follower.followPath(hold,1, true);
+            auto = true;
+        }
+    }
+
 
     public void botTelemetry(){
 //        for (VoltageSensor sensor : hardwareMap.voltageSensor) {

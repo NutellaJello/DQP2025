@@ -25,7 +25,7 @@ public class OutreachDriveTrain {
     private DcMotorEx BL; //Back left motor of drivetrain
     private DcMotorEx BR; //Back right motor of drivetrain
     GoBildaPinpointDriver pinpoint;
-    private double dampSpeedRatio = 0.7;
+    private double dampSpeedRatio = 0.6;
     private double dampTurnRatio  = -0.4;
     private Pose2D pose2D;
     private double headingOffset = 0;
@@ -104,13 +104,7 @@ public class OutreachDriveTrain {
         double x = Range.clip(-gamepad.left_stick_x, -1, 1);
         //right stick x value
         double rx = Range.clip(-gamepad.right_stick_x, -1, 1);
-        if(gamepad.right_bumper){
-            dampSpeedRatio = 0.7 - 0.4;
-            dampTurnRatio = -0.4 + 0.1;
-        }else{
-            dampSpeedRatio = 0.7;
-            dampTurnRatio = -0.4;
-        }
+
         if(gamepad.dpad_up){
             headingOffset = heading;
         }
