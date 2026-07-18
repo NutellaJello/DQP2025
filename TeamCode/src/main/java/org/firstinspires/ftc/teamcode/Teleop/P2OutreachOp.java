@@ -4,6 +4,7 @@ import android.util.Size;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -29,7 +30,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-
+@Disabled
 @TeleOp(name = "2 Players", group = "TeleOp") // SIDE RED/BLUE
 
 public class P2OutreachOp extends LinearOpMode { // SIDE
@@ -315,12 +316,12 @@ public class P2OutreachOp extends LinearOpMode { // SIDE
     public void firing(){
         //setting flap position
         if(range > 53){
-            flapPos = range * 0.00080 + 0.1481; //flapPos = range * 0.00086 + 0.1481;
+            flapPos = range * 0.00080 + 0.1281; //flapPos = range * 0.00086 + 0.1481;
         }
         flapPos = Range.clip(flapPos, 0, 0.22);
         flap.setPosition(flapPos);
 
-        FWTarget = 0.903*range * 7.710 + 790;
+        FWTarget = 0.903*range * 7.710 + 835;
         if (gamepad2.x) {
 
             //setting target velocity

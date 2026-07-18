@@ -73,6 +73,8 @@ public class BlueTeleop extends LinearOpMode { // SIDE
     GoalPos goal = new GoalPos(30,-50, 15.5); // SIDE 50/-50
 
     private Follower follower;
+    private Pose pose;
+    private Pose gatePos;
     private boolean auto = false;
     private boolean a2Press = false;
     private boolean hasEst = false;
@@ -138,9 +140,10 @@ public class BlueTeleop extends LinearOpMode { // SIDE
 
             // update variables
             follower.update();
-            xPos = follower.getPose().getX();
-            yPos = follower.getPose().getY();
-            heading = follower.getPose().getHeading();
+            pose = follower.getPose();
+            xPos = pose.getX();
+            yPos = pose.getY();
+            heading = pose.getHeading();
             leadK = 0.0033 * range + 0.2667;
             shootXPos = follower.getVelocity().getXComponent() * leadK;
             shootYPos = follower.getVelocity().getYComponent() * leadK;
@@ -182,10 +185,14 @@ public class BlueTeleop extends LinearOpMode { // SIDE
             }
 
             // intake controls
-            if(!auto){
+            if(!gamepad1.x){
                 setIntakePower();
             }
 
+            //auto gate navigation
+            if(gamepad1.dpad_down){
+                gatePos = pose;
+            }
             boolean gateButton = gamepad1.left_bumper;
             if(gateButton){
                 gate();
@@ -423,7 +430,7 @@ public class BlueTeleop extends LinearOpMode { // SIDE
     public void brake(){
         if(!auto){
             PathChain hold = follower.pathBuilder()
-                    .addPath(new BezierLine(follower.getPose(), new Pose(xPos + 0.01, yPos, heading)))
+                    .addPath(new BezierLine(pose, new Pose(xPos + 0.01, yPos, heading)))
                     .setConstantHeadingInterpolation(heading)
                     .build();
             follower.followPath(hold,1, true);
@@ -433,33 +440,10 @@ public class BlueTeleop extends LinearOpMode { // SIDE
 
     public void gate(){
         if(!auto){
-            double moveX = 5; // forward 6in SIDE 6/5
-            double moveY = 14; // left/right 3in SIDE -14/+14
-
-            double sin = Math.sin(headingOffset);
-            double cos = Math.cos(headingOffset);
-
-            double targetX = xPos + moveX * cos - moveY * sin;
-            double targetY = yPos + moveX * sin + moveY * cos;
-            double targetH = Math.toRadians(-35) + headingOffset; // SIDE +35/-35
-
-            double controlX = xPos - moveY * sin;
-
             PathChain gate = follower.pathBuilder()
-                    .addPath(new BezierCurve(follower.getPose(),
-                            new Pose(
-                                    controlX,
-                                    targetY
-                            ),
-                            new Pose(
-                                    targetX,
-                                    targetY,
-                                    targetH
-                            )
-                    ))
-                    .setLinearHeadingInterpolation(heading, targetH)
+                    .addPath(new BezierLine(pose, gatePos))
+                    .setLinearHeadingInterpolation(heading, gatePos.getHeading())
                     .build();
-            intakePower = 1;
             follower.followPath(gate, false);
             auto = true;
         }

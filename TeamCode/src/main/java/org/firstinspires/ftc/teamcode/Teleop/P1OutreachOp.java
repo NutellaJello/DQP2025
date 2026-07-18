@@ -8,6 +8,7 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.BezierPoint;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -34,7 +35,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-
+@Disabled
 @TeleOp(name = "1 Player", group = "TeleOp") // SIDE RED/BLUE
 
 public class P1OutreachOp extends LinearOpMode { // SIDE
@@ -317,14 +318,14 @@ public class P1OutreachOp extends LinearOpMode { // SIDE
         //setting flap position
         //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
         if(range > 53){
-            flapPos = range * 0.00080 + 0.1481; //flapPos = range * 0.00086 + 0.1481;
+            flapPos = range * 0.00080 + 0.1281; //flapPos = range * 0.00086 + 0.1481;
         } else{
             flapPos = range * 0.011 - 0.385;
         }
         flapPos = Range.clip(flapPos, 0, 0.22);
         flap.setPosition(flapPos);
 
-        FWTarget = 0.903*range * 7.710 + 790;  //FWTarget = range * 7.710 + 980
+        FWTarget = 0.903*range * 7.710 + 835;  //FWTarget = range * 7.710 + 980
         feedPower = 1;
 
         if (gamepad1.x) {
