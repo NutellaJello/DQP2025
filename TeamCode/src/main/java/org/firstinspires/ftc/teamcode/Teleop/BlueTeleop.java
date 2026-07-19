@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
@@ -74,7 +75,7 @@ public class BlueTeleop extends LinearOpMode { // SIDE
 
     private Follower follower;
     private Pose pose;
-    private Pose gatePos;
+    private Pose gatePos = new Pose(30, -50, Math.toRadians(-30));
     private boolean auto = false;
     private boolean a2Press = false;
     private boolean hasEst = false;
@@ -107,12 +108,12 @@ public class BlueTeleop extends LinearOpMode { // SIDE
         intake.setDirection(DcMotorEx.Direction.REVERSE);
 
         flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
-        flyWheel1.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
         flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel1.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
         flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
-        flyWheel2.setDirection(DcMotorEx.Direction.REVERSE);
+        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
         flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel2.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
@@ -338,11 +339,11 @@ public class BlueTeleop extends LinearOpMode { // SIDE
         }
 
         //required turret angle
-        if(range < 100){
-            hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
-        } else{
-            hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317
-        }
+//        if(range < 100){
+//            hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
+//        } else{
+//            hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317
+//        }
         hOffset = 0;
 
 
@@ -404,7 +405,7 @@ public class BlueTeleop extends LinearOpMode { // SIDE
             FWTarget = 0.903*range * 7.710 + 990;  //FWTarget = range * 7.710 + 980
             feedPower = 1;
         } else {
-            FWTarget = 0.903*range * 7.462 + 1020; //FWTarget = range * 7.462 + 1021
+            FWTarget = 0.903*range * 7.462 + 990; //FWTarget = range * 7.462 + 1021
             feedPower = 0.65;
         }
         if (gamepad1.x) {
@@ -443,8 +444,9 @@ public class BlueTeleop extends LinearOpMode { // SIDE
             PathChain gate = follower.pathBuilder()
                     .addPath(new BezierLine(pose, gatePos))
                     .setLinearHeadingInterpolation(heading, gatePos.getHeading())
+                    .setBrakingStrength(0.4)
                     .build();
-            follower.followPath(gate, false);
+            follower.followPath(gate, true);
             auto = true;
         }
     }

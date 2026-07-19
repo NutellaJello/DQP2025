@@ -12,6 +12,7 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
@@ -107,12 +108,12 @@ public class RedTeleop extends LinearOpMode { // SIDE
         intake.setDirection(DcMotorEx.Direction.REVERSE);
 
         flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
-        flyWheel1.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
         flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel1.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
         flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
-        flyWheel2.setDirection(DcMotorEx.Direction.REVERSE);
+        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
         flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel2.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
@@ -204,6 +205,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
                 firing();
             }
 
+            // parking
             boolean brakeButton = /*gamepad1.x ||*/ (gamepad2.right_trigger > 0.7 && gamepad2.left_trigger > 0.7);
             if(brakeButton){
                 brake();
@@ -340,11 +342,11 @@ public class RedTeleop extends LinearOpMode { // SIDE
         }
 
         //required turret angle
-        if(range < 100){
-            hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
-        } else{
-            hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317 // SIDE 3.0/4.0
-        }
+//        if(range < 100){
+//            hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
+//        } else{
+//            hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317 // SIDE 3.0/4.0
+//        }
         hOffset = 0;
 
         double turretTarget = goal.findAngle(shootXPos + xPos, shootYPos + yPos)
@@ -404,7 +406,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
             FWTarget = 0.903*range * 7.710 + 990;  //FWTarget = range * 7.710 + 980
             feedPower = 1;
         } else {
-            FWTarget = 0.903*range * 7.462 + 1020; //FWTarget = range * 7.462 + 1021
+            FWTarget = 0.903*range * 7.462 + 990; //FWTarget = range * 7.462 + 1021
             feedPower = 0.65;
         }
         if (gamepad1.x) {
@@ -444,8 +446,9 @@ public class RedTeleop extends LinearOpMode { // SIDE
             PathChain gate = follower.pathBuilder()
                     .addPath(new BezierLine(pose, gatePos))
                     .setLinearHeadingInterpolation(heading, gatePos.getHeading())
+                    .setBrakingStrength(0.4)
                     .build();
-            follower.followPath(gate, false);
+            follower.followPath(gate, true);
             auto = true;
         }
     }
