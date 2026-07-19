@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
@@ -91,15 +92,15 @@ public class BlueClose extends OpMode { // SIDE Red/Blue
 
     private PathState pathState;
     //positions SIDE +/- ALL X COORDINATES none/180- ALL ANGLES
-    private final Pose start = new Pose(-123, 133, Math.toRadians(180));
+    private final Pose start = new Pose(-122, 133, Math.toRadians(180));
     private final Pose outtakePre = new Pose(-93, 90, Math.toRadians(180));
     private final Pose outtake = new Pose(-100, 90, Math.toRadians(180));
     private final Pose intake1p1 = new Pose(-105, 67, Math.toRadians(180));
     private final Pose intake1p2 = new Pose(-130, 67 - 2, Math.toRadians(180));
     private final Pose outtake1Point = new Pose(-106, 65, Math.toRadians(180));
-    private final Pose gatePoint = new Pose(-122,46);
-    private final Pose gate1 = new Pose (-134.2, 66, Math.toRadians(180-30));
-    private final Pose gate2 = new Pose (-134.2, 66, Math.toRadians(180-30));
+    private final Pose gatePoint = new Pose(-122,63);
+    private final Pose gate1 = new Pose (-138, 63, Math.toRadians(180-30));
+    private final Pose gate2 = new Pose (-138, 63, Math.toRadians(180-30));
     private final Pose intake2 = new Pose(-127.5, 88, Math.toRadians(180));
     private final Pose end = new Pose(-108, 77, Math.toRadians(180));
 
@@ -136,11 +137,12 @@ public class BlueClose extends OpMode { // SIDE Red/Blue
         IntakeG1 = follower.pathBuilder()
                 .addPath(new BezierCurve(Arrays.asList(outtake, gatePoint, gate1)))
                 .setLinearHeadingInterpolation(outtake.getHeading(), gate1.getHeading())
+                .setBrakingStrength(0.3)
                 .build();
         IntakeG2 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, gate2))
                 .setLinearHeadingInterpolation(outtake.getHeading(), gate2.getHeading())
-                .setBrakingStrength(0.4)
+                .setBrakingStrength(0.3)
                 .build();
         OuttakeG1 = follower.pathBuilder()
                 .addPath(new BezierCurve(Arrays.asList(gate1, gatePoint, outtake)))
@@ -182,12 +184,12 @@ public class BlueClose extends OpMode { // SIDE Red/Blue
         intake.setDirection(DcMotorEx.Direction.REVERSE);
 
         flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
-        flyWheel1.setDirection(DcMotorEx.Direction.FORWARD);
+        flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
         flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel1.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
         flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
-        flyWheel2.setDirection(DcMotorEx.Direction.REVERSE);
+        flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
         flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel2.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
@@ -247,7 +249,7 @@ public class BlueClose extends OpMode { // SIDE Red/Blue
                 shoot(PathState.INTAKEG1);
                 break;
             case INTAKEG1:
-                moveIntake(IntakeG1, PathState.OUTTAKEG1, 1, 3500);
+                moveIntake(IntakeG1, PathState.OUTTAKEG1, 1, 4500);
                 break;
             case OUTTAKEG1:
                 move(OuttakeG1, PathState.SHOOTG1, true);
@@ -265,7 +267,7 @@ public class BlueClose extends OpMode { // SIDE Red/Blue
                 shoot(PathState.INTAKEG2);
                 break;
             case INTAKEG2:
-                moveIntake(IntakeG2, PathState.OUTTAKEG2, 1, 3500);
+                moveIntake(IntakeG2, PathState.OUTTAKEG2, 1, 4000);
                 break;
             case OUTTAKEG2:
                 move(OuttakeG2, PathState.SHOOTG2, true);
