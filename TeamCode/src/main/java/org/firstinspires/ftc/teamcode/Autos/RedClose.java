@@ -98,9 +98,9 @@ public class RedClose extends OpMode { // SIDE Red/Blue
     private final Pose intake1p1 = new Pose(105, 67, Math.toRadians(0));
     private final Pose intake1p2 = new Pose(129, 67 - 2, Math.toRadians(0));
     private final Pose outtake1Point = new Pose(106, 65, Math.toRadians(0));
-    private final Pose gatePoint = new Pose(122,55);
+    private final Pose gatePoint = new Pose(112,55);
     private final Pose gate1 = new Pose (138.5, 63.5, Math.toRadians(30));
-    private final Pose gate2 = new Pose (139, 63.5, Math.toRadians(30));
+    private final Pose gate2 = new Pose (139, 64, Math.toRadians(30));
     private final Pose intake2 = new Pose(127, 88.5, Math.toRadians(0));
     private final Pose end = new Pose(108, 77, Math.toRadians(0));
 
