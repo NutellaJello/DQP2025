@@ -23,6 +23,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
+import org.firstinspires.ftc.teamcode.subsystems.RobotConstants;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -48,27 +49,24 @@ public class RedClose extends OpMode { // SIDE Red/Blue
     private Follower follower;
     private Timer actionTimer, opModeTimer;
     private boolean moving = false;
-    GoalPos goal = new GoalPos(147,143, 15.5); // SIDE +147/-147
+    protected GoalPos goal;
     private double xPos = 0, yPos = 0, heading = 0;
     private double range;
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -1906;
-    private final double highLimit = 340;
+    private final double lowLimit = RobotConstants.TURRET_MIN_TICKS;
+    private final double highLimit = RobotConstants.TURRET_MAX_TICKS;
     private double camRange;
     private double bearing;
     private double elevation;
     private double xEst;
     private double yEst;
-    private final double camOffsetX = 2;
+    private final double camOffsetX = RobotConstants.CAMERA_FORWARD_OFFSET_IN;
     private double turretPos;
     private double hOffset;
     private double flapPos = 0.2;
     private boolean hasEst = false;
-    double p = 400;
-    double d = 0;
-    double i = 0;
-    double f = 13.5;
-    PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
+    PIDFCoefficients fwPID = new PIDFCoefficients(RobotConstants.FLYWHEEL_P, RobotConstants.FLYWHEEL_I,
+            RobotConstants.FLYWHEEL_D, RobotConstants.FLYWHEEL_F);
     private int shotCounter = 0;
     private enum PathState {
         PRELOAD,
@@ -92,17 +90,26 @@ public class RedClose extends OpMode { // SIDE Red/Blue
 
     private PathState pathState;
     //positions SIDE +/- ALL X COORDINATES none/180- ALL ANGLES
-    private final Pose start = new Pose(119, 133, Math.toRadians(0));
-    private final Pose outtakePre = new Pose(93, 90, Math.toRadians(0));
-    private final Pose outtake = new Pose(100, 90, Math.toRadians(0));
-    private final Pose intake1p1 = new Pose(105, 67, Math.toRadians(0));
-    private final Pose intake1p2 = new Pose(129, 67 - 2, Math.toRadians(0));
-    private final Pose outtake1Point = new Pose(106, 65, Math.toRadians(0));
-    private final Pose gatePoint = new Pose(112,55);
-    private final Pose gate1 = new Pose (138.5, 63.5, Math.toRadians(30));
-    private final Pose gate2 = new Pose (139, 64, Math.toRadians(30));
-    private final Pose intake2 = new Pose(127, 88.5, Math.toRadians(0));
-    private final Pose end = new Pose(108, 77, Math.toRadians(0));
+    private Pose start, outtakePre, outtake, intake1p1, intake1p2, outtake1Point;
+    private Pose gatePoint, gate1, gate2, intake2, end;
+
+    protected GoalPos createGoal() { return new GoalPos(147, 143, 15.5); }
+    protected Pose[] createPoses() {
+        return new Pose[] {
+                new Pose(119, 133, 0), // start
+                new Pose(93, 90, 0),  // outtakePre
+                new Pose(100, 90, 0), // outtake
+                new Pose(105, 67, 0), //intake1p1
+                new Pose(129, 65, 0), //intake1p2
+                new Pose(106, 65, 0), //outtake1Point
+                new Pose(112, 55), // gatePoint
+                new Pose(138.5, 63.5, Math.toRadians(30)),
+                new Pose(139, 64, Math.toRadians(30)),
+                new Pose(127, 88.5, 0),
+                new Pose(108, 77, 0) };
+    }
+    protected int targetAprilTagId() { return RobotConstants.RED_GOAL_TAG_ID; }
+    protected double turretCorrectionSign() { return 1; }
 
     //Paths
     private PathChain Preload;
@@ -175,6 +182,10 @@ public class RedClose extends OpMode { // SIDE Red/Blue
 
     @Override
     public void init() {
+        goal = createGoal();
+        Pose[] poses = createPoses();
+        start = poses[0]; outtakePre = poses[1]; outtake = poses[2]; intake1p1 = poses[3]; intake1p2 = poses[4];
+        outtake1Point = poses[5]; gatePoint = poses[6]; gate1 = poses[7]; gate2 = poses[8]; intake2 = poses[9]; end = poses[10];
         pathState = PathState.PRELOAD;
         actionTimer = new Timer();
         opModeTimer = new Timer();
@@ -401,7 +412,7 @@ public class RedClose extends OpMode { // SIDE Red/Blue
         range = goal.findRange(xPos, yPos);
         if(gainSet){
             for (AprilTagDetection detection : detectedTags) {
-                if (detection.metadata != null && detection.id == 24) { // SIDE 24/20
+                if (detection.metadata != null && detection.id == targetAprilTagId()) {
                     camRange = detection.ftcPose.range + camOffsetX;
                     bearing = detection.ftcPose.bearing;
                     elevation = detection.ftcPose.elevation;
@@ -420,7 +431,7 @@ public class RedClose extends OpMode { // SIDE Red/Blue
         double turretTarget = goal.findAngle(xPos, yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
-                + Math.toDegrees(Math.atan(hOffset/range)); // SIDE +/-
+                + turretCorrectionSign() * Math.toDegrees(Math.atan(hOffset/range));
         if (turretTarget > highLimit * (90.0/495.0) + 30.0) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < lowLimit * (90.0/495.0) - 30.0) {

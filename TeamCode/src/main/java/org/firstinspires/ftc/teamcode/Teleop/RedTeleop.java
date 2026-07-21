@@ -28,6 +28,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import org.firstinspires.ftc.teamcode.subsystems.DecodeDriveTrain;
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
+import org.firstinspires.ftc.teamcode.subsystems.RobotConstants;
 import org.firstinspires.ftc.vision.VisionPortal;
 import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
 import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
@@ -71,12 +72,12 @@ public class RedTeleop extends LinearOpMode { // SIDE
     double camRange = 0;
     double bearing = 0;
     double elevation = 0;
-    GoalPos goal = new GoalPos(30,50, 15.5); // SIDE 50/-50
+    protected GoalPos goal;
 
     private Follower follower;
     private Pose pose;
     private boolean auto = false;
-    private Pose gatePos = new Pose(30, 50, Math.toRadians(30));
+    private double gateAngle = gateAngle();
     private boolean a2Press = false;
     private boolean hasEst = false;
     private double range;
@@ -87,37 +88,62 @@ public class RedTeleop extends LinearOpMode { // SIDE
     private final double camOffsetX = 2; //inches (not really inches) forward of center
     private final double camOffsetY = 0; //inches (not really inches) right of center
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
-    private final double lowLimit = -1906; //495/90
-    private final double highLimit =  340 ;
-    double p = 400;
-    double d = 0;
-    double i = 0;
-    double f = 13.5;
+    private final double lowLimit = RobotConstants.TURRET_MIN_TICKS;
+    private final double highLimit = RobotConstants.TURRET_MAX_TICKS;
 
 
-    PIDFCoefficients fwPID = new PIDFCoefficients(p, i, d,  f);
+    PIDFCoefficients fwPID = new PIDFCoefficients(RobotConstants.FLYWHEEL_P, RobotConstants.FLYWHEEL_I, RobotConstants.FLYWHEEL_D, RobotConstants.FLYWHEEL_F);
+
+    /** Alliance-specific values overridden by {@link BlueTeleop}. */
+    protected GoalPos createGoal() {
+        return new GoalPos(30, 50, 15.5);
+    }
+
+    protected double gateAngle() {
+        return Math.toRadians(35);
+    }
+
+    protected int targetAprilTagId() {
+        return RobotConstants.RED_GOAL_TAG_ID;
+    }
+
+    /** Sign applied to the horizontal aiming correction for this alliance. */
+    protected double horizontalCorrectionSign() {
+        return 1;
+    }
+
+    protected double[] hOffsetConstants(){
+        return new double[]{4.0,5.0};
+    }
+
+
+    protected boolean showVoltageTelemetry() {
+        return false;
+    }
 
     @Override
     public void runOpMode() {
+        goal = createGoal();
+        //gatePos = createGatePose();
         // initializes movement motors
         drivetrain = new DecodeDriveTrain(hardwareMap, gamepad1, telemetry, false, fieldCentric);
         follower = Constants.createFollower(hardwareMap);
         follower.setStartingPose(new Pose(0,0,Math.toRadians(0)));
 
-        intake = hardwareMap.get(DcMotorEx.class, "intake");
+        intake = hardwareMap.get(DcMotorEx.class, RobotConstants.INTAKE_MOTOR);
         intake.setDirection(DcMotorEx.Direction.REVERSE);
 
-        flyWheel1 = hardwareMap.get(DcMotorEx.class, "FW1");
+        flyWheel1 = hardwareMap.get(DcMotorEx.class, RobotConstants.FLYWHEEL_ONE_MOTOR);
         flyWheel1.setDirection(DcMotorEx.Direction.REVERSE);
         flyWheel1.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel1.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
-        flyWheel2 = hardwareMap.get(DcMotorEx.class, "FW2");
+        flyWheel2 = hardwareMap.get(DcMotorEx.class, RobotConstants.FLYWHEEL_TWO_MOTOR);
         flyWheel2.setDirection(DcMotorEx.Direction.FORWARD);
         flyWheel2.setMode(DcMotorEx.RunMode.RUN_USING_ENCODER);
         flyWheel2.setPIDFCoefficients( DcMotor.RunMode.RUN_USING_ENCODER,fwPID);
 
-        turret = hardwareMap.get(DcMotorEx.class, "turret");
+        turret = hardwareMap.get(DcMotorEx.class, RobotConstants.TURRET_MOTOR);
         turret.setDirection(DcMotorEx.Direction.FORWARD);
         turret.setMode(DcMotorEx.RunMode.STOP_AND_RESET_ENCODER);
         turret.setTargetPosition(0);
@@ -125,10 +151,10 @@ public class RedTeleop extends LinearOpMode { // SIDE
         turret.setPower(1);
         turret.setPositionPIDFCoefficients(15);
 
-        stopper = hardwareMap.get(Servo.class, "stopper");
+        stopper = hardwareMap.get(Servo.class, RobotConstants.STOPPER_SERVO);
         stopper.setDirection(Servo.Direction.FORWARD);
 
-        flap = hardwareMap.get(Servo.class, "flap");
+        flap = hardwareMap.get(Servo.class, RobotConstants.FLAP_SERVO);
         flap.setDirection(Servo.Direction.FORWARD);
 
 
@@ -146,7 +172,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
             yPos = pose.getY();
             heading = pose.getHeading();
 
-            leadK = 0.0033 * range + 0.2667;
+            leadK = 0.0033 * range;
             shootXPos = follower.getVelocity().getXComponent() * leadK;
             shootYPos = follower.getVelocity().getYComponent() * leadK;
             if(gamepad1.dpad_up || gamepad2.dpad_up){
@@ -176,7 +202,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
 
             // all the movement controls.
             if(!auto){
-                drivetrain.Teleop(heading);
+                drivetrain.Teleop(heading, gateAngle);
             }
 
             //aiming
@@ -192,12 +218,12 @@ public class RedTeleop extends LinearOpMode { // SIDE
 
             //auto gate navigation
             if(gamepad1.dpad_down){
-                gatePos = pose;
+                gateAngle = heading;
             }
             boolean gateButton = gamepad1.left_bumper;
-            if(gateButton){
-                gate();
-            }
+//            if(gateButton){
+//                gate();
+//            }
 
             // outtake controls
             setIdlePower();
@@ -254,7 +280,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
 
         // Set the camera (webcam vs. built-in RC phone camera).
         if (useWebcam) {
-            builder.setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"));
+            builder.setCamera(hardwareMap.get(WebcamName.class, RobotConstants.WEBCAM));
         } else {
             builder.setCamera(BuiltinCameraDirection.BACK);
         }
@@ -285,9 +311,9 @@ public class RedTeleop extends LinearOpMode { // SIDE
         }
 
         exposureControl.setMode(ExposureControl.Mode.Manual);
-        exposureOK = exposureControl.setExposure(2, TimeUnit.MILLISECONDS);
+        exposureOK = exposureControl.setExposure(RobotConstants.CAMERA_EXPOSURE_MS, TimeUnit.MILLISECONDS);
 
-        gainOK = gainControl.setGain(100);
+        gainOK = gainControl.setGain(RobotConstants.CAMERA_GAIN);
 
         return exposureOK && gainOK;
     }
@@ -322,7 +348,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
         telemetry.addData("xV", follower.getVelocity().getYComponent());
         telemetry.addData("yV", follower.getVelocity().getXComponent());
         for (AprilTagDetection detection : detectedTags) {
-            if (detection.metadata != null && detection.id == 24) { // SIDE 24/20
+            if (detection.metadata != null && detection.id == targetAprilTagId()) {
                 camRange = detection.ftcPose.range + camOffsetX;
                 bearing = detection.ftcPose.bearing;
                 elevation = detection.ftcPose.elevation;
@@ -342,17 +368,16 @@ public class RedTeleop extends LinearOpMode { // SIDE
         }
 
         //required turret angle
-//        if(range < 100){
-//            hOffset = range * 0.0309 - 4.0; //hOffset = range * 0.0309 - 5.367
-//        } else{
-//            hOffset = range * 0.0298 - 5.0; //hOffset = range * 0.0298 - 5.317 // SIDE 3.0/4.0
-//        }
-        hOffset = 0;
+        if(range < 100){
+            hOffset = range * 0.0309 - hOffsetConstants()[0]; //hOffset = range * 0.0309 - 5.367
+        } else{
+            hOffset = range * 0.0298 - hOffsetConstants()[1]; //hOffset = range * 0.0298 - 5.317
+        }
 
         double turretTarget = goal.findAngle(shootXPos + xPos, shootYPos + yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
-                + Math.toDegrees(Math.atan2(hOffset, range)); // SIDE +/-
+                + horizontalCorrectionSign() * Math.toDegrees(Math.atan2(hOffset, range));
         if (turretTarget > highLimit * (90.0/495.0) + 30.0) { //wrap angle
             turretTarget -= 360;
         } else if (turretTarget < lowLimit * (90.0/495.0) - 30.0) {
@@ -403,7 +428,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
         flap.setPosition(flapPos);
 
         if(range < 100) {
-            FWTarget = 0.903*range * 7.710 + 990;  //FWTarget = range * 7.710 + 980
+            FWTarget = 0.903*range * 7.710 + 980;  //FWTarget = range * 7.710 + 980
             feedPower = 1;
         } else {
             FWTarget = 0.903*range * 7.462 + 990; //FWTarget = range * 7.462 + 1021
@@ -441,22 +466,24 @@ public class RedTeleop extends LinearOpMode { // SIDE
         }
     }
 
-    public void gate(){
-        if(!auto){
-            PathChain gate = follower.pathBuilder()
-                    .addPath(new BezierLine(pose, gatePos))
-                    .setLinearHeadingInterpolation(heading, gatePos.getHeading())
-                    .setBrakingStrength(0.4)
-                    .build();
-            follower.followPath(gate, true);
-            auto = true;
-        }
-    }
+//    public void gate(){
+//        if(!auto){
+//            PathChain gate = follower.pathBuilder()
+//                    .addPath(new BezierLine(pose, gatePos))
+//                    .setLinearHeadingInterpolation(heading, gatePos.getHeading())
+//                    .setBrakingStrength(0.4)
+//                    .build();
+//            follower.followPath(gate, true);
+//            auto = true;
+//        }
+//    }
 
     public void botTelemetry(){
-//        for (VoltageSensor sensor : hardwareMap.voltageSensor) {
-//            telemetry.addData(sensor.getDeviceName(), sensor.getVoltage());
-//        }
+        if (showVoltageTelemetry()) {
+            for (VoltageSensor sensor : hardwareMap.voltageSensor) {
+                telemetry.addData(sensor.getDeviceName(), sensor.getVoltage());
+            }
+        }
         telemetry.addData("Cam Status", visionPortal.getCameraState());
         telemetry.addData("Cam Setup", gainSet);
         telemetry.addData("Goal Position", goal);

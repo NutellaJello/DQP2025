@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
@@ -33,8 +34,9 @@ public class DecodeDriveTrain {
     private Telemetry telemetry;
     private boolean showTelemetry;
     private boolean fieldCentric;
+    private boolean angleFixed;
 
-
+    private boolean fixedWasPressed;
 
     public DecodeDriveTrain(HardwareMap hardwareMap, Gamepad gamepad, Telemetry telemetry, boolean showTelemetry, boolean fieldCentric){
         // Motor Mapping
@@ -46,7 +48,8 @@ public class DecodeDriveTrain {
         this.telemetry = telemetry;
         this.showTelemetry = showTelemetry;
         this.fieldCentric = fieldCentric;
-
+        this.angleFixed = false;
+        this.fixedWasPressed = false;
 
         // Set motor direction based on which side of the robot the motors are on
         FR.setDirection(DcMotorEx.Direction.FORWARD);
@@ -91,8 +94,7 @@ public class DecodeDriveTrain {
         pinpoint.resetPosAndIMU();
     }
 
-    public void Teleop(double heading){ //Code to be run in Teleop Mode void Loop at top level
-        heading = -heading;
+    public void Teleop(double heading, double gateAngle){ //Code to be run in Teleop Mode void Loop at top level
 
         double PowerFL = 0;
         double PowerFR = 0;
@@ -103,7 +105,28 @@ public class DecodeDriveTrain {
         //left stick x value
         double x = Range.clip(-gamepad.left_stick_x, -1, 1);
         //right stick x value
-        double rx = Range.clip(-gamepad.right_stick_x, -1, 1);
+        double rx = -gamepad.right_stick_x;
+
+        // lock angle
+        if(gamepad.left_bumper) {
+            if(!fixedWasPressed){
+                angleFixed = !angleFixed;
+                fixedWasPressed = true;
+            }
+        }else{
+            fixedWasPressed = false;
+        }
+        if(angleFixed){
+            double error = (gateAngle - heading);
+            if (error > Math.PI) {
+                error -= 2 * Math.PI;
+            }else if(error < -Math.PI){
+                error += 2 * Math.PI;
+            }
+            rx = 3 * error;
+        }
+        rx = Range.clip(rx, -1, 1);
+
         if(gamepad.right_bumper){
             dampSpeedRatio = 1 - 0.6;
             dampTurnRatio = -0.6 + 0.3;
@@ -116,9 +139,10 @@ public class DecodeDriveTrain {
         }
         double max;
         if (fieldCentric){
-            heading -= headingOffset;
-            double axial   = y * Math.cos(heading) - x * Math.sin(heading);
-            double lateral = 1.2 * (y * Math.sin(heading) + x * Math.cos(heading));
+            double fcHeading = -heading;
+            fcHeading -= headingOffset;
+            double axial   = y * Math.cos(fcHeading) - x * Math.sin(fcHeading);
+            double lateral = 1.2 * (y * Math.sin(fcHeading) + x * Math.cos(fcHeading));
             double turn     =  0.8 * -gamepad.right_stick_x;
 
             PowerFL = dampSpeedRatio*(axial - lateral) + turn*dampTurnRatio;
