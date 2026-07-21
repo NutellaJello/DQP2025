@@ -17,7 +17,7 @@ public class BlueTeleop extends RedTeleop {
 
     @Override
     protected double gateAngle() {
-        return Math.toRadians(325);
+        return Math.toRadians(-30);
     }
 
     @Override

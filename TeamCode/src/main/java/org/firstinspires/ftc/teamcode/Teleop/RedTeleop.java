@@ -100,7 +100,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
     }
 
     protected double gateAngle() {
-        return Math.toRadians(35);
+        return Math.toRadians(30);
     }
 
     protected int targetAprilTagId() {
