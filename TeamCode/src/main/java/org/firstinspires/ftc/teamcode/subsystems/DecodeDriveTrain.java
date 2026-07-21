@@ -107,6 +107,9 @@ public class DecodeDriveTrain {
         //right stick x value
         double rx = -gamepad.right_stick_x;
 
+        if(Math.abs(rx) > 0.1){
+            angleFixed = false;
+        }
         // lock angle
         if(gamepad.left_bumper) {
             if(!fixedWasPressed){
