@@ -27,12 +27,12 @@ public class BlueTeleop extends RedTeleop {
 
     @Override
     protected double horizontalCorrectionSign() {
-        return -1;
+        return 1;
     }
 
     @Override
     protected double[] hOffsetConstants(){
-        return new double[]{5.0,5.0};
+        return new double[]{1.0,3.0};
     }
 
     @Override

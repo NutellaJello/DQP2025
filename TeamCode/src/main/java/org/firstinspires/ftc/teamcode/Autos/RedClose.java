@@ -103,8 +103,8 @@ public class RedClose extends OpMode { // SIDE Red/Blue
                 new Pose(129, 65, 0), //intake1p2
                 new Pose(106, 65, 0), //outtake1Point
                 new Pose(112, 55), // gatePoint
-                new Pose(138.5, 63.5, Math.toRadians(30)),
-                new Pose(139, 64, Math.toRadians(30)),
+                new Pose(137.5, 63.5, Math.toRadians(30)), // gate1
+                new Pose(138, 64, Math.toRadians(30)), // gate2
                 new Pose(127, 88.5, 0),
                 new Pose(108, 77, 0) };
     }

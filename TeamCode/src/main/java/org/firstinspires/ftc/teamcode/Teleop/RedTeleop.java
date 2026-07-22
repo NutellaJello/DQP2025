@@ -3,16 +3,13 @@ package org.firstinspires.ftc.teamcode.Teleop;
 import android.util.Size;
 
 import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
-import com.pedropathing.geometry.BezierPoint;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
@@ -90,6 +87,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
     private final double startingAngle = 0; // angle from straight forward (counterclockwise in degrees)
     private final double lowLimit = RobotConstants.TURRET_MIN_TICKS;
     private final double highLimit = RobotConstants.TURRET_MAX_TICKS;
+    private boolean angleFixed = false;
 
 
     PIDFCoefficients fwPID = new PIDFCoefficients(RobotConstants.FLYWHEEL_P, RobotConstants.FLYWHEEL_I, RobotConstants.FLYWHEEL_D, RobotConstants.FLYWHEEL_F);
@@ -109,11 +107,11 @@ public class RedTeleop extends LinearOpMode { // SIDE
 
     /** Sign applied to the horizontal aiming correction for this alliance. */
     protected double horizontalCorrectionSign() {
-        return 1;
+        return -1;
     }
 
     protected double[] hOffsetConstants(){
-        return new double[]{4.0,5.0};
+        return new double[]{2.0,3.0};
     }
 
 
@@ -172,7 +170,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
             yPos = pose.getY();
             heading = pose.getHeading();
 
-            leadK = 0.0033 * range;
+            leadK = 0.002 * range + 0.2; //0.0033
             shootXPos = follower.getVelocity().getXComponent() * leadK;
             shootYPos = follower.getVelocity().getYComponent() * leadK;
             if(gamepad1.dpad_up || gamepad2.dpad_up){
@@ -199,10 +197,10 @@ public class RedTeleop extends LinearOpMode { // SIDE
                 gainSet = cameraControls();
             }
 
-
+            angleFix();
             // all the movement controls.
             if(!auto){
-                drivetrain.Teleop(heading, gateAngle);
+                drivetrain.Teleop(heading, gateAngle, angleFixed);
             }
 
             //aiming
@@ -343,10 +341,18 @@ public class RedTeleop extends LinearOpMode { // SIDE
         }
     }
 
+    public void angleFix(){
+        // lock angle
+        if(gamepad1.left_bumper) {
+            angleFixed = true;
+        }else if(Math.abs(gamepad1.right_stick_x) > 0.1){
+            angleFixed = false;
+        }
+    }
 
     public void aiming(List<AprilTagDetection> detectedTags){
-        telemetry.addData("xV", follower.getVelocity().getYComponent());
-        telemetry.addData("yV", follower.getVelocity().getXComponent());
+//        telemetry.addData("xV", follower.getVelocity().getYComponent());
+//        telemetry.addData("yV", follower.getVelocity().getXComponent());
         for (AprilTagDetection detection : detectedTags) {
             if (detection.metadata != null && detection.id == targetAprilTagId()) {
                 camRange = detection.ftcPose.range + camOffsetX;
@@ -369,21 +375,23 @@ public class RedTeleop extends LinearOpMode { // SIDE
 
         //required turret angle
         if(range < 100){
-            hOffset = range * 0.0309 - hOffsetConstants()[0]; //hOffset = range * 0.0309 - 5.367
+            hOffset = hOffsetConstants()[0];
         } else{
-            hOffset = range * 0.0298 - hOffsetConstants()[1]; //hOffset = range * 0.0298 - 5.317
+            hOffset = hOffsetConstants()[1];
         }
+
 
         double turretTarget = goal.findAngle(shootXPos + xPos, shootYPos + yPos)
                 - startingAngle
                 - Math.toDegrees(heading)
                 + horizontalCorrectionSign() * Math.toDegrees(Math.atan2(hOffset, range));
-        if (turretTarget > highLimit * (90.0/495.0) + 30.0) { //wrap angle
+        telemetry.addData("pre wrap target", 976.0 / 180.0 * turretTarget);
+        if (turretTarget > highLimit * (1/RobotConstants.TURRET_TICKS_PER_DEGREE) + 30.0) { //wrap angle
             turretTarget -= 360;
-        } else if (turretTarget < lowLimit * (90.0/495.0) - 30.0) {
+        } else if (turretTarget < lowLimit * (1/RobotConstants.TURRET_TICKS_PER_DEGREE) - 30.0) {
             turretTarget += 360;
         }
-        turretTarget = 976.0 / 180.0 * turretTarget; // convert to encoder ticks
+        turretTarget = RobotConstants.TURRET_TICKS_PER_DEGREE * turretTarget; // convert to encoder ticks
         // hardware limit
         turretTarget = Range.clip(turretTarget, lowLimit, highLimit); //(Math.toDegrees(Math.atan(3.5 / range)));
         if (gamepad2.a){
@@ -418,17 +426,13 @@ public class RedTeleop extends LinearOpMode { // SIDE
 
     public void firing(){
         //setting flap position
-        //flapPos = Math.pow(range * 0.00158, 0.1) - 0.159;
-        if(range > 53){
-            flapPos = range * 0.00080 + 0.1481; //flapPos = range * 0.00086 + 0.1481;
-        } else{
-            flapPos = range * 0.011 - 0.385;
-        }
+        flapPos = 0.02104 * Math.pow(range - 50, 0.6);
+        if(!Double.isFinite(flapPos)){ flapPos = 0;}
         flapPos = Range.clip(flapPos, 0, 0.22);
         flap.setPosition(flapPos);
 
         if(range < 100) {
-            FWTarget = 0.903*range * 7.710 + 980;  //FWTarget = range * 7.710 + 980
+            FWTarget = 0.903*range * 8 + 950;  //FWTarget = range * 7.710 + 980
             feedPower = 1;
         } else {
             FWTarget = 0.903*range * 7.462 + 990; //FWTarget = range * 7.462 + 1021

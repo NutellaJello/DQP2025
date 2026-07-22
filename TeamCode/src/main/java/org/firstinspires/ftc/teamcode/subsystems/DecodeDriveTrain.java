@@ -34,7 +34,6 @@ public class DecodeDriveTrain {
     private Telemetry telemetry;
     private boolean showTelemetry;
     private boolean fieldCentric;
-    private boolean angleFixed;
 
     private boolean fixedWasPressed;
 
@@ -48,7 +47,6 @@ public class DecodeDriveTrain {
         this.telemetry = telemetry;
         this.showTelemetry = showTelemetry;
         this.fieldCentric = fieldCentric;
-        this.angleFixed = false;
         this.fixedWasPressed = false;
 
         // Set motor direction based on which side of the robot the motors are on
@@ -94,7 +92,7 @@ public class DecodeDriveTrain {
         pinpoint.resetPosAndIMU();
     }
 
-    public void Teleop(double heading, double gateAngle){ //Code to be run in Teleop Mode void Loop at top level
+    public void Teleop(double heading, double gateAngle, boolean angleFixed){ //Code to be run in Teleop Mode void Loop at top level
 
         double PowerFL = 0;
         double PowerFR = 0;
@@ -107,18 +105,6 @@ public class DecodeDriveTrain {
         //right stick x value
         double rx = -gamepad.right_stick_x;
 
-        if(Math.abs(rx) > 0.1){
-            angleFixed = false;
-        }
-        // lock angle
-        if(gamepad.left_bumper) {
-            if(!fixedWasPressed){
-                angleFixed = !angleFixed;
-                fixedWasPressed = true;
-            }
-        }else{
-            fixedWasPressed = false;
-        }
         if(angleFixed){
             double error = (gateAngle - heading);
             if (error > Math.PI) {
@@ -126,7 +112,7 @@ public class DecodeDriveTrain {
             }else if(error < -Math.PI){
                 error += 2 * Math.PI;
             }
-            rx = 3 * error;
+            rx = 2 * error;
         }
         rx = Range.clip(rx, -1, 1);
 
