@@ -36,11 +36,7 @@ public class RedTeleopWebcam extends LinearOpMode {
     private DecodeDriveTrain drivetrain;
 
 
-
-    private DcMotorEx intake;
-
-    boolean fieldCentric = true;
-    double intakePower = 0;
+    boolean fieldCentric = false;
 
 
     private double heading = 0;
@@ -51,8 +47,7 @@ public class RedTeleopWebcam extends LinearOpMode {
     public void runOpMode() {
         drivetrain = new DecodeDriveTrain(hardwareMap);
 
-        intake = hardwareMap.get(DcMotorEx.class, "intake");
-        intake.setDirection(DcMotorEx.Direction.REVERSE);
+
 
         waitForStart();
         while (opModeIsActive()) {
@@ -62,27 +57,8 @@ public class RedTeleopWebcam extends LinearOpMode {
 
 
 
-            setIntakePower();
-
-
-            intake.setPower(intakePower);
-
-
-
         }
 
 
     }
-
-    public void setIntakePower(){
-        if (gamepad1.left_trigger > 0.1) {
-            intakePower = -1;
-        } else if(gamepad1.a){
-            intakePower = 0.67;
-        }
-        else {
-            intakePower=0;
-        }
-    }
-}
 
