@@ -32,7 +32,7 @@ public class BlueTeleop extends RedTeleop {
 
     @Override
     protected double[] hOffsetConstants(){
-        return new double[]{1.0,3.0};
+        return new double[]{2.0,3.0};
     }
 
     @Override

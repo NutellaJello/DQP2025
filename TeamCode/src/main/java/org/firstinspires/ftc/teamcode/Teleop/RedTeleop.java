@@ -111,7 +111,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
     }
 
     protected double[] hOffsetConstants(){
-        return new double[]{2.0,3.0};
+        return new double[]{1.0,3.0};
     }
 
 
@@ -173,6 +173,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
             leadK = 0.002 * range + 0.2; //0.0033
             shootXPos = follower.getVelocity().getXComponent() * leadK;
             shootYPos = follower.getVelocity().getYComponent() * leadK;
+            Range.clip(leadK, 0, 0.4);
             if(gamepad1.dpad_up || gamepad2.dpad_up){
                 headingOffset = heading;
             }
@@ -200,7 +201,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
             angleFix();
             // all the movement controls.
             if(!auto){
-                drivetrain.Teleop(heading, gateAngle, angleFixed);
+                drivetrain.Teleop(heading, gateAngle, angleFixed && !gamepad1.x);
             }
 
             //aiming
@@ -432,7 +433,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
         flap.setPosition(flapPos);
 
         if(range < 100) {
-            FWTarget = 0.903*range * 8 + 950;  //FWTarget = range * 7.710 + 980
+            FWTarget = 0.903*range * 8 + 960;  //FWTarget = range * 7.710 + 980
             feedPower = 1;
         } else {
             FWTarget = 0.903*range * 7.462 + 990; //FWTarget = range * 7.462 + 1021
