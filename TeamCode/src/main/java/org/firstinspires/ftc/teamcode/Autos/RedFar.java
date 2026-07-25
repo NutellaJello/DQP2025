@@ -30,7 +30,7 @@ import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@Autonomous(name = "Red Far", group = "Autos") // SIDE Red/Blue
+@Autonomous(name = "RED Far", group = "Autos") // SIDE Red/Blue
 public class RedFar extends OpMode { // SIDE Red/Blue
     private DcMotorEx intake;
     private DcMotorEx turret;

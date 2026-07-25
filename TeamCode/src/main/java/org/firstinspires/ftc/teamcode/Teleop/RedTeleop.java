@@ -111,7 +111,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
     }
 
     protected double[] hOffsetConstants(){
-        return new double[]{1.0,3.0};
+        return new double[]{2.0,3.0};
     }
 
 
@@ -360,7 +360,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
                 bearing = detection.ftcPose.bearing;
                 elevation = detection.ftcPose.elevation;
 
-                bearing += startingAngle + Math.toDegrees(heading) + turretPos * 180.0/976.0;   // in degrees
+                bearing += startingAngle + Math.toDegrees(heading) + turretPos * (1/RobotConstants.TURRET_TICKS_PER_DEGREE);   // in degrees
                 bearing = Math.toRadians(bearing);
                 elevation = Math.toRadians(elevation);
                 if(hasEst){
@@ -436,7 +436,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
             FWTarget = 0.903*range * 8 + 960;  //FWTarget = range * 7.710 + 980
             feedPower = 1;
         } else {
-            FWTarget = 0.903*range * 7.462 + 990; //FWTarget = range * 7.462 + 1021
+            FWTarget = 0.903*range * 7.462 + 975; //FWTarget = range * 7.462 + 1021
             feedPower = 0.65;
         }
         if (gamepad1.x) {

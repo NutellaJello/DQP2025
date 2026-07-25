@@ -7,8 +7,8 @@ import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
 import org.firstinspires.ftc.teamcode.subsystems.RobotConstants;
 
 /** Blue-side coordinates for the shared close autonomous routine. */
-@Autonomous(name = "BLUE Close", group = "Autos")
-public class BlueClose extends RedClose {
+@Autonomous(name = "BLUE close but better", group = "Autos")
+public class BlueClose2 extends RedClose2 {
     @Override
     protected GoalPos createGoal() { return new GoalPos(-147, 143, 15.5); }
 
@@ -23,7 +23,6 @@ public class BlueClose extends RedClose {
                 new Pose(-106, 65, Math.toRadians(180)),
                 new Pose(-122, 63),
                 new Pose(-138, 63, Math.toRadians(150)),
-                new Pose(-138, 62.5, Math.toRadians(150)),
                 new Pose(-127.5, 88, Math.toRadians(180)),
                 new Pose(-108, 77, Math.toRadians(180)) };
     }

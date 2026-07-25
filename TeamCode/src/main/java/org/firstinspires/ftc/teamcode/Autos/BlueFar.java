@@ -7,7 +7,7 @@ import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
 import org.firstinspires.ftc.teamcode.subsystems.RobotConstants;
 
 /** Blue-side coordinates and timing for the shared far autonomous routine. */
-@Autonomous(name = "Blue Far", group = "Autos")
+@Autonomous(name = "BLUE Far", group = "Autos")
 public class BlueFar extends RedFar {
     @Override
     protected GoalPos createGoal() { return new GoalPos(14, 135, 15.5); }

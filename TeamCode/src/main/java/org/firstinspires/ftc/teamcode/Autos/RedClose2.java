@@ -8,6 +8,7 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import  com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -32,8 +33,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-@Autonomous(name = "RED Close", group = "Autos") // SIDE Red/Blue
-public class RedClose extends OpMode { // SIDE Red/Blue
+@Autonomous(name = "RED close but better", group = "Autos") // SIDE Red/Blue
+public class RedClose2 extends OpMode { // SIDE Red/Blue
     private DcMotorEx intake;
     private DcMotorEx turret;
     private DcMotorEx flyWheel1;
@@ -75,15 +76,12 @@ public class RedClose extends OpMode { // SIDE Red/Blue
         INTAKE12,
         OUTTAKE1,
         SHOOT1,
-        INTAKEG1,
-        OUTTAKEG1,
-        SHOOTG1,
+        INTAKEG,
+        OUTTAKEG,
+        SHOOTG,
         INTAKE2,
         OUTTAKE2,
         SHOOT2,
-        INTAKEG2,
-        OUTTAKEG2,
-        SHOOTG2,
         END,
         STOP
     }
@@ -91,22 +89,21 @@ public class RedClose extends OpMode { // SIDE Red/Blue
     private PathState pathState;
     //positions SIDE +/- ALL X COORDINATES none/180- ALL ANGLES
     private Pose start, outtakePre, outtake, intake1p1, intake1p2, outtake1Point;
-    private Pose gatePoint, gate1, gate2, intake2, end;
+    private Pose gatePoint, gate, intake2, end;
 
     protected GoalPos createGoal() { return new GoalPos(147, 143, 15.5); }
     protected Pose[] createPoses() {
         return new Pose[] {
-                new Pose(119, 133, 0), // start
+                new Pose(119, 133, 0), // start             0
                 new Pose(93, 90, 0),  // outtakePre
                 new Pose(100, 90, 0), // outtake
-                new Pose(105, 67, 0), //intake1p1
-                new Pose(129, 65, 0), //intake1p2
-                new Pose(106, 65, 0), //outtake1Point
-                new Pose(112, 55), // gatePoint
-                new Pose(137.5, 63.5, Math.toRadians(30)), // gate1
-                new Pose(137, 63.7, Math.toRadians(30)), // gate2
-                new Pose(127, 88.5, 0),
-                new Pose(108, 77, 0) };
+                new Pose(105, 67, 0), // intake1p1          3
+                new Pose(129, 65, 0), // intake1p2
+                new Pose(106, 65, 0), // outtake1Point
+                new Pose(112, 55), // gatePoint                     6
+                new Pose(137.5, 63.5, Math.toRadians(30)), // gate
+                new Pose(127, 88.5, 0), //intake2
+                new Pose(108, 77, 0) }; // end              9
     }
     protected int targetAprilTagId() { return RobotConstants.RED_GOAL_TAG_ID; }
     protected double turretCorrectionSign() { return 1; }
@@ -116,10 +113,8 @@ public class RedClose extends OpMode { // SIDE Red/Blue
     private PathChain Intake11;
     private PathChain Intake12;
     private PathChain Outtake1;
-    private PathChain IntakeG1;
-    private PathChain IntakeG2;
-    private PathChain OuttakeG1;
-    private PathChain OuttakeG2;
+    private PathChain IntakeG;
+    private PathChain OuttakeG;
     private PathChain Intake2;
     private PathChain Outtake2;
     private PathChain End;
@@ -141,23 +136,14 @@ public class RedClose extends OpMode { // SIDE Red/Blue
                 .addPath(new BezierCurve(Arrays.asList(intake1p2, outtake1Point, outtake)))
                 .setConstantHeadingInterpolation(outtake.getHeading())
                 .build();
-        IntakeG1 = follower.pathBuilder()
-                .addPath(new BezierCurve(Arrays.asList(outtake, gatePoint, gate1)))
-                .setLinearHeadingInterpolation(outtake.getHeading(), gate1.getHeading())
+        IntakeG = follower.pathBuilder()
+                .addPath(new BezierCurve(Arrays.asList(outtake, gatePoint, gate)))
+                .setLinearHeadingInterpolation(outtake.getHeading(), gate.getHeading())
                 .setBrakingStrength(0.3)
                 .build();
-        IntakeG2 = follower.pathBuilder()
-                .addPath(new BezierLine(outtake, gate2))
-                .setLinearHeadingInterpolation(outtake.getHeading(), gate2.getHeading())
-                .setBrakingStrength(0.3)
-                .build();
-        OuttakeG1 = follower.pathBuilder()
-                .addPath(new BezierCurve(Arrays.asList(gate1, gatePoint, outtake)))
-                .setLinearHeadingInterpolation(gate1.getHeading(), outtake.getHeading())
-                .build();
-        OuttakeG2 = follower.pathBuilder()
-                .addPath(new BezierLine(gate2, outtake))
-                .setLinearHeadingInterpolation(gate2.getHeading(), outtake.getHeading())
+        OuttakeG = follower.pathBuilder()
+                .addPath(new BezierCurve(Arrays.asList(gate, gatePoint, outtake)))
+                .setLinearHeadingInterpolation(gate.getHeading(), outtake.getHeading())
                 .build();
         Intake2 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2))
@@ -184,8 +170,18 @@ public class RedClose extends OpMode { // SIDE Red/Blue
     public void init() {
         goal = createGoal();
         Pose[] poses = createPoses();
-        start = poses[0]; outtakePre = poses[1]; outtake = poses[2]; intake1p1 = poses[3]; intake1p2 = poses[4];
-        outtake1Point = poses[5]; gatePoint = poses[6]; gate1 = poses[7]; gate2 = poses[8]; intake2 = poses[9]; end = poses[10];
+
+        start = poses[0];
+        outtakePre = poses[1];
+        outtake = poses[2];
+        intake1p1 = poses[3];
+        intake1p2 = poses[4];
+        outtake1Point = poses[5];
+        gatePoint = poses[6];
+        gate = poses[7];
+        intake2 = poses[8];
+        end = poses[9];
+
         pathState = PathState.PRELOAD;
         actionTimer = new Timer();
         opModeTimer = new Timer();
@@ -257,15 +253,15 @@ public class RedClose extends OpMode { // SIDE Red/Blue
                 move(Outtake1, PathState.SHOOT1, true);
                 break;
             case SHOOT1:
-                shoot(PathState.INTAKEG1);
+                shoot(PathState.INTAKEG);
                 break;
-            case INTAKEG1:
-                moveIntake(IntakeG1, PathState.OUTTAKEG1, 1, 4500);
+            case INTAKEG:
+                moveIntake(IntakeG, PathState.OUTTAKEG, 1, 4300);
                 break;
-            case OUTTAKEG1:
-                move(OuttakeG1, PathState.SHOOTG1, true);
+            case OUTTAKEG:
+                move(OuttakeG, PathState.SHOOTG, true);
                 break;
-            case SHOOTG1:
+            case SHOOTG:
                 shoot(PathState.INTAKE2);
                 break;
             case INTAKE2:
@@ -275,15 +271,6 @@ public class RedClose extends OpMode { // SIDE Red/Blue
                 move(Outtake2, PathState.SHOOT2, true);
                 break;
             case SHOOT2:
-                shoot(PathState.INTAKEG2);
-                break;
-            case INTAKEG2:
-                moveIntake(IntakeG2, PathState.OUTTAKEG2, 1, 4000);
-                break;
-            case OUTTAKEG2:
-                move(OuttakeG2, PathState.SHOOTG2, true);
-                break;
-            case SHOOTG2:
                 shoot(PathState.END);
                 break;
             case END:
@@ -399,8 +386,8 @@ public class RedClose extends OpMode { // SIDE Red/Blue
             stopper.setPosition(0.9);
             flyWheel1.setVelocity(0);
             flyWheel2.setVelocity(0);
-            if(shotCounter == 5 /*&& shotCounter <= 6*/){
-                pathState = PathState.INTAKEG2;
+            if(shotCounter >= 3 && shotCounter <= 4){
+                pathState = PathState.INTAKEG;
             }else{
                 pathState = nextPath;
             }
