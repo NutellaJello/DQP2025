@@ -12,7 +12,7 @@ public class BlueTeleop extends RedTeleop {
 
     @Override
     protected GoalPos createGoal() {
-        return new GoalPos(30, -50, 15.5);
+        return new GoalPos(30, -60, 15.5);
     }
 
     @Override

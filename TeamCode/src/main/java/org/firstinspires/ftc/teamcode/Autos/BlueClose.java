@@ -2,11 +2,13 @@ package org.firstinspires.ftc.teamcode.Autos;
 
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 
 import org.firstinspires.ftc.teamcode.subsystems.GoalPos;
 import org.firstinspires.ftc.teamcode.subsystems.RobotConstants;
 
 /** Blue-side coordinates for the shared close autonomous routine. */
+@Disabled
 @Autonomous(name = "BLUE Close", group = "Autos")
 public class BlueClose extends RedClose {
     @Override

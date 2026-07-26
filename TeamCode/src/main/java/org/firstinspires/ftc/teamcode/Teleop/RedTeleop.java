@@ -111,7 +111,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
     }
 
     protected double[] hOffsetConstants(){
-        return new double[]{2.5,3.0};
+        return new double[]{1.5,3.0};
     } //2.0,3
 
 

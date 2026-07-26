@@ -24,7 +24,8 @@ public class BlueClose2 extends RedClose2 {
                 new Pose(-122, 63), //gatePoint
                 new Pose(-138.5, 63, Math.toRadians(150)), //gate -138，63， deg: 150
                 new Pose(-128.5, 90, Math.toRadians(180)), //intake2
-                new Pose(-108, 77, Math.toRadians(180)) }; //end
+                new Pose(-108, 77, Math.toRadians(180)), //end
+                new Pose(-130, 68, Math.toRadians(180)) }; // gate 0
     }
 
     @Override

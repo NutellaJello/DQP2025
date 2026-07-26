@@ -88,22 +88,24 @@ public class RedClose2 extends OpMode { // SIDE Red/Blue
 
     private PathState pathState;
     //positions SIDE +/- ALL X COORDINATES none/180- ALL ANGLES
-    private Pose start, outtakePre, outtake, intake1p1, intake1p2, outtake1Point;
+    private Pose start, outtakePre, outtake, intake1p1, intake1p2, gate0, outtake1Point;
     private Pose gatePoint, gate, intake2, end;
 
     protected GoalPos createGoal() { return new GoalPos(147, 143, 15.5); }
     protected Pose[] createPoses() {
-        return new Pose[] {
+        return new Pose[]{
                 new Pose(119, 133, 0), // start             0
                 new Pose(93, 90, 0),  // outtakePre
                 new Pose(100, 90, 0), // outtake
                 new Pose(105, 67, 0), // intake1p1          3
-                new Pose(129, 65, 0), // intake1p2
+                new Pose(125, 66, 0), // intake1p2
                 new Pose(106, 65, 0), // outtake1Point
                 new Pose(112, 55), // gatePoint                     6
-                new Pose(136.75, 63.5, Math.toRadians(35)), // gate 137.5, deg: 30
+                new Pose(136.75, 62, Math.toRadians(35)), // gate 137.5, deg: 30
                 new Pose(127, 88.5, 0), //intake2
-                new Pose(108, 77, 0) }; // end              9
+                new Pose(108, 77, 0),  // end              9
+                new Pose(130, 68, 0) //gate 0
+        };
     }
     protected int targetAprilTagId() { return RobotConstants.RED_GOAL_TAG_ID; }
     protected double turretCorrectionSign() { return 1; }
@@ -129,8 +131,8 @@ public class RedClose2 extends OpMode { // SIDE Red/Blue
                 .setConstantHeadingInterpolation(outtakePre.getHeading())
                 .build();
         Intake12 = follower.pathBuilder()
-                .addPath(new BezierLine(intake1p1, intake1p2))
-                .setConstantHeadingInterpolation(intake1p1.getHeading())
+                .addPath(new BezierCurve(Arrays.asList(intake1p1, intake1p2, gate0)))
+                .setConstantHeadingInterpolation(gate0.getHeading())
                 .build();
         Outtake1 = follower.pathBuilder()
                 .addPath(new BezierCurve(Arrays.asList(intake1p2, outtake1Point, outtake)))
@@ -143,7 +145,7 @@ public class RedClose2 extends OpMode { // SIDE Red/Blue
                 .build();
         OuttakeG = follower.pathBuilder()
                 .addPath(new BezierCurve(Arrays.asList(gate, gatePoint, outtake)))
-                .setLinearHeadingInterpolation(gate.getHeading(), outtake.getHeading())
+                .setConstantHeadingInterpolation(outtake.getHeading())
                 .build();
         Intake2 = follower.pathBuilder()
                 .addPath(new BezierLine(outtake, intake2))
@@ -181,6 +183,7 @@ public class RedClose2 extends OpMode { // SIDE Red/Blue
         gate = poses[7];
         intake2 = poses[8];
         end = poses[9];
+        gate0 = poses[10];
 
         pathState = PathState.PRELOAD;
         actionTimer = new Timer();
@@ -256,7 +259,7 @@ public class RedClose2 extends OpMode { // SIDE Red/Blue
                 shoot(PathState.INTAKEG);
                 break;
             case INTAKEG:
-                moveIntake(IntakeG, PathState.OUTTAKEG, 1, 4300);
+                moveIntake(IntakeG, PathState.OUTTAKEG, 1, 3800);
                 break;
             case OUTTAKEG:
                 move(OuttakeG, PathState.SHOOTG, true);
