@@ -111,8 +111,8 @@ public class RedTeleop extends LinearOpMode { // SIDE
     }
 
     protected double[] hOffsetConstants(){
-        return new double[]{2.0,3.0};
-    }
+        return new double[]{2.5,3.0};
+    } //2.0,3
 
 
     protected boolean showVoltageTelemetry() {
@@ -433,7 +433,7 @@ public class RedTeleop extends LinearOpMode { // SIDE
         flap.setPosition(flapPos);
 
         if(range < 100) {
-            FWTarget = 0.903*range * 8 + 960;  //FWTarget = range * 7.710 + 980
+            FWTarget = 0.903*range * 8 + 970 ;  //0.903*range * 8 + 960
             feedPower = 1;
         } else {
             FWTarget = 0.903*range * 7.462 + 975; //FWTarget = range * 7.462 + 1021
