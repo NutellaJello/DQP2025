@@ -15,16 +15,16 @@ public class BlueClose2 extends RedClose2 {
     @Override
     protected Pose[] createPoses() {
         return new Pose[] {
-                new Pose(-122, 133, Math.toRadians(180)),
-                new Pose(-93, 90, Math.toRadians(180)),
-                new Pose(-100, 90, Math.toRadians(180)),
-                new Pose(-105, 67, Math.toRadians(180)),
-                new Pose(-130, 65, Math.toRadians(180)),
-                new Pose(-106, 65, Math.toRadians(180)),
-                new Pose(-122, 63),
-                new Pose(-138, 63, Math.toRadians(150)),
-                new Pose(-127.5, 88, Math.toRadians(180)),
-                new Pose(-108, 77, Math.toRadians(180)) };
+                new Pose(-122, 133, Math.toRadians(180)), // start
+                new Pose(-95, 92, Math.toRadians(180)), // outtakePre
+                new Pose(-100, 90, Math.toRadians(180)), //outtake
+                new Pose(-105, 67, Math.toRadians(180)), //intake1p1
+                new Pose(-131, 65, Math.toRadians(180)), //intake1p2
+                new Pose(-106, 65, Math.toRadians(180)), //outtake1Point
+                new Pose(-122, 63), //gatePoint
+                new Pose(-138, 63, Math.toRadians(150)), //gate
+                new Pose(-128.5, 90, Math.toRadians(180)), //intake2
+                new Pose(-108, 77, Math.toRadians(180)) }; //end
     }
 
     @Override

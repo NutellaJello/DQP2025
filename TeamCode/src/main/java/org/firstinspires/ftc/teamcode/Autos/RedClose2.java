@@ -101,7 +101,7 @@ public class RedClose2 extends OpMode { // SIDE Red/Blue
                 new Pose(129, 65, 0), // intake1p2
                 new Pose(106, 65, 0), // outtake1Point
                 new Pose(112, 55), // gatePoint                     6
-                new Pose(137.5, 63.5, Math.toRadians(30)), // gate
+                new Pose(136.75, 63.5, Math.toRadians(35)), // gate 137.5, deg: 30
                 new Pose(127, 88.5, 0), //intake2
                 new Pose(108, 77, 0) }; // end              9
     }
@@ -363,7 +363,7 @@ public class RedClose2 extends OpMode { // SIDE Red/Blue
     }
 
     public void shoot(PathState nextPath){
-        double targetV = 0.903*range * 7.710 + 975;  //FWTarget = range * 7.710 + 980
+        double targetV = 0.903*range * 7.710 + 985;  //FWTarget = range * 7.710 + 980
         flyWheel1.setVelocity(targetV);
         flyWheel2.setVelocity(targetV);
 
