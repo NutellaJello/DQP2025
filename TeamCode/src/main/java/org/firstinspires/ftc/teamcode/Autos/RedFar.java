@@ -287,8 +287,8 @@ public class RedFar extends OpMode { // SIDE Red/Blue
     public void move(PathChain path, PathState nextPath, boolean idle, double wait){
         if (!moving) {
             if(idle){
-                flyWheel1.setVelocity(1100);
-                flyWheel2.setVelocity(1100);
+                flyWheel1.setVelocity(1080);//1100
+                flyWheel2.setVelocity(1080); //1100
             }
             follower.followPath(path, false);
             moving = true;

@@ -436,8 +436,8 @@ public class RedTeleop extends LinearOpMode { // SIDE
             FWTarget = 0.903*range * 8 + 970 ;  //0.903*range * 8 + 960
             feedPower = 1;
         } else {
-            FWTarget = 0.903*range * 7.462 + 975; //FWTarget = range * 7.462 + 1021
-            feedPower = 0.65;
+            FWTarget = 0.903*range * 7.462 + 970; //0.903*range * 7.462 + 975
+            feedPower = 0.75;
         }
         if (gamepad1.x) {
 
